@@ -59,37 +59,31 @@ class VoiceSessionManager: ObservableObject {
     func startSession() async throws {
         state = .connecting
 
-        // Step 1: Get ephemeral session token from backend
-        NSLog("🔐 VoiceSession: Requesting session token from backend...")
-        sessionToken = try await getSessionToken()
-        NSLog("✅ VoiceSession: Session token received")
+        NSLog("🔐 VoiceSession: Starting DIRECT WebSocket connection (no backend session)")
 
-        // Step 2: Setup audio engine
+        // Setup audio engine first
         try setupAudioEngine()
 
-        // Step 3: Create WebSocket connection using session token
-        var urlComponents = URLComponents(string: "wss://api.openai.com/v1/realtime")!
-        urlComponents.queryItems = [
-            URLQueryItem(name: "model", value: "gpt-4o-realtime-preview-2024-12-17")
-        ]
-
-        guard let url = urlComponents.url else {
+        // Create WebSocket connection DIRECTLY to OpenAI (same as AIPersonalTrainer)
+        guard let url = URL(string: "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17") else {
             throw NSError(domain: "VoiceSession", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid WebSocket URL"])
         }
 
         var request = URLRequest(url: url)
-        // Use ephemeral session token instead of API key
-        request.setValue("Bearer \(sessionToken!)", forHTTPHeaderField: "Authorization")
+        // Use API key directly - same as working AIPersonalTrainer app
+        request.setValue("Bearer \(AppConfig.openAIAPIKey)", forHTTPHeaderField: "Authorization")
         request.setValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
 
         NSLog("🔌 Connecting to OpenAI WebSocket...")
         NSLog("   URL: \(url.absoluteString)")
-        NSLog("   Token: \(sessionToken!.prefix(20))...")
 
         webSocketTask = URLSession.shared.webSocketTask(with: request)
         webSocketTask?.resume()
 
         NSLog("✅ WebSocket task created and resumed")
+
+        // Wait a moment for connection to establish
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
 
         // Start receiving messages
         startReceivingMessages()
@@ -106,18 +100,6 @@ class VoiceSessionManager: ObservableObject {
         // Start audio streaming
         startListening()
         NSLog("🎤 Audio streaming started")
-    }
-
-    private func getSessionToken() async throws -> String {
-        // Call backend to get ephemeral OpenAI session token
-        struct SessionResponse: Codable {
-            let success: Bool
-            let sessionId: String
-            let clientSecret: String
-            let expiresAt: Int?
-        }
-
-        return try await APIManager.shared.createVoiceSession()
     }
 
     func endSession() {
