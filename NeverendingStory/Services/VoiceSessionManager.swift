@@ -82,19 +82,30 @@ class VoiceSessionManager: ObservableObject {
         request.setValue("Bearer \(sessionToken!)", forHTTPHeaderField: "Authorization")
         request.setValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
 
+        print("🔌 Connecting to OpenAI WebSocket...")
+        print("   URL: \(url.absoluteString)")
+        print("   Token: \(sessionToken!.prefix(20))...")
+
         webSocketTask = URLSession.shared.webSocketTask(with: request)
         webSocketTask?.resume()
 
+        print("✅ WebSocket task created and resumed")
+
         // Start receiving messages
         startReceivingMessages()
+        print("✅ Started receiving messages")
 
         // Configure the session
+        print("⚙️ Configuring session...")
         try await configureSession()
+        print("✅ Session configured")
 
         state = .connected
+        print("✅ State set to connected")
 
         // Start audio streaming
         startListening()
+        print("🎤 Audio streaming started")
     }
 
     private func getSessionToken() async throws -> String {
@@ -286,10 +297,13 @@ class VoiceSessionManager: ObservableObject {
             ]
         ]
 
+        print("📤 Sending session configuration...")
         sendEvent(config)
 
         // Wait a moment for configuration to be processed
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        print("⏳ Waiting for configuration to process...")
+        try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+        print("✅ Configuration wait complete")
     }
 
     // MARK: - WebSocket Communication
@@ -337,6 +351,9 @@ class VoiceSessionManager: ObservableObject {
                     self.receiveMessage() // Continue receiving
 
                 case .failure(let error):
+                    print("❌ WebSocket receive error: \(error)")
+                    print("   Error code: \(error._code)")
+                    print("   Description: \(error.localizedDescription)")
                     self.state = .error("Connection error: \(error.localizedDescription)")
                     self.isReceivingMessages = false
                 }
@@ -371,9 +388,11 @@ class VoiceSessionManager: ObservableObject {
     }
 
     private func handleEvent(type: String, data: [String: Any]) async {
+        print("📨 Received event: \(type)")
+
         switch type {
         case "session.created", "session.updated":
-            print("Session configured successfully")
+            print("✅ Session configured successfully")
 
         case "input_audio_buffer.speech_started":
             state = .listening
