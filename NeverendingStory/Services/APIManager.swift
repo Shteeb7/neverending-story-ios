@@ -155,6 +155,23 @@ class APIManager: ObservableObject {
 
     // MARK: - Onboarding Endpoints
 
+    func createVoiceSession() async throws -> String {
+        struct SessionResponse: Decodable {
+            let success: Bool
+            let sessionId: String
+            let clientSecret: String
+            let expiresAt: Int?
+        }
+
+        let response: SessionResponse = try await makeRequest(
+            endpoint: "/onboarding/start",
+            method: "POST",
+            requiresAuth: true
+        )
+
+        return response.clientSecret
+    }
+
     func submitVoiceConversation(userId: String, conversation: String) async throws {
         struct ConversationRequest: Encodable {
             let userId: String
