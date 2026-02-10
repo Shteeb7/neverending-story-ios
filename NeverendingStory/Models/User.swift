@@ -13,6 +13,7 @@ struct User: Codable, Identifiable {
     let name: String?
     let avatarURL: String?
     let createdAt: Date?
+    let hasCompletedOnboarding: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -20,5 +21,6 @@ struct User: Codable, Identifiable {
         case name
         case avatarURL = "avatar_url"
         case createdAt = "created_at"
+        case hasCompletedOnboarding = "has_completed_onboarding"
     }
 }

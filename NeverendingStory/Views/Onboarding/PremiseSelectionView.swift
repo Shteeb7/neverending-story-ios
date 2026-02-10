@@ -175,6 +175,21 @@ struct PremiseSelectionView: View {
 
                 createdStory = story
 
+                // Mark onboarding as complete
+                try await APIManager.shared.markOnboardingComplete(userId: userId)
+
+                // Update local user state
+                if let currentUser = authManager.user {
+                    authManager.user = User(
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        name: currentUser.name,
+                        avatarURL: currentUser.avatarURL,
+                        createdAt: currentUser.createdAt,
+                        hasCompletedOnboarding: true
+                    )
+                }
+
                 // Simulate book forming animation
                 try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
 

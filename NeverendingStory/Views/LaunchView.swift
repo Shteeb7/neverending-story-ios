@@ -42,9 +42,13 @@ struct LaunchView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(.systemBackground))
             } else {
-                // Navigate based on auth state
+                // Navigate based on auth state and onboarding completion
                 if authManager.isAuthenticated {
-                    LibraryView()
+                    if authManager.user?.hasCompletedOnboarding == true {
+                        LibraryView()
+                    } else {
+                        OnboardingView()
+                    }
                 } else {
                     LoginView()
                 }

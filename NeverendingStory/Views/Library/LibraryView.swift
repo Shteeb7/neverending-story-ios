@@ -30,6 +30,44 @@ struct LibraryView: View {
                 Color(.systemBackground)
                     .ignoresSafeArea()
 
+                // DEBUG OVERLAY
+                VStack {
+                    HStack {
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("DEBUG INFO:")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                            Text("isAuth: \(authManager.isAuthenticated ? "✅" : "❌")")
+                                .font(.caption2)
+                            Text("User: \(authManager.user != nil ? "✅" : "❌")")
+                                .font(.caption2)
+                            Text("ID: \(authManager.user?.id ?? "NIL")")
+                                .font(.caption2)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                            Text("Email: \(authManager.user?.email ?? "NIL")")
+                                .font(.caption2)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                            if let error = error {
+                                Text("Error: \(error)")
+                                    .font(.caption2)
+                                    .foregroundColor(.yellow)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.4)
+                            }
+                        }
+                        .padding(8)
+                        .background(Color.red.opacity(0.8))
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .padding()
+                    }
+                    Spacer()
+                }
+                .zIndex(999)
+
                 if isLoading {
                     LoadingView()
                 } else if let error = error {
@@ -135,16 +173,32 @@ struct LibraryView: View {
     // MARK: - Actions
 
     private func loadLibrary() {
-        guard let userId = authManager.user?.id else { return }
+        print("📚 LibraryView.loadLibrary() called")
+        print("   authManager.user: \(authManager.user?.email ?? "nil")")
+        print("   authManager.user?.id: \(authManager.user?.id ?? "nil")")
+        print("   authManager.isAuthenticated: \(authManager.isAuthenticated)")
 
+        guard let userId = authManager.user?.id else {
+            print("❌ LibraryView: No user ID, returning early")
+            return
+        }
+
+        print("✅ LibraryView: Found user ID, loading library...")
         isLoading = true
         error = nil
 
         Task {
             do {
+                NSLog("📞 Calling getLibrary with userId: %@", userId)
                 stories = try await APIManager.shared.getLibrary(userId: userId)
                 isLoading = false
+                NSLog("✅ Got %d stories", stories.count)
+            } catch let apiError as APIError {
+                NSLog("❌ LibraryView: APIError type: %@", String(describing: apiError))
+                self.error = apiError.localizedDescription
+                isLoading = false
             } catch {
+                NSLog("❌ LibraryView: Other error: %@ (type: %@)", error.localizedDescription, String(describing: type(of: error)))
                 self.error = error.localizedDescription
                 isLoading = false
             }

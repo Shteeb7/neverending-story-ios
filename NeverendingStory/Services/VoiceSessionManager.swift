@@ -170,8 +170,8 @@ class VoiceSessionManager: ObservableObject {
         updateAudioLevel(from: buffer)
 
         // Convert and send to OpenAI
-        guard let converter = audioConverter,
-              let targetFormat = converter.outputFormat else { return }
+        guard let converter = audioConverter else { return }
+        let targetFormat = converter.outputFormat
 
         // Create output buffer
         let capacity = AVAudioFrameCount(Double(buffer.frameLength) * targetSampleRate / buffer.format.sampleRate)

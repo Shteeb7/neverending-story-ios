@@ -178,12 +178,12 @@ class ReaderSettings: ObservableObject {
     @Published var colorScheme: ReaderColorScheme
 
     init() {
-        // Load from UserDefaults
-        self.fontSize = CGFloat(UserDefaults.standard.float(forKey: "readerFontSize"))
-        if self.fontSize == 0 { self.fontSize = AppConfig.defaultFontSize }
+        // Load from UserDefaults with defaults if not set
+        let savedFontSize = CGFloat(UserDefaults.standard.float(forKey: "readerFontSize"))
+        self.fontSize = savedFontSize == 0 ? AppConfig.defaultFontSize : savedFontSize
 
-        self.lineSpacing = CGFloat(UserDefaults.standard.float(forKey: "readerLineSpacing"))
-        if self.lineSpacing == 0 { self.lineSpacing = AppConfig.defaultLineSpacing }
+        let savedLineSpacing = CGFloat(UserDefaults.standard.float(forKey: "readerLineSpacing"))
+        self.lineSpacing = savedLineSpacing == 0 ? AppConfig.defaultLineSpacing : savedLineSpacing
 
         let designRaw = UserDefaults.standard.integer(forKey: "readerFontDesign")
         self.fontDesign = ReaderSettings.fontDesignFromRaw(designRaw)

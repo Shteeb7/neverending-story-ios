@@ -6,17 +6,21 @@
 //
 
 import SwiftUI
+import GoogleSignIn
 
 @main
 struct NeverendingStoryApp: App {
     init() {
-        // Configure app appearance
         configureAppearance()
+        configureGoogleSignIn()
     }
 
     var body: some Scene {
         WindowGroup {
             LaunchView()
+                .onOpenURL { url in
+                    handleIncomingURL(url)
+                }
         }
     }
 
@@ -29,5 +33,19 @@ struct NeverendingStoryApp: App {
         appearance.configureWithDefaultBackground()
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
+    }
+
+    private func configureGoogleSignIn() {
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+            clientID: AppConfig.googleClientID
+        )
+    }
+
+    private func handleIncomingURL(_ url: URL) {
+        // Handle Google Sign-In callback
+        if GIDSignIn.sharedInstance.handle(url) {
+            return
+        }
+        // Add custom URL handling here if needed in the future
     }
 }

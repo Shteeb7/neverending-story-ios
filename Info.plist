@@ -42,6 +42,16 @@
 				<string>neverendingstory</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.google.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.756674440214-q5afeoh7gk8h0tc72r7v687sdpp2o5ah</string>
+			</array>
+		</dict>
 	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Automatic</string>

@@ -55,7 +55,8 @@ class APIManager: ObservableObject {
         endpoint: String,
         method: String = "GET",
         body: Data? = nil,
-        requiresAuth: Bool = true
+        requiresAuth: Bool = true,
+        userId: String? = nil  // NEW: Allow passing userId directly
     ) async throws -> T {
         guard let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
@@ -66,18 +67,43 @@ class APIManager: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         if requiresAuth {
-            guard let userId = AuthManager.shared.user?.id else {
+            // Get the Supabase access token for authorization
+            guard let accessToken = AuthManager.shared.accessToken else {
+                NSLog("❌ APIManager: NO ACCESS TOKEN FOUND")
                 throw APIError.unauthorized
             }
-            request.setValue(userId, forHTTPHeaderField: "X-User-ID")
+
+            // Use provided userId if available, otherwise check AuthManager
+            let userIdToUse: String
+            if let providedUserId = userId {
+                userIdToUse = providedUserId
+                NSLog("✅ Using provided userId: %@", providedUserId)
+            } else {
+                NSLog("🔍 No userId provided, checking AuthManager...")
+                guard let authUserId = AuthManager.shared.user?.id else {
+                    NSLog("❌ APIManager: NO USER ID FOUND")
+                    throw APIError.unauthorized
+                }
+                userIdToUse = authUserId
+            }
+
+            // Backend expects Authorization header with Supabase access token
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            request.setValue(userIdToUse, forHTTPHeaderField: "X-User-ID")
+            NSLog("✅ Added Authorization header with Supabase access token")
         }
 
         if let body = body {
             request.httpBody = body
         }
 
+        NSLog("🌐 Making request to: %@", url.absoluteString)
+        NSLog("   Method: %@", method)
+        NSLog("   Headers: %@", request.allHTTPHeaderFields ?? [:])
+
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
+            NSLog("📥 Received response, status: %d", (response as? HTTPURLResponse)?.statusCode ?? 0)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
@@ -162,6 +188,14 @@ class APIManager: ObservableObject {
         return try await makeRequest(endpoint: "/story/select-premise", method: "POST", body: body)
     }
 
+    func markOnboardingComplete(userId: String) async throws {
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/onboarding/complete",
+            method: "POST",
+            requiresAuth: true
+        )
+    }
+
     // MARK: - Story Endpoints
 
     func getChapters(storyId: String) async throws -> [Chapter] {
@@ -197,7 +231,10 @@ class APIManager: ObservableObject {
             let stories: [Story]
         }
 
-        let response: LibraryResponse = try await makeRequest(endpoint: "/library/\(userId)")
+        let response: LibraryResponse = try await makeRequest(
+            endpoint: "/library/\(userId)",
+            userId: userId  // Pass userId through so makeRequest doesn't re-check
+        )
         return response.stories
     }
 
