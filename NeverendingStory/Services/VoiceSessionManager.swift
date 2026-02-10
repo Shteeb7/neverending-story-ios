@@ -60,9 +60,9 @@ class VoiceSessionManager: ObservableObject {
         state = .connecting
 
         // Step 1: Get ephemeral session token from backend
-        print("🔐 Requesting session token from backend...")
+        NSLog("🔐 VoiceSession: Requesting session token from backend...")
         sessionToken = try await getSessionToken()
-        print("✅ Session token received")
+        NSLog("✅ VoiceSession: Session token received")
 
         // Step 2: Setup audio engine
         try setupAudioEngine()
@@ -82,30 +82,30 @@ class VoiceSessionManager: ObservableObject {
         request.setValue("Bearer \(sessionToken!)", forHTTPHeaderField: "Authorization")
         request.setValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
 
-        print("🔌 Connecting to OpenAI WebSocket...")
-        print("   URL: \(url.absoluteString)")
-        print("   Token: \(sessionToken!.prefix(20))...")
+        NSLog("🔌 Connecting to OpenAI WebSocket...")
+        NSLog("   URL: \(url.absoluteString)")
+        NSLog("   Token: \(sessionToken!.prefix(20))...")
 
         webSocketTask = URLSession.shared.webSocketTask(with: request)
         webSocketTask?.resume()
 
-        print("✅ WebSocket task created and resumed")
+        NSLog("✅ WebSocket task created and resumed")
 
         // Start receiving messages
         startReceivingMessages()
-        print("✅ Started receiving messages")
+        NSLog("✅ Started receiving messages")
 
         // Configure the session
-        print("⚙️ Configuring session...")
+        NSLog("⚙️ Configuring session...")
         try await configureSession()
-        print("✅ Session configured")
+        NSLog("✅ Session configured")
 
         state = .connected
-        print("✅ State set to connected")
+        NSLog("✅ State set to connected")
 
         // Start audio streaming
         startListening()
-        print("🎤 Audio streaming started")
+        NSLog("🎤 Audio streaming started")
     }
 
     private func getSessionToken() async throws -> String {
@@ -297,13 +297,13 @@ class VoiceSessionManager: ObservableObject {
             ]
         ]
 
-        print("📤 Sending session configuration...")
+        NSLog("📤 Sending session configuration...")
         sendEvent(config)
 
         // Wait a moment for configuration to be processed
-        print("⏳ Waiting for configuration to process...")
+        NSLog("⏳ Waiting for configuration to process...")
         try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-        print("✅ Configuration wait complete")
+        NSLog("✅ Configuration wait complete")
     }
 
     // MARK: - WebSocket Communication
@@ -325,11 +325,11 @@ class VoiceSessionManager: ObservableObject {
 
             webSocketTask.send(message) { error in
                 if let error = error {
-                    print("WebSocket send error: \(error)")
+                    NSLog("WebSocket send error: \(error)")
                 }
             }
         } catch {
-            print("Failed to serialize event: \(error)")
+            NSLog("Failed to serialize event: \(error)")
         }
     }
 
@@ -351,9 +351,9 @@ class VoiceSessionManager: ObservableObject {
                     self.receiveMessage() // Continue receiving
 
                 case .failure(let error):
-                    print("❌ WebSocket receive error: \(error)")
-                    print("   Error code: \(error._code)")
-                    print("   Description: \(error.localizedDescription)")
+                    NSLog("❌ WebSocket receive error: \(error)")
+                    NSLog("   Error code: \(error._code)")
+                    NSLog("   Description: \(error.localizedDescription)")
                     self.state = .error("Connection error: \(error.localizedDescription)")
                     self.isReceivingMessages = false
                 }
@@ -383,16 +383,16 @@ class VoiceSessionManager: ObservableObject {
             await handleEvent(type: type, data: json)
 
         } catch {
-            print("Failed to parse message: \(error)")
+            NSLog("Failed to parse message: \(error)")
         }
     }
 
     private func handleEvent(type: String, data: [String: Any]) async {
-        print("📨 Received event: \(type)")
+        NSLog("📨 Received event: \(type)")
 
         switch type {
         case "session.created", "session.updated":
-            print("✅ Session configured successfully")
+            NSLog("✅ Session configured successfully")
 
         case "input_audio_buffer.speech_started":
             state = .listening
