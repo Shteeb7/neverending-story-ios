@@ -1,0 +1,37 @@
+name: NeverendingStory
+options:
+  bundleIdPrefix: com.neverendingstory
+  deploymentTarget:
+    iOS: "17.0"
+  
+targets:
+  NeverendingStory:
+    type: application
+    platform: iOS
+    sources:
+      - NeverendingStory
+    info:
+      path: Info.plist
+      properties:
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.neverendingstory.NeverendingStory
+      SWIFT_VERSION: "5.9"
+      TARGETED_DEVICE_FAMILY: "1,2"
+      IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    dependencies:
+      - package: Supabase
+      - package: OpenAI
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.0.0"
+  OpenAI:
+    url: https://github.com/MacPaw/OpenAI
+    from: "0.2.0"
