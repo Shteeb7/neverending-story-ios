@@ -55,6 +55,10 @@ struct LaunchView: View {
             }
         }
         .onAppear {
+            // TEST: Verify console works
+            NSLog("🚀 LaunchView appeared - CONSOLE TEST")
+            print("🚀 LaunchView appeared - PRINT TEST")
+
             // Wait for auth check, then show content with animation
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 withAnimation(.easeInOut(duration: 0.5)) {
