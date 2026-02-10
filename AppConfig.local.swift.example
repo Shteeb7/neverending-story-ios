@@ -1,0 +1,20 @@
+//
+//  AppConfig.local.swift.example
+//  NeverendingStory
+//
+//  LOCAL CONFIGURATION TEMPLATE
+//  Copy this file to AppConfig.local.swift and add your API keys
+//
+
+import Foundation
+
+extension AppConfig {
+    // Add your actual API keys here
+    static var supabaseAnonKeyLocal: String? {
+        "YOUR_SUPABASE_ANON_KEY_HERE"
+    }
+
+    static var openAIAPIKeyLocal: String? {
+        "YOUR_OPENAI_API_KEY_HERE"
+    }
+}
