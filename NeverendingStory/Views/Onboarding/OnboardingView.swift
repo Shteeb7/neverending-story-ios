@@ -12,6 +12,8 @@ struct OnboardingView: View {
     @State private var navigateToPremises = false
     @State private var showPermissionDenied = false
     @State private var conversationData: String? = nil
+    @State private var premisesReady = false
+    @State private var storyPreferences: [String: Any]? = nil
 
     var body: some View {
         NavigationStack {
@@ -65,21 +67,57 @@ struct OnboardingView: View {
 
                         case .listening:
                             VStack(spacing: 16) {
-                                Text("I'm listening...")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
+                                if premisesReady {
+                                    // Show "ready" state with proceed button
+                                    VStack(spacing: 16) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 60))
+                                            .foregroundColor(.green)
 
-                                Button(action: endVoiceSession) {
-                                    HStack {
-                                        Image(systemName: "stop.fill")
-                                        Text("End Session")
+                                        Text("Story Premises Ready!")
                                             .font(.headline)
+                                            .foregroundColor(.primary)
+
+                                        Button(action: {
+                                            voiceManager.endSession()
+                                            navigateToPremises = true
+                                        }) {
+                                            HStack {
+                                                Image(systemName: "sparkles")
+                                                Text("Show Me Stories!")
+                                                    .font(.headline)
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 16)
+                                            .background(
+                                                LinearGradient(
+                                                    colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                            .foregroundColor(.white)
+                                            .cornerRadius(12)
+                                        }
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(Color.red)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
+                                } else {
+                                    // Normal listening state
+                                    Text("I'm listening...")
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+
+                                    Button(action: endVoiceSession) {
+                                        HStack {
+                                            Image(systemName: "stop.fill")
+                                            Text("End Session")
+                                                .font(.headline)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                        .background(Color.red)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                    }
                                 }
                             }
 
@@ -149,6 +187,37 @@ struct OnboardingView: View {
             let hasPermission = await voiceManager.requestMicrophonePermission()
 
             if hasPermission {
+                // Set up callback for when preferences are gathered
+                voiceManager.onPreferencesGathered = { preferences in
+                    DispatchQueue.main.async {
+                        print("✅ Story preferences received in view:")
+                        print("   \(preferences)")
+
+                        self.storyPreferences = preferences
+                        self.conversationData = self.voiceManager.conversationText
+
+                        // Call backend API to generate premises with preferences
+                        Task {
+                            do {
+                                // TODO: Update generatePremises() to accept preferences parameter
+                                // For now, calling without preferences - backend should use last conversation
+                                try await APIManager.shared.generatePremises()
+
+                                DispatchQueue.main.async {
+                                    self.premisesReady = true
+                                    print("✅ Premises generated - user can now proceed")
+                                }
+                            } catch {
+                                print("❌ Failed to generate premises: \(error)")
+                                // Still allow user to proceed - they can try manual selection
+                                DispatchQueue.main.async {
+                                    self.premisesReady = true
+                                }
+                            }
+                        }
+                    }
+                }
+
                 do {
                     try await voiceManager.startSession()
                 } catch {

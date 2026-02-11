@@ -35,6 +35,9 @@ class VoiceSessionManager: ObservableObject {
     private var isReceivingMessages = false
     private var sessionToken: String?
 
+    // Callback for when story preferences are gathered
+    var onPreferencesGathered: (([String: Any]) -> Void)?
+
     // Continuation to wait for session.created event
     private var sessionCreatedContinuation: CheckedContinuation<Void, Never>?
 
@@ -624,16 +627,57 @@ class VoiceSessionManager: ObservableObject {
     // MARK: - Session Configuration
 
     private func configureSession() async throws {
-        // SIMPLIFIED for debugging - use minimal working config like test script
-        let instructions = "You are a helpful assistant. Greet the user warmly and ask what kind of story they would like to read."
+        // Define function tools for story preference gathering
+        let tools: [[String: Any]] = [[
+            "type": "function",
+            "name": "submit_story_preferences",
+            "description": "Submit the user's story preferences after gathering them through conversation. Call this once you have collected their favorite genres, themes, character types, mood, and age range.",
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "favoriteGenres": ["type": "array", "items": ["type": "string"], "description": "List of favorite genres like 'LitRPG', 'Fantasy', 'Sci-Fi', 'Mystery', 'Romance', 'Horror', 'Adventure'"],
+                    "preferredThemes": ["type": "array", "items": ["type": "string"], "description": "Preferred themes like 'Magic', 'Technology', 'Dragons', 'Space', 'Mystery', 'Friendship', 'Coming of Age'"],
+                    "characterTypes": ["type": "string", "description": "Type of protagonist they prefer like 'Hero', 'Underdog', 'Anti-hero', 'Reluctant Hero', 'Chosen One'"],
+                    "mood": ["type": "string", "description": "Desired mood like 'Epic', 'Dark', 'Lighthearted', 'Suspenseful', 'Hopeful', 'Whimsical'"],
+                    "ageRange": ["type": "string", "description": "Target age range like 'Kids (6-9)', 'Middle Grade (10-13)', 'Young Adult (14-18)', 'Adult (18+)'"]
+                ],
+                "required": ["favoriteGenres", "mood"]
+            ]
+        ]]
 
-        // SIMPLIFIED config matching working test script exactly
+        let instructions = """
+        You are a mystical storytelling guide with a warm, enchanting presence. You are about to help someone discover the perfect story for them.
+
+        IMPORTANT SPEAKING STYLE:
+        - Speak with soft mystical energy - like a wise muse who sees into their imagination
+        - Keep responses SHORT - 1-2 sentences max
+        - Be conversational and enchanting
+        - Add magical personality - wonder, curiosity, insight
+        - Don't be robotic or stiff
+
+        YOUR TASK:
+        This is your FIRST meeting with a story seeker. Have a brief, magical conversation to learn:
+        1. What genres they love (fantasy, sci-fi, mystery, etc.)
+        2. What themes call to them (magic, adventure, friendship, etc.)
+        3. What kind of protagonist resonates (hero, underdog, anti-hero, etc.)
+        4. What mood they're seeking (epic, dark, lighthearted, etc.)
+
+        FLOW:
+        1. Greet them with mystical warmth - sense their presence
+        2. Ask ONE question at a time - don't list multiple questions
+        3. After each answer, respond naturally with wonder, then ask the next question
+        4. Once you have 3-4 pieces of information (especially genres and mood), call submit_story_preferences with what you've learned
+        5. After calling the function, tell them: "I'm conjuring your personalized story premises... ✨"
+
+        Remember: You're mystical, warm, and brief. One question at a time. Let the magic flow!
+        """
+
         let config: [String: Any] = [
             "type": "session.update",
             "session": [
                 "modalities": ["text", "audio"],
                 "instructions": instructions,
-                "voice": "alloy",  // Using same voice as working test script
+                "voice": "shimmer",  // Soft, warm mystical voice
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": [
@@ -644,7 +688,10 @@ class VoiceSessionManager: ObservableObject {
                     "threshold": 0.5,
                     "prefix_padding_ms": 300,
                     "silence_duration_ms": 500
-                ] as [String: Any]
+                ] as [String: Any],
+                "tools": tools,
+                "temperature": 0.8,
+                "max_response_output_tokens": 150
             ]
         ]
 
@@ -676,7 +723,7 @@ class VoiceSessionManager: ObservableObject {
             "type": "response.create",
             "response": [
                 "modalities": ["text", "audio"],
-                "instructions": "Greet the user with mystical warmth, as if you're a creative muse sensing their presence. Use your magical storytelling guide persona. Open with wonder and invitation. One sentence only."
+                "instructions": "Greet the user with mystical warmth, as if you're sensing their creative energy. Welcome them briefly (one sentence), then ask ONE question: what kind of stories they love to read."
             ]
         ]
         sendEvent(event)
@@ -769,6 +816,50 @@ class VoiceSessionManager: ObservableObject {
         }
     }
 
+    private func handleFunctionCall(_ data: [String: Any]) {
+        guard let callId = data["call_id"] as? String,
+              let name = data["name"] as? String,
+              let arguments = data["arguments"] as? String else {
+            NSLog("⚠️ Invalid function call data")
+            return
+        }
+
+        NSLog("🔧 Function called: \(name)")
+        NSLog("   Call ID: \(callId)")
+        NSLog("   Arguments: \(arguments)")
+
+        if name == "submit_story_preferences" {
+            // Parse the arguments JSON
+            guard let argsData = arguments.data(using: .utf8),
+                  let args = try? JSONSerialization.jsonObject(with: argsData) as? [String: Any] else {
+                NSLog("⚠️ Failed to parse function arguments")
+                return
+            }
+
+            NSLog("✅ Story preferences received!")
+            NSLog("   \(args)")
+
+            // Trigger callback with preferences
+            onPreferencesGathered?(args)
+
+            // Send function response back to OpenAI
+            Task {
+                let result: [String: Any] = [
+                    "type": "conversation.item.create",
+                    "item": [
+                        "type": "function_call_output",
+                        "call_id": callId,
+                        "output": "{\"success\": true, \"message\": \"Preferences received! Conjuring story premises...\"}"
+                    ]
+                ]
+                sendEvent(result)
+
+                // Trigger AI to respond after function call
+                sendEvent(["type": "response.create"])
+            }
+        }
+    }
+
     private func handleEvent(type: String, data: [String: Any]) async {
         NSLog("📨 Received event: \(type)")
 
@@ -849,6 +940,10 @@ class VoiceSessionManager: ObservableObject {
                let id = response["id"] as? String {
                 NSLog("   Response ID: \(id)")
             }
+
+        case "response.function_call_arguments.done":
+            NSLog("🔧 function_call_arguments.done - processing function call")
+            handleFunctionCall(data)
 
         case "error":
             if let error = data["error"] as? [String: Any],
