@@ -52,3 +52,5 @@ iOSInjectionProject/
 .AppleDouble
 .LSOverride
 AppConfig.local.swift
+Secrets.swift
+*.secret.swift
