@@ -26,6 +26,7 @@ class VoiceSessionManager: ObservableObject {
     @Published var audioLevel: Float = 0.0
     @Published var transcription: String = ""
     @Published var conversationText: String = "" // Full conversation for display
+    @Published var isConversationComplete = false // Signals conversation end
 
     private var audioEngine: AVAudioEngine?
     private var inputNode: AVAudioInputNode?
@@ -33,6 +34,11 @@ class VoiceSessionManager: ObservableObject {
     private var audioConverter: AVAudioConverter?
     private var isReceivingMessages = false
     private var sessionToken: String?
+
+    // Audio playback
+    private var audioPlayerNode: AVAudioPlayerNode?
+    private var audioMixerNode: AVAudioMixerNode?
+    private var pendingAudioData = Data()
 
     // Target format for OpenAI: 24kHz, PCM16, mono
     private let targetSampleRate: Double = 24000
@@ -100,6 +106,10 @@ class VoiceSessionManager: ObservableObject {
         // Start audio streaming
         startListening()
         NSLog("🎤 Audio streaming started")
+
+        // Send initial greeting to start conversation
+        triggerAIGreeting()
+        NSLog("👋 AI greeting triggered")
     }
 
     func endSession() {
@@ -113,14 +123,54 @@ class VoiceSessionManager: ObservableObject {
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         isReceivingMessages = false
-        state = .idle
+
+        // Submit conversation to backend if we have content
+        if !conversationText.isEmpty {
+            Task {
+                await submitConversationToBackend()
+            }
+        }
+
+        state = .conversationComplete
+        isConversationComplete = true
+    }
+
+    // MARK: - Backend Integration
+
+    private func submitConversationToBackend() async {
+        guard let userId = AuthManager.shared.user?.id else {
+            NSLog("⚠️ Cannot submit conversation - no user ID")
+            return
+        }
+
+        NSLog("📤 Submitting conversation transcript to backend...")
+        NSLog("   User ID: \(userId)")
+        NSLog("   Transcript length: \(conversationText.count) characters")
+
+        do {
+            // Step 1: Submit transcript to extract preferences
+            try await APIManager.shared.submitVoiceConversation(
+                userId: userId,
+                conversation: conversationText
+            )
+            NSLog("✅ Conversation transcript submitted")
+
+            // Step 2: Generate premises based on extracted preferences
+            try await APIManager.shared.generatePremises()
+            NSLog("✅ Story premises generated")
+
+        } catch {
+            NSLog("❌ Failed to process conversation: \(error)")
+            state = .error("Failed to process conversation: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Audio Engine Setup
 
     private func setupAudioEngine() throws {
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .measurement, options: [])
+        // Use playAndRecord for two-way audio conversation
+        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
         try audioSession.setActive(true)
 
         audioEngine = AVAudioEngine()
@@ -149,12 +199,45 @@ class VoiceSessionManager: ObservableObject {
 
         audioConverter = converter
 
+        // Setup audio playback
+        setupAudioPlayback()
+
         // Install tap with smaller buffer for lower latency
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
             Task { @MainActor in
                 await self?.processAudioBuffer(buffer)
             }
         }
+    }
+
+    private func setupAudioPlayback() {
+        guard let audioEngine = audioEngine else { return }
+
+        // Create player node for AI audio responses
+        audioPlayerNode = AVAudioPlayerNode()
+        audioMixerNode = AVAudioMixerNode()
+
+        guard let playerNode = audioPlayerNode,
+              let mixerNode = audioMixerNode else { return }
+
+        // Attach nodes to engine
+        audioEngine.attach(playerNode)
+        audioEngine.attach(mixerNode)
+
+        // Create format for playback (24kHz, PCM16, mono - same as OpenAI output)
+        guard let outputFormat = AVAudioFormat(
+            commonFormat: .pcmFormatInt16,
+            sampleRate: targetSampleRate,
+            channels: targetChannels,
+            interleaved: true
+        ) else { return }
+
+        // Connect player -> mixer -> output
+        audioEngine.connect(playerNode, to: mixerNode, format: outputFormat)
+        audioEngine.connect(mixerNode, to: audioEngine.mainMixerNode, format: outputFormat)
+
+        // Start the player node
+        playerNode.play()
     }
 
     private func startListening() {
@@ -173,6 +256,58 @@ class VoiceSessionManager: ObservableObject {
         inputNode?.removeTap(onBus: 0)
         audioEngine = nil
         inputNode = nil
+    }
+
+    // MARK: - Audio Playback
+
+    private func playAudioChunk(base64Audio: String) {
+        guard let audioData = Data(base64Encoded: base64Audio),
+              let playerNode = audioPlayerNode else {
+            NSLog("⚠️ Cannot play audio - missing data or player node")
+            return
+        }
+
+        guard let audioFormat = AVAudioFormat(
+            commonFormat: .pcmFormatInt16,
+            sampleRate: targetSampleRate,
+            channels: targetChannels,
+            interleaved: true
+        ) else {
+            NSLog("⚠️ Cannot create audio format")
+            return
+        }
+
+        // Calculate frame count for this chunk
+        let frameCount = audioData.count / (MemoryLayout<Int16>.size * Int(targetChannels))
+        guard frameCount > 0 else { return }
+
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: AVAudioFrameCount(frameCount)) else {
+            NSLog("⚠️ Cannot create audio buffer")
+            return
+        }
+
+        buffer.frameLength = AVAudioFrameCount(frameCount)
+
+        // Copy audio data to buffer
+        audioData.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
+            guard let baseAddress = bytes.baseAddress,
+                  let int16ChannelData = buffer.int16ChannelData else { return }
+
+            let bytesToCopy = audioData.count
+            memcpy(int16ChannelData.pointee, baseAddress, bytesToCopy)
+        }
+
+        // Schedule the buffer for playback
+        playerNode.scheduleBuffer(buffer) {
+            // Buffer finished playing
+            NSLog("🔊 Audio chunk played (\(frameCount) frames)")
+        }
+
+        NSLog("🎵 Scheduled audio chunk: \(frameCount) frames, \(audioData.count) bytes")
+    }
+
+    private func clearPendingAudio() {
+        pendingAudioData.removeAll()
     }
 
     // MARK: - Audio Processing
@@ -288,6 +423,18 @@ class VoiceSessionManager: ObservableObject {
         NSLog("✅ Configuration wait complete")
     }
 
+    private func triggerAIGreeting() {
+        // Create a response to trigger the AI to speak first
+        let event: [String: Any] = [
+            "type": "response.create",
+            "response": [
+                "modalities": ["text", "audio"],
+                "instructions": "Start the conversation with a warm, friendly greeting. Introduce yourself as their creative writing assistant and ask what kind of story they'd like to explore today. Keep it brief and conversational."
+            ]
+        ]
+        sendEvent(event)
+    }
+
     // MARK: - WebSocket Communication
 
     private func sendEvent(type: String, data: [String: Any] = [:]) {
@@ -399,12 +546,28 @@ class VoiceSessionManager: ObservableObject {
                 }
             }
 
+        case "response.audio.delta":
+            // Play audio chunk from AI
+            if let delta = data["delta"] as? String {
+                playAudioChunk(base64Audio: delta)
+            }
+
+        case "response.audio.done":
+            // Audio response complete, clear any pending data
+            clearPendingAudio()
+
+        case "response.audio_transcript.delta":
+            // Handle audio transcript if needed (already handled in conversation.item.created)
+            break
+
         case "response.done":
             state = .listening
+            clearPendingAudio()
 
         case "error":
             if let error = data["error"] as? [String: Any],
                let message = error["message"] as? String {
+                NSLog("❌ OpenAI Error: \(message)")
                 state = .error(message)
             }
 

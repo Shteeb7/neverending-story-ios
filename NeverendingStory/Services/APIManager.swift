@@ -174,17 +174,37 @@ class APIManager: ObservableObject {
 
     func submitVoiceConversation(userId: String, conversation: String) async throws {
         struct ConversationRequest: Encodable {
-            let userId: String
-            let conversation: String
+            let transcript: String
+            let sessionId: String
         }
 
-        let body = try encoder.encode(ConversationRequest(userId: userId, conversation: conversation))
+        // Submit to correct endpoint: /process-transcript
+        let body = try encoder.encode(ConversationRequest(
+            transcript: conversation,
+            sessionId: "direct_websocket"
+        ))
         let _: EmptyResponse = try await makeRequest(
-            endpoint: "/onboarding/voice-conversation",
+            endpoint: "/onboarding/process-transcript",
             method: "POST",
             body: body,
             requiresAuth: true
         )
+    }
+
+    func generatePremises() async throws {
+        struct GenerateResponse: Decodable {
+            let success: Bool
+            let premises: [Premise]
+            let premisesId: String
+        }
+
+        let response: GenerateResponse = try await makeRequest(
+            endpoint: "/onboarding/generate-premises",
+            method: "POST",
+            requiresAuth: true
+        )
+
+        NSLog("✅ Generated \(response.premises.count) premises")
     }
 
     func getPremises(userId: String) async throws -> [Premise] {
