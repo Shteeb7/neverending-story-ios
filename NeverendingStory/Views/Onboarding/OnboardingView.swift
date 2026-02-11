@@ -12,6 +12,10 @@ struct OnboardingView: View {
     @State private var navigateToPremises = false
     @State private var showPermissionDenied = false
     @State private var conversationData: String? = nil
+    // TEMPORARY: Bypassing voice interview for testing
+    @State private var isSkippingToTest = false
+    @State private var showSkipError = false
+    @State private var skipErrorMessage = ""
 
     var body: some View {
         NavigationStack {
@@ -121,12 +125,29 @@ struct OnboardingView: View {
 
                     Spacer()
 
-                    // Skip button
-                    Button("Skip voice, choose manually") {
-                        navigateToPremises = true
+                    // TEMPORARY: Bypassing voice interview for testing
+                    VStack(spacing: 12) {
+                        Button(action: skipToTesting) {
+                            HStack {
+                                Image(systemName: "bolt.fill")
+                                Text(isSkippingToTest ? "Setting up..." : "Skip to Testing (Adult)")
+                                    .font(.headline)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.orange)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isSkippingToTest)
+
+                        Button("Skip voice, choose manually") {
+                            navigateToPremises = true
+                        }
+                        .font(.callout)
+                        .foregroundColor(.secondary)
                     }
-                    .font(.callout)
-                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 32)
                     .padding(.bottom, 24)
                 }
             }
@@ -138,6 +159,12 @@ struct OnboardingView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Please enable microphone access in Settings to use voice onboarding.")
+            }
+            // TEMPORARY: Error alert for skip to testing
+            .alert("Setup Error", isPresented: $showSkipError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(skipErrorMessage)
             }
         }
     }
@@ -177,6 +204,41 @@ struct OnboardingView: View {
     private func openSettings() {
         if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(settingsURL)
+        }
+    }
+
+    // TEMPORARY: Bypassing voice interview for testing
+    private func skipToTesting() {
+        Task {
+            isSkippingToTest = true
+            defer { isSkippingToTest = false }
+
+            do {
+                // Call backend with hardcoded adult preferences
+                try await APIManager.shared.startOnboardingWithHardcodedPreferences()
+
+                // Update local user state to mark onboarding as complete
+                if let currentUser = AuthManager.shared.user {
+                    AuthManager.shared.user = User(
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        name: currentUser.name,
+                        avatarURL: currentUser.avatarURL,
+                        createdAt: currentUser.createdAt,
+                        hasCompletedOnboarding: true  // Mark as completed
+                    )
+                }
+
+                // Navigate to premise selection
+                await MainActor.run {
+                    navigateToPremises = true
+                }
+            } catch {
+                await MainActor.run {
+                    skipErrorMessage = "Failed to set up testing: \(error.localizedDescription)"
+                    showSkipError = true
+                }
+            }
         }
     }
 }
