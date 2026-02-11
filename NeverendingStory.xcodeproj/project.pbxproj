@@ -17,6 +17,7 @@
 		5FBDD2CA9BC1F60C8793FF27 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F95DABAFB4DEFE47A9F2CD /* AuthManager.swift */; };
 		60FE83E01B4959709B91D422 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = C188CAFDD9DAE8521F761700 /* User.swift */; };
 		616D669164FCBBE32D7C7EFA /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = C09C936859098AB469AB3C37 /* AppConfig.swift */; };
+		7890ABCD1234EF567890FEDC /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F1E8A9B2C4567890FEDCBA /* Secrets.swift */; };
 		6757693A264BAFE82631582F /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D3C65D53A89A44386F2D70D /* LoadingView.swift */; };
 		6B46302ECDEB2E04041FF250 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25289B9307F5D81EC25FA5DC /* LoginView.swift */; };
 		8250B66A88A2369D855D72B8 /* PremiseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE889A414CE445BBEE5172B5 /* PremiseCard.swift */; };
@@ -58,6 +59,7 @@
 		B83348A93FA5B6907AF98A84 /* StoryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryCard.swift; sourceTree = "<group>"; };
 		BE889A414CE445BBEE5172B5 /* PremiseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseCard.swift; sourceTree = "<group>"; };
 		C09C936859098AB469AB3C37 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		D3F1E8A9B2C4567890FEDCBA /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		C188CAFDD9DAE8521F761700 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		F2F95DABAFB4DEFE47A9F2CD /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -181,6 +183,7 @@
 			isa = PBXGroup;
 			children = (
 				C09C936859098AB469AB3C37 /* AppConfig.swift */,
+				D3F1E8A9B2C4567890FEDCBA /* Secrets.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -271,6 +274,7 @@
 			files = (
 				054C6BF7556880C7EBCC15DC /* APIManager.swift in Sources */,
 				616D669164FCBBE32D7C7EFA /* AppConfig.swift in Sources */,
+				7890ABCD1234EF567890FEDC /* Secrets.swift in Sources */,
 				5FBDD2CA9BC1F60C8793FF27 /* AuthManager.swift in Sources */,
 				39B303E18D2D435877B7BD53 /* BookReaderView.swift in Sources */,
 				BEDB5463FA4FA692AE763C61 /* Chapter.swift in Sources */,
