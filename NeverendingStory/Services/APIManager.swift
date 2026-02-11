@@ -172,41 +172,6 @@ class APIManager: ObservableObject {
         return response.clientSecret
     }
 
-    // TEMPORARY: Bypassing voice interview for testing
-    func startOnboardingWithHardcodedPreferences() async throws {
-        struct OnboardingPreferencesRequest: Encodable {
-            let ageRange: String
-            let favoriteGenres: [String]
-            let themes: [String]
-            let readingLevel: String
-            let contentPreferences: String
-
-            enum CodingKeys: String, CodingKey {
-                case ageRange = "age_range"
-                case favoriteGenres = "favorite_genres"
-                case themes
-                case readingLevel = "reading_level"
-                case contentPreferences = "content_preferences"
-            }
-        }
-
-        let preferences = OnboardingPreferencesRequest(
-            ageRange: "18-35",
-            favoriteGenres: ["fantasy", "sci-fi", "mystery", "thriller"],
-            themes: ["complex characters", "moral ambiguity", "world-building", "plot twists"],
-            readingLevel: "adult",
-            contentPreferences: "mature themes, sophisticated narrative"
-        )
-
-        let body = try encoder.encode(preferences)
-        let _: EmptyResponse = try await makeRequest(
-            endpoint: "/onboarding/start",
-            method: "POST",
-            body: body,
-            requiresAuth: true
-        )
-    }
-
     func submitVoiceConversation(userId: String, conversation: String) async throws {
         struct ConversationRequest: Encodable {
             let userId: String
