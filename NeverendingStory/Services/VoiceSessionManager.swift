@@ -40,6 +40,10 @@ class VoiceSessionManager: ObservableObject {
     private var audioMixerNode: AVAudioMixerNode?
     private var pendingAudioData = Data()
 
+    // Audio buffering (prevents choppy/silent audio)
+    private var audioQueue: [Data] = []
+    private var isPlayingAudio = false
+
     // Target format for OpenAI: 24kHz, PCM16, mono
     private let targetSampleRate: Double = 24000
     private let targetChannels: AVAudioChannelCount = 1
@@ -181,6 +185,10 @@ class VoiceSessionManager: ObservableObject {
             throw NSError(domain: "VoiceSession", code: -2, userInfo: [NSLocalizedDescriptionKey: "No input node available"])
         }
 
+        // Enable voice processing on input node (prevents feedback/echo)
+        try audioEngine?.inputNode.setVoiceProcessingEnabled(true)
+        NSLog("✅ Voice processing enabled on INPUT node")
+
         let inputFormat = inputNode.outputFormat(forBus: 0)
 
         // Create target format: 24kHz, PCM16, mono
@@ -233,6 +241,14 @@ class VoiceSessionManager: ObservableObject {
         audioEngine.attach(playerNode)
         audioEngine.attach(mixerNode)
         NSLog("✅ Attached player and mixer nodes")
+
+        // Enable voice processing on output node (prevents feedback/echo)
+        do {
+            try audioEngine.outputNode.setVoiceProcessingEnabled(true)
+            NSLog("✅ Voice processing enabled on OUTPUT node")
+        } catch {
+            NSLog("⚠️ Failed to enable voice processing on output: \(error)")
+        }
 
         // Create format for playback (24kHz, PCM16, mono - same as OpenAI output)
         guard let outputFormat = AVAudioFormat(
@@ -336,6 +352,89 @@ class VoiceSessionManager: ObservableObject {
         NSLog("🎵 Scheduled audio chunk: \(frameCount) frames, \(audioData.count) bytes")
     }
 
+    private func queueAudioForPlayback(_ audioData: Data) {
+        audioQueue.append(audioData)
+
+        // Wait for 3 chunks to buffer before starting playback
+        if !isPlayingAudio && audioQueue.count >= 3 {
+            NSLog("🎵 Buffer ready (\(audioQueue.count) chunks), starting playback")
+            playNextAudioChunk()
+        } else {
+            NSLog("🎵 Buffering chunk (\(audioQueue.count)/3)")
+        }
+    }
+
+    private func playNextAudioChunk() {
+        guard !audioQueue.isEmpty else {
+            NSLog("🎵 Audio queue empty, stopping playback")
+            isPlayingAudio = false
+            return
+        }
+
+        isPlayingAudio = true
+
+        // Combine up to 5 chunks into one larger buffer for smooth playback
+        var combinedData = Data()
+        let chunksToPlay = min(audioQueue.count, 5)
+
+        NSLog("🎵 Combining \(chunksToPlay) chunks for playback")
+        for _ in 0..<chunksToPlay {
+            if !audioQueue.isEmpty {
+                combinedData.append(audioQueue.removeFirst())
+            }
+        }
+
+        guard let audioFormat = AVAudioFormat(
+            commonFormat: .pcmFormatInt16,
+            sampleRate: targetSampleRate,
+            channels: targetChannels,
+            interleaved: true
+        ) else {
+            NSLog("⚠️ Cannot create audio format")
+            playNextAudioChunk() // Try next
+            return
+        }
+
+        let frameCount = UInt32(combinedData.count / 2) // 16-bit samples
+        guard frameCount > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: frameCount) else {
+            NSLog("⚠️ Cannot create combined buffer")
+            playNextAudioChunk() // Try next
+            return
+        }
+
+        buffer.frameLength = frameCount
+
+        // Copy combined data to buffer
+        combinedData.withUnsafeBytes { bytes in
+            if let baseAddress = bytes.baseAddress,
+               let channelData = buffer.int16ChannelData {
+                memcpy(channelData[0], baseAddress, combinedData.count)
+            }
+        }
+
+        guard let playerNode = audioPlayerNode else {
+            NSLog("❌ audioPlayerNode is nil")
+            return
+        }
+
+        // Schedule combined buffer
+        playerNode.scheduleBuffer(buffer) { [weak self] in
+            DispatchQueue.main.async {
+                NSLog("🔊 Combined chunk played (\(frameCount) frames)")
+                self?.playNextAudioChunk() // Chain to next chunk
+            }
+        }
+
+        // Ensure player is running
+        if !playerNode.isPlaying {
+            playerNode.play()
+            NSLog("▶️  Started audio player")
+        }
+
+        NSLog("🎵 Scheduled combined buffer: \(frameCount) frames (\(combinedData.count) bytes)")
+    }
+
     private func clearPendingAudio() {
         pendingAudioData.removeAll()
     }
@@ -346,6 +445,8 @@ class VoiceSessionManager: ObservableObject {
         guard let playerNode = audioPlayerNode else { return }
 
         playerNode.stop()
+        audioQueue.removeAll()
+        isPlayingAudio = false
         clearPendingAudio()
 
         NSLog("🛑 Paused AI audio - user is speaking")
@@ -636,20 +737,15 @@ class VoiceSessionManager: ObservableObject {
             }
 
         case "response.audio.delta":
-            // Play audio chunk from AI
+            // Queue audio chunk from AI for buffered playback
             NSLog("🔊 response.audio.delta received")
 
-            // Ensure player is running (safety check)
-            if let playerNode = audioPlayerNode, !playerNode.isPlaying {
-                NSLog("⚠️ Player was stopped, restarting...")
-                playerNode.play()
-            }
-
-            if let delta = data["delta"] as? String {
-                NSLog("   Delta length: \(delta.count) characters")
-                playAudioChunk(base64Audio: delta)
+            if let delta = data["delta"] as? String,
+               let audioData = Data(base64Encoded: delta) {
+                NSLog("   Delta length: \(delta.count) characters → \(audioData.count) bytes")
+                queueAudioForPlayback(audioData)
             } else {
-                NSLog("⚠️ response.audio.delta has no delta field")
+                NSLog("⚠️ response.audio.delta has no delta field or decode failed")
             }
 
         case "response.audio.done":
