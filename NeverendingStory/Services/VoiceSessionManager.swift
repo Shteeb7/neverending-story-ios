@@ -246,12 +246,9 @@ class VoiceSessionManager: ObservableObject {
         // Setup audio playback
         setupAudioPlayback()
 
-        // Install tap with smaller buffer for lower latency
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
-            Task { @MainActor in
-                await self?.processAudioBuffer(buffer)
-            }
-        }
+        // DON'T install tap yet - must start engine first!
+        // Tap will be installed in startListening() after engine is running
+        NSLog("✅ Audio engine setup complete (tap will be installed after engine starts)")
     }
 
     private func setupAudioPlayback() {
@@ -306,38 +303,40 @@ class VoiceSessionManager: ObservableObject {
     }
 
     private func startListening() {
-        guard let audioEngine = audioEngine else {
-            NSLog("⚠️ startListening: audioEngine is nil")
+        guard let audioEngine = audioEngine,
+              let inputNode = inputNode else {
+            NSLog("⚠️ startListening: audioEngine or inputNode is nil")
             return
         }
 
         NSLog("🎤 Starting audio engine...")
         do {
-            // Prepare the engine first
+            // STEP 1: Start the engine FIRST (before installing tap!)
             audioEngine.prepare()
             NSLog("✅ Audio engine prepared")
 
             try audioEngine.start()
-            NSLog("✅ Audio engine start() called")
-
-            // Give it a moment to actually start
-            try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-
+            NSLog("✅ Audio engine started")
             NSLog("   Engine is running: \(audioEngine.isRunning)")
 
-            if !audioEngine.isRunning {
-                NSLog("⚠️ WARNING: Engine not running after start()! Trying again...")
-                try audioEngine.start()
-                try await Task.sleep(nanoseconds: 100_000_000)
-                NSLog("   Engine is running (retry): \(audioEngine.isRunning)")
+            guard audioEngine.isRunning else {
+                throw NSError(domain: "VoiceSession", code: -5,
+                            userInfo: [NSLocalizedDescriptionKey: "Audio engine failed to start"])
             }
 
-            // NOW start the player node (engine must be running first!)
-            if let playerNode = audioPlayerNode, audioEngine.isRunning {
+            // STEP 2: NOW install tap (engine is running!)
+            let inputFormat = inputNode.outputFormat(forBus: 0)
+            inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
+                Task { @MainActor in
+                    await self?.processAudioBuffer(buffer)
+                }
+            }
+            NSLog("✅ Microphone tap installed (after engine start)")
+
+            // STEP 3: Start the player node (engine confirmed running)
+            if let playerNode = audioPlayerNode {
                 playerNode.play()
-                NSLog("▶️  Audio player node started (engine confirmed running)")
-            } else {
-                NSLog("❌ Cannot start player - engine not running!")
+                NSLog("▶️  Audio player node started")
             }
 
             state = .listening
@@ -348,8 +347,11 @@ class VoiceSessionManager: ObservableObject {
     }
 
     private func stopListening() {
-        // Stop the engine but DON'T nil it out - we need it for audio playback!
-        inputNode?.removeTap(onBus: 0)
+        // Remove the tap if it was installed
+        if let inputNode = inputNode {
+            inputNode.removeTap(onBus: 0)
+            NSLog("✅ Removed microphone tap")
+        }
         // Note: We keep audioEngine alive for audio playback
         // It will be cleaned up when VoiceSessionManager is deallocated
     }
