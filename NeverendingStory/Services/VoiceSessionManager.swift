@@ -87,6 +87,7 @@ class VoiceSessionManager: ObservableObject {
         webSocketTask?.resume()
 
         NSLog("✅ WebSocket task created and resumed")
+        NSLog("   API Key present: \(AppConfig.openAIAPIKey.prefix(10))...")
 
         // Wait a moment for connection to establish
         try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
@@ -211,18 +212,27 @@ class VoiceSessionManager: ObservableObject {
     }
 
     private func setupAudioPlayback() {
-        guard let audioEngine = audioEngine else { return }
+        guard let audioEngine = audioEngine else {
+            NSLog("⚠️ setupAudioPlayback: audioEngine is nil")
+            return
+        }
+
+        NSLog("🔊 Setting up audio playback...")
 
         // Create player node for AI audio responses
         audioPlayerNode = AVAudioPlayerNode()
         audioMixerNode = AVAudioMixerNode()
 
         guard let playerNode = audioPlayerNode,
-              let mixerNode = audioMixerNode else { return }
+              let mixerNode = audioMixerNode else {
+            NSLog("⚠️ Failed to create player/mixer nodes")
+            return
+        }
 
         // Attach nodes to engine
         audioEngine.attach(playerNode)
         audioEngine.attach(mixerNode)
+        NSLog("✅ Attached player and mixer nodes")
 
         // Create format for playback (24kHz, PCM16, mono - same as OpenAI output)
         guard let outputFormat = AVAudioFormat(
@@ -230,23 +240,35 @@ class VoiceSessionManager: ObservableObject {
             sampleRate: targetSampleRate,
             channels: targetChannels,
             interleaved: true
-        ) else { return }
+        ) else {
+            NSLog("⚠️ Failed to create output audio format")
+            return
+        }
 
         // Connect player -> mixer -> output
         audioEngine.connect(playerNode, to: mixerNode, format: outputFormat)
         audioEngine.connect(mixerNode, to: audioEngine.mainMixerNode, format: outputFormat)
+        NSLog("✅ Connected audio nodes: player -> mixer -> output")
 
         // Start the player node
         playerNode.play()
+        NSLog("✅ Audio player node started")
     }
 
     private func startListening() {
-        guard let audioEngine = audioEngine else { return }
+        guard let audioEngine = audioEngine else {
+            NSLog("⚠️ startListening: audioEngine is nil")
+            return
+        }
 
+        NSLog("🎤 Starting audio engine...")
         do {
             try audioEngine.start()
+            NSLog("✅ Audio engine started successfully")
+            NSLog("   Engine is running: \(audioEngine.isRunning)")
             state = .listening
         } catch {
+            NSLog("❌ Failed to start audio engine: \(error)")
             state = .error("Failed to start audio engine: \(error.localizedDescription)")
         }
     }
@@ -261,11 +283,19 @@ class VoiceSessionManager: ObservableObject {
     // MARK: - Audio Playback
 
     private func playAudioChunk(base64Audio: String) {
-        guard let audioData = Data(base64Encoded: base64Audio),
-              let playerNode = audioPlayerNode else {
-            NSLog("⚠️ Cannot play audio - missing data or player node")
+        NSLog("🎵 playAudioChunk called with base64 length: \(base64Audio.count)")
+
+        guard let audioData = Data(base64Encoded: base64Audio) else {
+            NSLog("❌ Failed to decode base64 audio data")
             return
         }
+
+        guard let playerNode = audioPlayerNode else {
+            NSLog("❌ audioPlayerNode is nil - cannot play audio")
+            return
+        }
+
+        NSLog("   Decoded audio data: \(audioData.count) bytes")
 
         guard let audioFormat = AVAudioFormat(
             commonFormat: .pcmFormatInt16,
@@ -319,6 +349,18 @@ class VoiceSessionManager: ObservableObject {
         clearPendingAudio()
 
         NSLog("🛑 Paused AI audio - user is speaking")
+    }
+
+    private func resumeAudioPlayback() {
+        // Resume audio playback after user stops speaking
+        guard let playerNode = audioPlayerNode else {
+            NSLog("⚠️ Cannot resume audio - playerNode is nil")
+            return
+        }
+
+        // Restart the player node so it can play new audio
+        playerNode.play()
+        NSLog("▶️  Resumed audio playback - ready for AI response")
     }
 
     // MARK: - Audio Processing
@@ -383,6 +425,11 @@ class VoiceSessionManager: ObservableObject {
 
         // Send audio append event
         sendEvent(type: "input_audio_buffer.append", data: ["audio": base64Audio])
+
+        // Log occasionally (every ~100 chunks to avoid spam)
+        if frameLength % 100 == 0 {
+            NSLog("📤 Sending audio: \(dataSize) bytes, \(frameLength) frames")
+        }
     }
 
     // MARK: - Session Configuration
@@ -453,6 +500,7 @@ class VoiceSessionManager: ObservableObject {
     }
 
     private func triggerAIGreeting() {
+        NSLog("👋 Triggering AI greeting with response.create event...")
         // Trigger mystical opening - sets the magical tone immediately
         let event: [String: Any] = [
             "type": "response.create",
@@ -462,6 +510,7 @@ class VoiceSessionManager: ObservableObject {
             ]
         ]
         sendEvent(event)
+        NSLog("✅ response.create event sent (greeting request)")
     }
 
     // MARK: - WebSocket Communication
@@ -549,8 +598,15 @@ class VoiceSessionManager: ObservableObject {
         NSLog("📨 Received event: \(type)")
 
         switch type {
-        case "session.created", "session.updated":
-            NSLog("✅ Session configured successfully")
+        case "session.created":
+            NSLog("✅ session.created - WebSocket connected to OpenAI!")
+            if let session = data["session"] as? [String: Any],
+               let id = session["id"] as? String {
+                NSLog("   Session ID: \(id)")
+            }
+
+        case "session.updated":
+            NSLog("✅ session.updated - Configuration applied successfully")
 
         case "input_audio_buffer.speech_started":
             // User started speaking - pause AI audio to prevent self-interruption
@@ -558,6 +614,8 @@ class VoiceSessionManager: ObservableObject {
             state = .listening
 
         case "input_audio_buffer.speech_stopped":
+            NSLog("🎤 User stopped speaking - resuming audio playback")
+            resumeAudioPlayback()
             state = .processing
 
         case "conversation.item.created":
@@ -579,12 +637,24 @@ class VoiceSessionManager: ObservableObject {
 
         case "response.audio.delta":
             // Play audio chunk from AI
+            NSLog("🔊 response.audio.delta received")
+
+            // Ensure player is running (safety check)
+            if let playerNode = audioPlayerNode, !playerNode.isPlaying {
+                NSLog("⚠️ Player was stopped, restarting...")
+                playerNode.play()
+            }
+
             if let delta = data["delta"] as? String {
+                NSLog("   Delta length: \(delta.count) characters")
                 playAudioChunk(base64Audio: delta)
+            } else {
+                NSLog("⚠️ response.audio.delta has no delta field")
             }
 
         case "response.audio.done":
             // Audio response complete, clear any pending data
+            NSLog("✅ response.audio.done - AI finished speaking")
             clearPendingAudio()
 
         case "response.audio_transcript.delta":
@@ -592,8 +662,16 @@ class VoiceSessionManager: ObservableObject {
             break
 
         case "response.done":
+            NSLog("✅ response.done - conversation turn complete")
             state = .listening
             clearPendingAudio()
+
+        case "response.created":
+            NSLog("✅ response.created - AI is preparing to respond")
+            if let response = data["response"] as? [String: Any],
+               let id = response["id"] as? String {
+                NSLog("   Response ID: \(id)")
+            }
 
         case "error":
             if let error = data["error"] as? [String: Any],
@@ -603,7 +681,10 @@ class VoiceSessionManager: ObservableObject {
             }
 
         default:
-            // Handle other event types as needed
+            // Log unhandled event types for debugging
+            if !["response.output_item.added", "response.content_part.added", "response.audio_transcript.delta", "response.audio_transcript.done", "rate_limits.updated"].contains(type) {
+                NSLog("ℹ️ Unhandled event type: \(type)")
+            }
             break
         }
     }
