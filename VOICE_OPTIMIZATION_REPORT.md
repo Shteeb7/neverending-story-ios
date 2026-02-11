@@ -54,24 +54,29 @@ Based on comprehensive research of OpenAI Realtime API best practices and voice 
 
 ### Voice Selection
 
-**Source:** [OpenAI Text-to-Speech Documentation](https://platform.openai.com/docs/guides/text-to-speech)
+**IMPORTANT:** Realtime API has different voices than Text-to-Speech API!
 
-#### Classic Voices (Original 6)
+**Source:** [OpenAI Realtime API Documentation](https://platform.openai.com/docs/guides/realtime)
+
+#### Realtime API Voices
 - **Alloy:** Neutral
+- **Ash:** Expressive
+- **Ballad:** Expressive, warm
+- **Coral:** Expressive
 - **Echo:** Professional
-- **Fable:** Warm ⭐ (SELECTED)
-- **Nova:** Energetic
-- **Onyx:** Authoritative
-- **Shimmer:** Soft
+- **Sage:** Expressive
+- **Shimmer:** Soft, warm ⭐ (SELECTED)
+- **Verse:** Expressive
+- **Marin:** (New)
+- **Cedar:** (New)
 
-#### New Voices (2024+)
-- **Ash, Ballad, Coral, Sage, Verse:** More expressive, better emotion control
+**Note:** "Fable" is NOT available in Realtime API (only in Text-to-Speech)
 
-**Why Fable?**
-- Warm and expressive - perfect for a mystical guide
-- Proven reliability across all platforms
-- Conveys empathy and creativity
-- Not too soft (shimmer) or too energetic (nova)
+**Why Shimmer?**
+- Soft and warm - perfect for a mystical guide
+- Conveys empathy and approachability
+- Gentle tone fits the creative muse persona
+- Available in Realtime API (unlike "fable")
 
 ### AI Personality Best Practices
 
@@ -121,13 +126,14 @@ Based on comprehensive research of OpenAI Realtime API best practices and voice 
 - **0.6 threshold:** Reduces false triggers from background noise while remaining sensitive to user speech
 - **700ms silence:** Storytelling requires patient conversation, not rapid-fire exchanges. Allows natural pauses without interrupting user mid-thought.
 
-### 2. Voice Changed: Alloy → Fable
+### 2. Voice Changed: Alloy → Shimmer
 
 ```swift
-"voice": "fable"  // Warm, expressive - perfect for mystical guide
+"voice": "shimmer"  // Soft, warm - perfect for mystical guide (Realtime API)
 ```
 
-**Impact:** Voice now conveys warmth, creativity, and empathy rather than neutral roboticism.
+**Impact:** Voice now conveys warmth, gentleness, and empathy rather than neutral roboticism.
+**Note:** Originally tried "fable" but it's not available in Realtime API (only in Text-to-Speech API)
 
 ### 3. Mystical Storytelling Guide Persona
 
@@ -205,7 +211,7 @@ private func triggerAIGreeting() {
 
 | Setting | Before | After | Reason |
 |---------|--------|-------|--------|
-| **Voice** | alloy (neutral) | fable (warm) | Better for mystical storytelling guide |
+| **Voice** | alloy (neutral) | shimmer (warm) | Soft, warm voice for mystical guide (Realtime API) |
 | **Threshold** | 0.5 | 0.6 | Reduce false triggers from noise |
 | **Silence Duration** | 500ms | 700ms | Allow natural pauses in conversation |
 | **Temperature** | 0.8 | 0.85 | More creative responses |
@@ -228,7 +234,7 @@ private func triggerAIGreeting() {
 - ✨ Mystical, warm creative muse from first greeting
 - 🎙️ Patient conversation, allows natural pauses
 - 🛑 Gracefully pauses when user speaks
-- 💫 Warm, expressive voice (Fable)
+- 💫 Soft, warm voice (Shimmer - Realtime API)
 - 💬 One thoughtful question at a time, conversational flow
 
 ### Example Conversation Flow

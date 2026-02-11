@@ -473,7 +473,7 @@ class VoiceSessionManager: ObservableObject {
             "session": [
                 "modalities": ["text", "audio"],
                 "instructions": instructions,
-                "voice": "fable",  // Warm, expressive - perfect for mystical guide
+                "voice": "shimmer",  // Warm, soft voice - perfect for mystical guide (Realtime API voice)
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": [
