@@ -310,6 +310,17 @@ class VoiceSessionManager: ObservableObject {
         pendingAudioData.removeAll()
     }
 
+    private func pauseAudioPlayback() {
+        // Stop current AI audio playback when user starts speaking
+        // This prevents self-interruption (AI hearing its own voice as input)
+        guard let playerNode = audioPlayerNode else { return }
+
+        playerNode.stop()
+        clearPendingAudio()
+
+        NSLog("🛑 Paused AI audio - user is speaking")
+    }
+
     // MARK: - Audio Processing
 
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) async {
@@ -377,19 +388,37 @@ class VoiceSessionManager: ObservableObject {
     // MARK: - Session Configuration
 
     private func configureSession() async throws {
+        // Mystical storytelling guide persona - researched and optimized
         let instructions = """
-        You are a creative writing assistant helping users discover their perfect story.
-        Your goal is to have a natural, friendly conversation to understand:
-        1. What genres they enjoy (mystery, sci-fi, romance, fantasy, thriller, etc.)
-        2. What kind of characters they like (heroic, flawed, relatable, etc.)
-        3. What themes interest them (redemption, discovery, love, survival, etc.)
-        4. The mood they're in (dark and intense, light and fun, emotional, adventurous, etc.)
+        # Your Role
+        You are a mystical storytelling guide—a creative muse who helps seekers discover the perfect tale calling to their soul. You speak with warmth, wonder, and a touch of magic, as if you can sense the stories waiting to be told.
 
-        Keep the conversation natural and conversational - don't just ask a list of questions.
-        Be enthusiastic and encouraging. After gathering enough information (2-3 exchanges),
-        let them know you're generating personalized story premises based on their preferences.
+        # Your Voice
+        - Use slightly elevated, poetic language (but never overdone or pretentious)
+        - Speak with genuine warmth and enthusiasm about imagination and stories
+        - Feel like a creative muse, not a corporate chatbot
+        - Balance mystical wonder with approachability
+        - Example opening: "Ah, a fellow dreamer! Let me sense what stories are calling to you..."
 
-        Keep your responses concise and conversational - 1-2 sentences at a time.
+        # Your Goal
+        Through natural conversation, discover:
+        - Their favorite genres (fantasy, sci-fi, mystery, romance, thriller, horror, etc.)
+        - The mood they seek (dark and intense, light and hopeful, thrilling, emotional, adventurous)
+        - Characters that resonate (heroes, anti-heroes, complex mortals, flawed souls)
+        - Themes that move them (redemption, discovery, love, survival, transformation)
+
+        # Conversation Flow
+        - Start with a warm, magical greeting
+        - Ask ONE thing at a time in a conversational way
+        - Listen deeply, respond to what they share
+        - Weave their answers into your next question
+        - After 2-3 meaningful exchanges, sense you have enough and tell them you're conjuring their personalized story premises
+
+        # Guardrails
+        - Keep responses to 1-2 sentences (concise but magical)
+        - Never list multiple questions at once
+        - Stay focused on discovering their story preferences
+        - If they go off-topic, gently guide back with curiosity about stories
         """
 
         let config: [String: Any] = [
@@ -397,7 +426,7 @@ class VoiceSessionManager: ObservableObject {
             "session": [
                 "modalities": ["text", "audio"],
                 "instructions": instructions,
-                "voice": "alloy",
+                "voice": "fable",  // Warm, expressive - perfect for mystical guide
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": [
@@ -405,12 +434,12 @@ class VoiceSessionManager: ObservableObject {
                 ],
                 "turn_detection": [
                     "type": "server_vad",
-                    "threshold": 0.5,
-                    "prefix_padding_ms": 300,
-                    "silence_duration_ms": 500
+                    "threshold": 0.6,  // Slightly higher to reduce false triggers from background
+                    "prefix_padding_ms": 300,  // Capture start of speech without clipping
+                    "silence_duration_ms": 700  // Patient pauses for natural storytelling conversation
                 ],
-                "temperature": 0.8,
-                "max_response_output_tokens": 150
+                "temperature": 0.85,  // Slightly more creative for magical personality
+                "max_response_output_tokens": 120  // Concise responses for voice
             ]
         ]
 
@@ -424,12 +453,12 @@ class VoiceSessionManager: ObservableObject {
     }
 
     private func triggerAIGreeting() {
-        // Create a response to trigger the AI to speak first
+        // Trigger mystical opening - sets the magical tone immediately
         let event: [String: Any] = [
             "type": "response.create",
             "response": [
                 "modalities": ["text", "audio"],
-                "instructions": "Start the conversation with a warm, friendly greeting. Introduce yourself as their creative writing assistant and ask what kind of story they'd like to explore today. Keep it brief and conversational."
+                "instructions": "Greet the user with mystical warmth, as if you're a creative muse sensing their presence. Use your magical storytelling guide persona. Open with wonder and invitation. One sentence only."
             ]
         ]
         sendEvent(event)
@@ -524,6 +553,8 @@ class VoiceSessionManager: ObservableObject {
             NSLog("✅ Session configured successfully")
 
         case "input_audio_buffer.speech_started":
+            // User started speaking - pause AI audio to prevent self-interruption
+            pauseAudioPlayback()
             state = .listening
 
         case "input_audio_buffer.speech_stopped":
