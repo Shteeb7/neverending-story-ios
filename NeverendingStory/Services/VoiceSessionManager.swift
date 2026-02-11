@@ -136,7 +136,7 @@ class VoiceSessionManager: ObservableObject {
         NSLog("✅ State set to connected")
 
         // Start audio streaming
-        startListening()
+        await startListening()
         NSLog("🎤 Audio streaming started")
 
         // Send initial greeting to start conversation
@@ -302,7 +302,7 @@ class VoiceSessionManager: ObservableObject {
         NSLog("✅ Audio playback setup complete (will start player after engine starts)")
     }
 
-    private func startListening() {
+    private func startListening() async {
         guard let audioEngine = audioEngine,
               let inputNode = inputNode else {
             NSLog("⚠️ startListening: audioEngine or inputNode is nil")
