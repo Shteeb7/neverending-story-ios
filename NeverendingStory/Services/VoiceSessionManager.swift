@@ -301,9 +301,8 @@ class VoiceSessionManager: ObservableObject {
         audioEngine.connect(mixerNode, to: audioEngine.mainMixerNode, format: outputFormat)
         NSLog("✅ Connected audio nodes: player -> mixer -> output")
 
-        // Start the player node
-        playerNode.play()
-        NSLog("✅ Audio player node started")
+        // DON'T start player node yet - must wait for engine to start first
+        NSLog("✅ Audio playback setup complete (will start player after engine starts)")
     }
 
     private func startListening() {
@@ -317,6 +316,13 @@ class VoiceSessionManager: ObservableObject {
             try audioEngine.start()
             NSLog("✅ Audio engine started successfully")
             NSLog("   Engine is running: \(audioEngine.isRunning)")
+
+            // NOW start the player node (engine must be running first!)
+            if let playerNode = audioPlayerNode {
+                playerNode.play()
+                NSLog("▶️  Audio player node started (after engine)")
+            }
+
             state = .listening
         } catch {
             NSLog("❌ Failed to start audio engine: \(error)")
@@ -325,10 +331,10 @@ class VoiceSessionManager: ObservableObject {
     }
 
     private func stopListening() {
-        audioEngine?.stop()
+        // Stop the engine but DON'T nil it out - we need it for audio playback!
         inputNode?.removeTap(onBus: 0)
-        audioEngine = nil
-        inputNode = nil
+        // Note: We keep audioEngine alive for audio playback
+        // It will be cleaned up when VoiceSessionManager is deallocated
     }
 
     // MARK: - Audio Playback
