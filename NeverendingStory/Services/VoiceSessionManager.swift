@@ -571,56 +571,27 @@ class VoiceSessionManager: ObservableObject {
     // MARK: - Session Configuration
 
     private func configureSession() async throws {
-        // Mystical storytelling guide persona - researched and optimized
-        let instructions = """
-        # Your Role
-        You are a mystical storytelling guide—a creative muse who helps seekers discover the perfect tale calling to their soul. You speak with warmth, wonder, and a touch of magic, as if you can sense the stories waiting to be told.
+        // SIMPLIFIED for debugging - use minimal working config like test script
+        let instructions = "You are a helpful assistant. Greet the user warmly and ask what kind of story they would like to read."
 
-        # Your Voice
-        - Use slightly elevated, poetic language (but never overdone or pretentious)
-        - Speak with genuine warmth and enthusiasm about imagination and stories
-        - Feel like a creative muse, not a corporate chatbot
-        - Balance mystical wonder with approachability
-        - Example opening: "Ah, a fellow dreamer! Let me sense what stories are calling to you..."
-
-        # Your Goal
-        Through natural conversation, discover:
-        - Their favorite genres (fantasy, sci-fi, mystery, romance, thriller, horror, etc.)
-        - The mood they seek (dark and intense, light and hopeful, thrilling, emotional, adventurous)
-        - Characters that resonate (heroes, anti-heroes, complex mortals, flawed souls)
-        - Themes that move them (redemption, discovery, love, survival, transformation)
-
-        # Conversation Flow
-        - Start with a warm, magical greeting
-        - Ask ONE thing at a time in a conversational way
-        - Listen deeply, respond to what they share
-        - Weave their answers into your next question
-        - After 2-3 meaningful exchanges, sense you have enough and tell them you're conjuring their personalized story premises
-
-        # Guardrails
-        - Keep responses to 1-2 sentences (concise but magical)
-        - Never list multiple questions at once
-        - Stay focused on discovering their story preferences
-        - If they go off-topic, gently guide back with curiosity about stories
-        """
-
+        // SIMPLIFIED config matching working test script exactly
         let config: [String: Any] = [
             "type": "session.update",
             "session": [
                 "modalities": ["text", "audio"],
                 "instructions": instructions,
-                "voice": "shimmer",  // Warm, soft voice - perfect for mystical guide (Realtime API voice)
+                "voice": "alloy",  // Using same voice as working test script
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": [
                     "model": "whisper-1"
-                ] as [String: Any],  // Dictionary, not array!
+                ] as [String: Any],
                 "turn_detection": [
                     "type": "server_vad",
-                    "threshold": 0.6,  // Slightly higher to reduce false triggers from background
-                    "prefix_padding_ms": 300,  // Capture start of speech without clipping
-                    "silence_duration_ms": 700  // Patient pauses for natural storytelling conversation
-                ] as [String: Any]  // Dictionary, not array!
+                    "threshold": 0.5,
+                    "prefix_padding_ms": 300,
+                    "silence_duration_ms": 500
+                ] as [String: Any]
             ]
         ]
 
