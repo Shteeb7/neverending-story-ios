@@ -313,14 +313,31 @@ class VoiceSessionManager: ObservableObject {
 
         NSLog("🎤 Starting audio engine...")
         do {
+            // Prepare the engine first
+            audioEngine.prepare()
+            NSLog("✅ Audio engine prepared")
+
             try audioEngine.start()
-            NSLog("✅ Audio engine started successfully")
+            NSLog("✅ Audio engine start() called")
+
+            // Give it a moment to actually start
+            try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+
             NSLog("   Engine is running: \(audioEngine.isRunning)")
 
+            if !audioEngine.isRunning {
+                NSLog("⚠️ WARNING: Engine not running after start()! Trying again...")
+                try audioEngine.start()
+                try await Task.sleep(nanoseconds: 100_000_000)
+                NSLog("   Engine is running (retry): \(audioEngine.isRunning)")
+            }
+
             // NOW start the player node (engine must be running first!)
-            if let playerNode = audioPlayerNode {
+            if let playerNode = audioPlayerNode, audioEngine.isRunning {
                 playerNode.play()
-                NSLog("▶️  Audio player node started (after engine)")
+                NSLog("▶️  Audio player node started (engine confirmed running)")
+            } else {
+                NSLog("❌ Cannot start player - engine not running!")
             }
 
             state = .listening
@@ -459,6 +476,20 @@ class VoiceSessionManager: ObservableObject {
             return
         }
 
+        guard let audioEngine = audioEngine, audioEngine.isRunning else {
+            NSLog("❌ Audio engine is not running! Cannot play audio.")
+            NSLog("   Attempting to restart engine...")
+            // Try to restart the engine
+            do {
+                try audioEngine?.start()
+                NSLog("✅ Engine restarted successfully")
+            } catch {
+                NSLog("❌ Failed to restart engine: \(error)")
+            }
+            isPlayingAudio = false
+            return
+        }
+
         // Schedule combined buffer
         playerNode.scheduleBuffer(buffer) { [weak self] in
             DispatchQueue.main.async {
@@ -474,6 +505,7 @@ class VoiceSessionManager: ObservableObject {
         }
 
         NSLog("🎵 Scheduled combined buffer: \(frameCount) frames (\(combinedData.count) bytes)")
+        NSLog("   Engine running: \(audioEngine.isRunning), Player playing: \(playerNode.isPlaying)")
     }
 
     private func clearPendingAudio() {
