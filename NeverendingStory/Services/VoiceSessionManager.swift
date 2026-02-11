@@ -645,7 +645,12 @@ class VoiceSessionManager: ObservableObject {
 
         do {
             let data = try JSONSerialization.data(withJSONObject: event)
-            let message = URLSessionWebSocketTask.Message.data(data)
+            // Send as STRING not binary data - OpenAI expects text messages!
+            guard let jsonString = String(data: data, encoding: .utf8) else {
+                NSLog("❌ Failed to convert JSON data to string")
+                return
+            }
+            let message = URLSessionWebSocketTask.Message.string(jsonString)
 
             webSocketTask.send(message) { error in
                 if let error = error {
