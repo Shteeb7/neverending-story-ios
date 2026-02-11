@@ -614,15 +614,13 @@ class VoiceSessionManager: ObservableObject {
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": [
                     "model": "whisper-1"
-                ],
+                ] as [String: Any],  // Dictionary, not array!
                 "turn_detection": [
                     "type": "server_vad",
                     "threshold": 0.6,  // Slightly higher to reduce false triggers from background
                     "prefix_padding_ms": 300,  // Capture start of speech without clipping
                     "silence_duration_ms": 700  // Patient pauses for natural storytelling conversation
-                ],
-                "temperature": 0.85,  // Slightly more creative for magical personality
-                "max_response_output_tokens": 120  // Concise responses for voice
+                ] as [String: Any]  // Dictionary, not array!
             ]
         ]
 
