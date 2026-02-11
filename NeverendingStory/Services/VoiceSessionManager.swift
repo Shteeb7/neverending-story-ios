@@ -625,6 +625,18 @@ class VoiceSessionManager: ObservableObject {
         ]
 
         NSLog("📤 Sending session configuration...")
+
+        // Debug: Print the actual JSON being sent
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: config, options: .prettyPrinted)
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                NSLog("🔍 DEBUG: Actual JSON payload:")
+                NSLog("%@", jsonString)
+            }
+        } catch {
+            NSLog("⚠️ Failed to serialize config for debug: \(error)")
+        }
+
         sendEvent(config)
 
         // Wait a moment for configuration to be processed
