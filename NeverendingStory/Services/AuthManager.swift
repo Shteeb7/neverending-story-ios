@@ -73,7 +73,12 @@ class AuthManager: ObservableObject {
     private init() {
         self.supabase = SupabaseClient(
             supabaseURL: URL(string: AppConfig.supabaseURL)!,
-            supabaseKey: AppConfig.supabaseAnonKey
+            supabaseKey: AppConfig.supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
         )
 
         initTask = Task {
