@@ -11,6 +11,10 @@ import GoogleSignIn
 @main
 struct NeverendingStoryApp: App {
     init() {
+        // TEST: Verify logging works
+        NSLog("🚀🚀🚀 APP STARTED - NeverendingStory launching! 🚀🚀🚀")
+        print("🚀🚀🚀 APP STARTED (print) - NeverendingStory launching! 🚀🚀🚀")
+
         configureAppearance()
         configureGoogleSignIn()
     }
