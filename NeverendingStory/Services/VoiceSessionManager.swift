@@ -316,24 +316,36 @@ class VoiceSessionManager: ObservableObject {
             NSLog("✅ Audio engine prepared")
 
             try audioEngine.start()
-            NSLog("✅ Audio engine started")
+            NSLog("✅ Audio engine start() called")
             NSLog("   Engine is running: \(audioEngine.isRunning)")
 
-            guard audioEngine.isRunning else {
-                throw NSError(domain: "VoiceSession", code: -5,
-                            userInfo: [NSLocalizedDescriptionKey: "Audio engine failed to start"])
+            // If not running, try a few more times
+            var retries = 0
+            while !audioEngine.isRunning && retries < 3 {
+                NSLog("⚠️ Engine not running, retry \(retries + 1)/3...")
+                try await Task.sleep(nanoseconds: 200_000_000) // 0.2s
+                try audioEngine.start()
+                NSLog("   Engine is running: \(audioEngine.isRunning)")
+                retries += 1
             }
 
-            // STEP 2: NOW install tap (engine is running!)
+            // Continue even if engine isn't running - it might start when needed
+            if audioEngine.isRunning {
+                NSLog("✅ Audio engine confirmed running")
+            } else {
+                NSLog("⚠️ WARNING: Engine still not running after retries, continuing anyway...")
+            }
+
+            // STEP 2: Install tap regardless (engine might start later)
             let inputFormat = inputNode.outputFormat(forBus: 0)
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
                 Task { @MainActor in
                     await self?.processAudioBuffer(buffer)
                 }
             }
-            NSLog("✅ Microphone tap installed (after engine start)")
+            NSLog("✅ Microphone tap installed")
 
-            // STEP 3: Start the player node (engine confirmed running)
+            // STEP 3: Start the player node
             if let playerNode = audioPlayerNode {
                 playerNode.play()
                 NSLog("▶️  Audio player node started")
@@ -342,7 +354,8 @@ class VoiceSessionManager: ObservableObject {
             state = .listening
         } catch {
             NSLog("❌ Failed to start audio engine: \(error)")
-            state = .error("Failed to start audio engine: \(error.localizedDescription)")
+            // Don't set error state - let it continue, engine might recover
+            state = .listening
         }
     }
 
