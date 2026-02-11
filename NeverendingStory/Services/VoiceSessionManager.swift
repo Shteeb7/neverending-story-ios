@@ -35,6 +35,9 @@ class VoiceSessionManager: ObservableObject {
     private var isReceivingMessages = false
     private var sessionToken: String?
 
+    // Continuation to wait for session.created event
+    private var sessionCreatedContinuation: CheckedContinuation<Void, Never>?
+
     // Audio playback
     private var audioPlayerNode: AVAudioPlayerNode?
     private var audioMixerNode: AVAudioMixerNode?
@@ -93,14 +96,38 @@ class VoiceSessionManager: ObservableObject {
         NSLog("✅ WebSocket task created and resumed")
         NSLog("   API Key present: \(AppConfig.openAIAPIKey.prefix(10))...")
 
-        // Wait a moment for connection to establish
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-
-        // Start receiving messages
+        // Start receiving messages immediately
         startReceivingMessages()
         NSLog("✅ Started receiving messages")
 
-        // Configure the session
+        // Wait for session.created event from OpenAI before configuring (with timeout)
+        NSLog("⏳ Waiting for session.created event from OpenAI...")
+        do {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                // Task 1: Wait for session.created
+                group.addTask { @MainActor in
+                    await withCheckedContinuation { continuation in
+                        self.sessionCreatedContinuation = continuation
+                    }
+                }
+
+                // Task 2: Timeout after 5 seconds
+                group.addTask {
+                    try await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                    throw NSError(domain: "VoiceSession", code: -99, userInfo: [NSLocalizedDescriptionKey: "Timeout waiting for session.created"])
+                }
+
+                // Wait for first task to complete (either session.created or timeout)
+                try await group.next()
+                group.cancelAll()
+            }
+            NSLog("✅ session.created event received, now configuring...")
+        } catch {
+            NSLog("❌ Failed waiting for session.created: \(error)")
+            throw error
+        }
+
+        // Configure the session (AFTER session.created is received)
         NSLog("⚙️ Configuring session...")
         try await configureSession()
         NSLog("✅ Session configured")
@@ -119,6 +146,13 @@ class VoiceSessionManager: ObservableObject {
 
     func endSession() {
         stopListening()
+
+        // Clean up any pending continuation
+        if let continuation = sessionCreatedContinuation {
+            sessionCreatedContinuation = nil
+            continuation.resume()
+            NSLog("⚠️ Cleaned up pending session.created continuation")
+        }
 
         // Send session end event
         if webSocketTask != nil {
@@ -175,7 +209,8 @@ class VoiceSessionManager: ObservableObject {
     private func setupAudioEngine() throws {
         let audioSession = AVAudioSession.sharedInstance()
         // Use playAndRecord for two-way audio conversation
-        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+        // .voiceChat mode automatically handles Bluetooth routing
+        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker])
         try audioSession.setActive(true)
 
         audioEngine = AVAudioEngine()
@@ -704,6 +739,13 @@ class VoiceSessionManager: ObservableObject {
             if let session = data["session"] as? [String: Any],
                let id = session["id"] as? String {
                 NSLog("   Session ID: \(id)")
+            }
+
+            // Resume the continuation waiting for session creation
+            if let continuation = sessionCreatedContinuation {
+                sessionCreatedContinuation = nil
+                continuation.resume()
+                NSLog("▶️  Resumed session startup flow")
             }
 
         case "session.updated":
