@@ -12,8 +12,6 @@ struct PremiseCard: View {
     let isSelected: Bool
     let action: () -> Void
 
-    @State private var isPressed = false
-
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 20) {
@@ -58,28 +56,14 @@ struct PremiseCard: View {
             .background(
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color(.systemGray6))
-                    .shadow(color: Color.black.opacity(isPressed ? 0.15 : 0.1), radius: isPressed ? 8 : 12, y: isPressed ? 2 : 4)
+                    .shadow(color: Color.black.opacity(0.1), radius: 12, y: 4)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
                     .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
             )
-            .scaleEffect(isPressed ? 0.98 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = true
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = false
-                    }
-                }
-        )
     }
 }
 
