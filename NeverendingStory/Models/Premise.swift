@@ -12,6 +12,9 @@ struct Premise: Codable, Identifiable {
     let title: String
     let genre: String
     let description: String
+    let hook: String?
+    let themes: [String]?
+    let ageRange: String?
     let generatedAt: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -19,7 +22,31 @@ struct Premise: Codable, Identifiable {
         case title
         case genre
         case description
+        case hook
+        case themes
+        case ageRange = "age_range"
         case generatedAt = "generated_at"
+    }
+
+    // Custom decoder to generate ID if missing
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // Try to decode id, or generate one if missing
+        if let decodedId = try? container.decode(String.self, forKey: .id) {
+            id = decodedId
+        } else {
+            // Generate a UUID if id is missing
+            id = UUID().uuidString
+        }
+
+        title = try container.decode(String.self, forKey: .title)
+        genre = try container.decode(String.self, forKey: .genre)
+        description = try container.decode(String.self, forKey: .description)
+        hook = try? container.decode(String.self, forKey: .hook)
+        themes = try? container.decode([String].self, forKey: .themes)
+        ageRange = try? container.decode(String.self, forKey: .ageRange)
+        generatedAt = try? container.decode(Date.self, forKey: .generatedAt)
     }
 }
 
