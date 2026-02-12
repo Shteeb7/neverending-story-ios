@@ -316,7 +316,7 @@ struct OnboardingView: View {
             }
 
             do {
-                // STEP 1: Submit conversation transcript AND preferences to backend
+                // Submit conversation transcript AND preferences to backend
                 print("📤 Submitting voice conversation to backend...")
                 print("   Preferences: \(String(describing: storyPreferences))")
                 try await APIManager.shared.submitVoiceConversation(
@@ -326,25 +326,14 @@ struct OnboardingView: View {
                 )
                 print("✅ Conversation submitted and preferences saved")
 
-                // STEP 2: Generate premises based on saved preferences
-                print("📤 Calling backend to generate premises...")
-                print("   This may take 10-30 seconds for AI generation...")
-                try await APIManager.shared.generatePremises()
-                print("✅ Premises generation completed successfully!")
-
-                // Navigate to premise selection (which will show loading then cards)
+                // Navigate immediately to PremiseSelectionView with loading animation
+                // Premise generation will happen there (takes 10-15 seconds)
                 await MainActor.run {
                     navigateToPremises = true
                 }
             } catch {
-                print("❌❌❌ CRITICAL ERROR in proceedToLibrary:")
-                print("   Error: \(error)")
-                print("   Error type: \(type(of: error))")
-                print("   Localized: \(error.localizedDescription)")
-                if let apiError = error as? APIError {
-                    print("   API Error details: \(apiError.errorDescription ?? "unknown")")
-                }
-                // Still navigate - PremiseSelectionView will handle error
+                print("❌ Error submitting preferences: \(error)")
+                // Still navigate - PremiseSelectionView will handle generation
                 await MainActor.run {
                     navigateToPremises = true
                 }

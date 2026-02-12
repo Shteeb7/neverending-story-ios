@@ -136,18 +136,31 @@ struct PremiseSelectionView: View {
 
         Task {
             do {
-                // If we have voice conversation data, send it to the backend first
-                if let conversation = voiceConversation, !conversation.isEmpty {
-                    try await APIManager.shared.submitVoiceConversation(
-                        userId: userId,
-                        conversation: conversation
-                    )
+                print("🎬 Loading premises for user...")
+
+                // Try to fetch existing premises first
+                let existingPremises = try? await APIManager.shared.getPremises(userId: userId)
+
+                if let existing = existingPremises, !existing.isEmpty {
+                    // Premises already exist, use them
+                    print("✅ Found existing premises: \(existing.count)")
+                    premises = existing
+                } else {
+                    // No premises yet, generate them (takes 10-15 seconds)
+                    print("🤖 No premises found, generating new ones...")
+                    print("   This will take 10-15 seconds...")
+
+                    try await APIManager.shared.generatePremises()
+                    print("✅ Generation complete, fetching premises...")
+
+                    // Now fetch the generated premises
+                    premises = try await APIManager.shared.getPremises(userId: userId)
+                    print("✅ Loaded \(premises.count) premises")
                 }
 
-                // Load premises (backend will use conversation data if available)
-                premises = try await APIManager.shared.getPremises(userId: userId)
                 isLoading = false
             } catch {
+                print("❌ Failed to load premises: \(error)")
                 self.error = error.localizedDescription
                 isLoading = false
             }
