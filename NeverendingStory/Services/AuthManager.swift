@@ -106,89 +106,77 @@ class AuthManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        NSLog("🔍 Checking session...")
+
+        // Try to refresh the session first - this validates it's still good
+        let refreshedSession: Session
         do {
-            NSLog("🔍 Checking session...")
-
-            // Try to refresh the session first - this validates it's still good
-            let refreshedSession: Session
-            do {
-                refreshedSession = try await supabase.auth.refreshSession()
-                NSLog("✅ Session refreshed successfully")
-            } catch {
-                NSLog("❌ Session refresh failed, signing out...")
-                try? await supabase.auth.signOut()
-                self.user = nil
-                // isAuthenticated is now computed from user
-                return
-            }
-
-            // Use the REFRESHED session data
-            let supabaseUser = refreshedSession.user
-
-            NSLog("✅ Session found!")
-            NSLog("   User ID: %@", supabaseUser.id.uuidString)
-            NSLog("   Email: %@", supabaseUser.email ?? "no email")
-
-            // Convert Supabase user to our User model
-            // Extract metadata values from AnyJSON
-            let nameValue: String? = {
-                if case let .string(value) = supabaseUser.userMetadata["name"] {
-                    return value
-                }
-                return nil
-            }()
-
-            let avatarURLValue: String? = {
-                if case let .string(value) = supabaseUser.userMetadata["avatar_url"] {
-                    return value
-                }
-                return nil
-            }()
-
-            let hasCompletedOnboardingValue: Bool = {
-                if case let .bool(value) = supabaseUser.userMetadata["has_completed_onboarding"] {
-                    return value
-                }
-                return false  // Default to false for new users
-            }()
-
-            let userId = supabaseUser.id.uuidString
-
-            // CRITICAL: Ensure user ID is valid
-            guard !userId.isEmpty, userId.count > 10 else {
-                NSLog("❌ CRITICAL: Invalid user ID from checkSession: '%@'", userId)
-                try? await supabase.auth.signOut()
-                self.user = nil
-                // isAuthenticated is now computed from user
-                return
-            }
-
-            self.user = User(
-                id: userId,
-                email: supabaseUser.email,
-                name: nameValue,
-                avatarURL: avatarURLValue,
-                createdAt: supabaseUser.createdAt,
-                hasCompletedOnboarding: hasCompletedOnboardingValue
-            )
-            // Store the access token
-            self.accessToken = refreshedSession.accessToken
-            // isAuthenticated is now computed from user
-            NSLog("✅✅✅ USER SET IN CHECK SESSION")
-            NSLog("   ID: %@", userId)
-            NSLog("   Email: %@", supabaseUser.email ?? "nil")
-            NSLog("   Access token: %@...", String(refreshedSession.accessToken.prefix(20)))
+            refreshedSession = try await supabase.auth.refreshSession()
+            NSLog("✅ Session refreshed successfully")
         } catch {
-            print("❌ checkSession error: \(error)")
-            print("❌ Error details: \(error.localizedDescription)")
-
-            // If session is invalid, sign out to clear corrupted state
-            print("🧹 Clearing invalid session...")
+            NSLog("❌ Session refresh failed, signing out...")
             try? await supabase.auth.signOut()
-
             self.user = nil
             // isAuthenticated is now computed from user
+            return
         }
+
+        // Use the REFRESHED session data
+        let supabaseUser = refreshedSession.user
+
+        NSLog("✅ Session found!")
+        NSLog("   User ID: %@", supabaseUser.id.uuidString)
+        NSLog("   Email: %@", supabaseUser.email ?? "no email")
+
+        // Convert Supabase user to our User model
+        // Extract metadata values from AnyJSON
+        let nameValue: String? = {
+            if case let .string(value) = supabaseUser.userMetadata["name"] {
+                return value
+            }
+            return nil
+        }()
+
+        let avatarURLValue: String? = {
+            if case let .string(value) = supabaseUser.userMetadata["avatar_url"] {
+                return value
+            }
+            return nil
+        }()
+
+        let hasCompletedOnboardingValue: Bool = {
+            if case let .bool(value) = supabaseUser.userMetadata["has_completed_onboarding"] {
+                return value
+            }
+            return false  // Default to false for new users
+        }()
+
+        let userId = supabaseUser.id.uuidString
+
+        // CRITICAL: Ensure user ID is valid
+        guard !userId.isEmpty, userId.count > 10 else {
+            NSLog("❌ CRITICAL: Invalid user ID from checkSession: '%@'", userId)
+            try? await supabase.auth.signOut()
+            self.user = nil
+            // isAuthenticated is now computed from user
+            return
+        }
+
+        self.user = User(
+            id: userId,
+            email: supabaseUser.email,
+            name: nameValue,
+            avatarURL: avatarURLValue,
+            createdAt: supabaseUser.createdAt,
+            hasCompletedOnboarding: hasCompletedOnboardingValue
+        )
+        // Store the access token
+        self.accessToken = refreshedSession.accessToken
+        // isAuthenticated is now computed from user
+        NSLog("✅✅✅ USER SET IN CHECK SESSION")
+        NSLog("   ID: %@", userId)
+        NSLog("   Email: %@", supabaseUser.email ?? "nil")
+        NSLog("   Access token: %@...", String(refreshedSession.accessToken.prefix(20)))
     }
 
     // MARK: - OAuth Authentication
@@ -205,8 +193,8 @@ class AuthManager: ObservableObject {
         print("   Hashed: \(hashedNonce.prefix(10))...")
 
         // Step 2: Get root view controller for presenting Google Sign-In sheet
-        guard let windowScene = await UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootViewController = await windowScene.windows.first?.rootViewController else {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
             throw AuthError.noPresentingViewController
         }
 
@@ -404,14 +392,29 @@ class AuthManager: ObservableObject {
         // Store access token
         self.accessToken = session.accessToken
 
+        // Extract metadata using pattern matching (same approach as Google sign-in)
+        let nameValue: String? = {
+            if case let .string(value) = session.user.userMetadata["name"] {
+                return value
+            }
+            return nil
+        }()
+
+        let hasCompletedOnboardingValue: Bool = {
+            if case let .bool(value) = session.user.userMetadata["has_completed_onboarding"] {
+                return value
+            }
+            return false
+        }()
+
         // Create User object
         let user = User(
             id: session.user.id.uuidString,
             email: session.user.email ?? "",
-            name: session.user.userMetadata["name"] as? String,
+            name: nameValue,
             avatarURL: nil,
             createdAt: session.user.createdAt,
-            hasCompletedOnboarding: session.user.userMetadata["has_completed_onboarding"] as? Bool ?? false
+            hasCompletedOnboarding: hasCompletedOnboardingValue
         )
 
         self.user = user

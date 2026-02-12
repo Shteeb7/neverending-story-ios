@@ -361,7 +361,7 @@ struct DNATransferView: View {
             // Pause timer and haptics
             transferTimer?.invalidate()
             transferTimer = nil
-            hapticPlayer?.stop()
+            try? hapticPlayer?.stop(atTime: CHHapticTimeImmediate)
         }
     }
 
@@ -393,7 +393,7 @@ struct DNATransferView: View {
         }
 
         // Stop haptics
-        hapticPlayer?.stop()
+        try? hapticPlayer?.stop(atTime: CHHapticTimeImmediate)
 
         // Transition to sustaining
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -608,7 +608,7 @@ struct DNATransferView: View {
     private func cleanup() {
         transferTimer?.invalidate()
         premiseTimer?.invalidate()
-        hapticPlayer?.stop()
+        try? hapticPlayer?.stop(atTime: CHHapticTimeImmediate)
         hapticEngine?.stop()
     }
 }
