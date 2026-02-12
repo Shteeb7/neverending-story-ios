@@ -79,6 +79,7 @@ class VoiceSessionManager: ObservableObject {
         state = .connecting
 
         NSLog("🔐 VoiceSession: Starting DIRECT WebSocket connection (no backend session)")
+        NSLog("📊 Initial conversationText length: \(conversationText.count)")
 
         // Prevent screen from sleeping during voice session
         await MainActor.run {
@@ -962,6 +963,12 @@ class VoiceSessionManager: ObservableObject {
             NSLog("✅ Story preferences received!")
             NSLog("   \(args)")
 
+            // Debug: Check conversation state BEFORE triggering callback
+            NSLog("📊 Current conversationText state:")
+            NSLog("   Length: \(conversationText.count) characters")
+            NSLog("   Content preview: \(conversationText.prefix(200))")
+            NSLog("   Is empty: \(conversationText.isEmpty)")
+
             // Trigger callback with preferences
             onPreferencesGathered?(args)
 
@@ -1016,20 +1023,55 @@ class VoiceSessionManager: ObservableObject {
             state = .processing
 
         case "conversation.item.created":
-            if let item = data["item"] as? [String: Any],
-               let role = item["role"] as? String,
-               let content = item["content"] as? [[String: Any]] {
+            NSLog("📝 conversation.item.created - attempting to capture transcript")
 
-                for contentItem in content {
-                    if let transcript = contentItem["transcript"] as? String {
-                        if role == "user" {
-                            conversationText += "You: \(transcript)\n\n"
-                            transcription = transcript
-                        } else if role == "assistant" {
-                            conversationText += "AI: \(transcript)\n\n"
+            // Debug: Print the entire event data
+            if let jsonData = try? JSONSerialization.data(withJSONObject: data, options: .prettyPrinted),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                NSLog("🔍 Full event data:")
+                NSLog("%@", jsonString)
+            }
+
+            if let item = data["item"] as? [String: Any] {
+                NSLog("   ✅ item found")
+                NSLog("   item keys: \(item.keys)")
+
+                if let role = item["role"] as? String {
+                    NSLog("   ✅ role: \(role)")
+
+                    if let content = item["content"] as? [[String: Any]] {
+                        NSLog("   ✅ content array found with \(content.count) items")
+
+                        for (index, contentItem) in content.enumerated() {
+                            NSLog("   Content item #\(index) keys: \(contentItem.keys)")
+                            NSLog("   Content item #\(index) type: \(contentItem["type"] ?? "no type")")
+
+                            if let transcript = contentItem["transcript"] as? String {
+                                NSLog("   ✅ TRANSCRIPT FOUND: \"\(transcript)\"")
+
+                                if role == "user" {
+                                    conversationText += "You: \(transcript)\n\n"
+                                    transcription = transcript
+                                    NSLog("   📝 Added USER transcript to conversationText")
+                                    NSLog("   Total conversationText length now: \(conversationText.count)")
+                                } else if role == "assistant" {
+                                    conversationText += "AI: \(transcript)\n\n"
+                                    NSLog("   📝 Added ASSISTANT transcript to conversationText")
+                                    NSLog("   Total conversationText length now: \(conversationText.count)")
+                                }
+                            } else {
+                                NSLog("   ❌ No 'transcript' field in content item #\(index)")
+                            }
                         }
+                    } else {
+                        NSLog("   ❌ content is not an array or missing")
+                        NSLog("   content value: \(item["content"] ?? "nil")")
                     }
+                } else {
+                    NSLog("   ❌ role not found")
                 }
+            } else {
+                NSLog("   ❌ item not found in data")
             }
 
         case "response.audio.delta":
