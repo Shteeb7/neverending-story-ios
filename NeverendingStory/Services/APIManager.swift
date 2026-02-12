@@ -287,6 +287,26 @@ class APIManager: ObservableObject {
 
     // MARK: - Story Endpoints
 
+    func checkGenerationStatus(storyId: String) async throws -> GenerationStatus {
+        struct StatusResponse: Decodable {
+            let success: Bool
+            let storyId: String
+            let title: String
+            let status: String
+            let progress: GenerationProgress?
+            let chaptersAvailable: Int
+        }
+
+        let response: StatusResponse = try await makeRequest(endpoint: "/story/generation-status/\(storyId)")
+        return GenerationStatus(
+            storyId: response.storyId,
+            title: response.title,
+            status: response.status,
+            progress: response.progress,
+            chaptersAvailable: response.chaptersAvailable
+        )
+    }
+
     func getChapters(storyId: String) async throws -> [Chapter] {
         struct ChaptersResponse: Decodable {
             let chapters: [Chapter]
@@ -342,6 +362,15 @@ class APIManager: ObservableObject {
             body: body
         )
     }
+}
+
+// Generation status response
+struct GenerationStatus {
+    let storyId: String
+    let title: String
+    let status: String
+    let progress: GenerationProgress?
+    let chaptersAvailable: Int
 }
 
 // Empty response for endpoints that don't return data

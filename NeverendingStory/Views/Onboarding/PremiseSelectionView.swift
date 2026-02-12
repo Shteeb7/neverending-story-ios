@@ -204,8 +204,28 @@ struct PremiseSelectionView: View {
                     )
                 }
 
-                // Simulate book forming animation
-                try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                // Poll backend until chapters are ready (every 10 seconds)
+                print("📚 Waiting for chapters to generate...")
+                var chaptersReady = false
+                var pollCount = 0
+
+                while !chaptersReady {
+                    try await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+                    pollCount += 1
+
+                    print("📡 Polling for chapters (attempt \(pollCount))...")
+
+                    let status = try await APIManager.shared.checkGenerationStatus(storyId: story.id)
+                    print("   Chapters available: \(status.chaptersAvailable)")
+                    print("   Status: \(status.status)")
+
+                    if status.chaptersAvailable > 0 {
+                        chaptersReady = true
+                        print("✅ Chapters ready! Navigating to reader...")
+                    } else {
+                        print("⏳ Still generating... (elapsed: \(pollCount * 10)s)")
+                    }
+                }
 
                 isCreatingStory = false
                 navigateToReader = true
