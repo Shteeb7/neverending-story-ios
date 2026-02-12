@@ -79,6 +79,12 @@ class VoiceSessionManager: ObservableObject {
 
         NSLog("🔐 VoiceSession: Starting DIRECT WebSocket connection (no backend session)")
 
+        // Prevent screen from sleeping during voice session
+        await MainActor.run {
+            UIApplication.shared.isIdleTimerDisabled = true
+            NSLog("🔒 Screen lock DISABLED - phone will stay awake during conversation")
+        }
+
         // Setup audio engine first
         try setupAudioEngine()
 
@@ -151,6 +157,12 @@ class VoiceSessionManager: ObservableObject {
 
     func endSession() {
         stopListening()
+
+        // Re-enable screen lock now that conversation is over
+        DispatchQueue.main.async {
+            UIApplication.shared.isIdleTimerDisabled = false
+            NSLog("🔓 Screen lock RE-ENABLED - phone can sleep normally")
+        }
 
         // Clean up any pending continuation
         if let continuation = sessionCreatedContinuation {
