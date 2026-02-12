@@ -180,16 +180,51 @@ class APIManager: ObservableObject {
         return response.clientSecret
     }
 
-    func submitVoiceConversation(userId: String, conversation: String) async throws {
+    func submitVoiceConversation(userId: String, conversation: String, preferences: [String: Any]? = nil) async throws {
         struct ConversationRequest: Encodable {
             let transcript: String
             let sessionId: String
+            let preferences: [String: Any]?
+
+            enum CodingKeys: String, CodingKey {
+                case transcript, sessionId, preferences
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(transcript, forKey: .transcript)
+                try container.encode(sessionId, forKey: .sessionId)
+                if let preferences = preferences {
+                    try container.encode(AnyCodable(preferences), forKey: .preferences)
+                }
+            }
         }
+
+        // Helper to encode [String: Any]
+        struct AnyCodable: Encodable {
+            let value: Any
+            init(_ value: Any) { self.value = value }
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                if let dict = value as? [String: Any] {
+                    try container.encode(dict.mapValues { AnyCodable($0) })
+                } else if let array = value as? [Any] {
+                    try container.encode(array.map { AnyCodable($0) })
+                } else if let string = value as? String {
+                    try container.encode(string)
+                } else {
+                    try container.encode("\(value)")
+                }
+            }
+        }
+
+        NSLog("📤 Submitting conversation with preferences: \(String(describing: preferences))")
 
         // Submit to correct endpoint: /process-transcript
         let body = try encoder.encode(ConversationRequest(
             transcript: conversation,
-            sessionId: "direct_websocket"
+            sessionId: "direct_websocket",
+            preferences: preferences
         ))
         let _: EmptyResponse = try await makeRequest(
             endpoint: "/onboarding/process-transcript",

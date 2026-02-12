@@ -316,9 +316,14 @@ struct OnboardingView: View {
             }
 
             do {
-                // STEP 1: Submit conversation transcript to extract and save preferences
+                // STEP 1: Submit conversation transcript AND preferences to backend
                 print("📤 Submitting voice conversation to backend...")
-                try await APIManager.shared.submitVoiceConversation(userId: userId, conversation: conversation)
+                print("   Preferences: \(String(describing: storyPreferences))")
+                try await APIManager.shared.submitVoiceConversation(
+                    userId: userId,
+                    conversation: conversation,
+                    preferences: storyPreferences
+                )
                 print("✅ Conversation submitted and preferences saved")
 
                 // STEP 2: Generate premises based on saved preferences
