@@ -158,7 +158,19 @@ class VoiceSessionManager: ObservableObject {
     }
 
     func endSession() {
+        NSLog("🛑 Ending voice session - stopping all audio")
+
+        // Stop microphone input
         stopListening()
+
+        // IMPORTANT: Stop AI audio playback and clear buffer
+        pauseAudioPlayback()
+
+        // Stop the audio engine completely
+        if audioEngine.isRunning {
+            audioEngine.stop()
+            NSLog("🔇 Audio engine stopped")
+        }
 
         // Re-enable screen lock now that conversation is over
         DispatchQueue.main.async {
@@ -187,6 +199,8 @@ class VoiceSessionManager: ObservableObject {
 
         state = .conversationComplete
         isConversationComplete = true
+
+        NSLog("✅ Voice session ended - all audio stopped, WebSocket closed")
     }
 
     // MARK: - Backend Integration
