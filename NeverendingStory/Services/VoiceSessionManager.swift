@@ -167,8 +167,8 @@ class VoiceSessionManager: ObservableObject {
         pauseAudioPlayback()
 
         // Stop the audio engine completely
-        if audioEngine.isRunning {
-            audioEngine.stop()
+        if let engine = audioEngine, engine.isRunning {
+            engine.stop()
             NSLog("🔇 Audio engine stopped")
         }
 
