@@ -265,6 +265,7 @@ struct OnboardingView: View {
         print("📊 Debug - proceedToLibrary() called")
         print("   conversationData length: \(conversationData?.count ?? 0)")
         print("   voiceManager.conversationText length: \(voiceManager.conversationText.count)")
+        print("   storyPreferences: \(String(describing: storyPreferences))")
 
         // End voice session first
         voiceManager.endSession()
@@ -273,12 +274,44 @@ struct OnboardingView: View {
         Task {
             guard let userId = AuthManager.shared.user?.id else {
                 print("❌ No user ID available")
+                await MainActor.run {
+                    navigateToPremises = true // Navigate anyway to show error
+                }
                 return
             }
 
             guard let conversation = conversationData, !conversation.isEmpty else {
                 print("❌ No conversation data to submit")
                 print("   conversationData: \(String(describing: conversationData))")
+                print("🔧 WORKAROUND: Using voiceManager.conversationText instead")
+
+                // FALLBACK: Try using voiceManager.conversationText directly
+                let fallbackConversation = voiceManager.conversationText
+                if !fallbackConversation.isEmpty {
+                    print("✅ Found conversation text in voiceManager: \(fallbackConversation.count) chars")
+                    // Use fallback and continue
+                    do {
+                        try await APIManager.shared.submitVoiceConversation(userId: userId, conversation: fallbackConversation)
+                        print("✅ Conversation submitted (fallback)")
+
+                        try await APIManager.shared.generatePremises()
+                        print("✅ Premises generation started")
+
+                        await MainActor.run {
+                            navigateToPremises = true
+                        }
+                    } catch {
+                        print("❌ Fallback failed: \(error)")
+                        await MainActor.run {
+                            navigateToPremises = true // Navigate to show error
+                        }
+                    }
+                } else {
+                    print("❌ No conversation text anywhere!")
+                    await MainActor.run {
+                        navigateToPremises = true // Navigate anyway
+                    }
+                }
                 return
             }
 
