@@ -222,6 +222,10 @@ struct OnboardingView: View {
                         self.storyPreferences = preferences
                         self.conversationData = self.voiceManager.conversationText
 
+                        print("📊 Saved conversation data for later submission")
+                        print("   Length: \(self.conversationData?.count ?? 0) characters")
+                        print("   Preview: \(String(describing: self.conversationData?.prefix(100)))")
+
                         // Show "Enter Your Library" button
                         // DON'T call backend yet - wait for user to tap button
                         self.premisesReady = true
@@ -255,8 +259,12 @@ struct OnboardingView: View {
     }
 
     private func proceedToLibrary() {
-        // Save conversation data
-        conversationData = voiceManager.conversationText
+        // DON'T re-assign - conversationData was already saved in callback!
+        // conversationData was set on line 223 when preferences were gathered
+
+        print("📊 Debug - proceedToLibrary() called")
+        print("   conversationData length: \(conversationData?.count ?? 0)")
+        print("   voiceManager.conversationText length: \(voiceManager.conversationText.count)")
 
         // End voice session first
         voiceManager.endSession()
@@ -270,6 +278,7 @@ struct OnboardingView: View {
 
             guard let conversation = conversationData, !conversation.isEmpty else {
                 print("❌ No conversation data to submit")
+                print("   conversationData: \(String(describing: conversationData))")
                 return
             }
 

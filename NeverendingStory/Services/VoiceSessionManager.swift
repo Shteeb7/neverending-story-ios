@@ -168,12 +168,8 @@ class VoiceSessionManager: ObservableObject {
         webSocketTask = nil
         isReceivingMessages = false
 
-        // Submit conversation to backend if we have content
-        if !conversationText.isEmpty {
-            Task {
-                await submitConversationToBackend()
-            }
-        }
+        // NOTE: Conversation submission is now handled manually in OnboardingView.proceedToLibrary()
+        // DON'T auto-submit here anymore
 
         state = .conversationComplete
         isConversationComplete = true
