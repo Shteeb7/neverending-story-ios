@@ -26,17 +26,37 @@ class ReadingStateManager: ObservableObject {
     // MARK: - Story Management
 
     func loadStory(_ story: Story) async throws {
+        NSLog("📖 ReadingStateManager: loadStory() called for story: %@", story.title)
+        NSLog("   Story ID: %@", story.id)
+
         self.currentStory = story
         self.currentChapterIndex = 0 // Start at beginning
         self.scrollPosition = 0
 
         // Fetch chapters (may be empty if still generating)
+        NSLog("📡 ReadingStateManager: Fetching chapters from API...")
         do {
             self.chapters = try await APIManager.shared.getChapters(storyId: story.id)
+            NSLog("✅ ReadingStateManager: Fetched %d chapters", self.chapters.count)
+            if self.chapters.isEmpty {
+                NSLog("⚠️ ReadingStateManager: Chapters array is EMPTY - story still generating or no chapters exist")
+            } else {
+                NSLog("📚 ReadingStateManager: Chapter titles:")
+                for (index, chapter) in self.chapters.enumerated() {
+                    NSLog("   %d: %@", index + 1, chapter.title)
+                }
+            }
         } catch {
-            print("⚠️ No chapters available yet (story still generating)")
+            NSLog("❌ ReadingStateManager: Error fetching chapters: %@", error.localizedDescription)
+            NSLog("   Error type: %@", String(describing: type(of: error)))
+            NSLog("   Setting chapters to empty array")
             self.chapters = []
         }
+
+        NSLog("📊 ReadingStateManager: Final state after loadStory:")
+        NSLog("   currentChapter: %@", currentChapter?.title ?? "NIL")
+        NSLog("   chapters.count: %d", chapters.count)
+        NSLog("   currentChapterIndex: %d", currentChapterIndex)
 
         persistState()
     }
