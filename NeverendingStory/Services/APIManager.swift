@@ -91,6 +91,7 @@ class APIManager: ObservableObject {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             request.setValue(userIdToUse, forHTTPHeaderField: "X-User-ID")
             NSLog("✅ Added Authorization header with Supabase access token")
+            NSLog("🔑 DEBUG - Auth Token: %@", accessToken)  // DEBUG: Print token for testing
         }
 
         if let body = body {
