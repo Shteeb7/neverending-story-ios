@@ -904,10 +904,18 @@ class VoiceSessionManager: ObservableObject {
                     self.receiveMessage() // Continue receiving
 
                 case .failure(let error):
+                    let errorCode = (error as NSError).code
                     NSLog("❌ WebSocket receive error: \(error)")
-                    NSLog("   Error code: \(error._code)")
+                    NSLog("   Error code: \(errorCode)")
                     NSLog("   Description: \(error.localizedDescription)")
-                    self.state = .error("Connection error: \(error.localizedDescription)")
+
+                    // Error 57 (ENOTCONN) is expected when closing the socket - don't treat as error
+                    if errorCode == 57 {
+                        NSLog("   ℹ️  Socket closed normally (expected when ending session)")
+                    } else {
+                        // Only set error state for actual connection problems
+                        self.state = .error("Connection error: \(error.localizedDescription)")
+                    }
                     self.isReceivingMessages = false
                 }
             }
