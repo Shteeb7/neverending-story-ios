@@ -318,14 +318,9 @@ struct CompactStoryCard: View {
                 Spacer()
 
                 // Progress
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Chapter \(story.currentChapter)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    ProgressView(value: story.progress)
-                        .tint(.accentColor)
-                }
+                Text(story.progressText)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             .padding(16)
             .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
