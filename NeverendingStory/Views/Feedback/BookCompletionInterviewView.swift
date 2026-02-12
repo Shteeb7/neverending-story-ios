@@ -116,7 +116,7 @@ struct BookCompletionInterviewView: View {
             }
 
             // Description
-            Text("Cassandra wants to hear what you thought about the story! This quick voice chat helps her understand what you loved so she can conjure the perfect Book 2.")
+            Text("Cassandra wants to hear what you thought about the story! This quick voice chat lets her sense what stirred your soul so she can conjure the perfect Book 2.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)

@@ -29,11 +29,11 @@ struct FeedbackModalView: View {
                         .font(.system(size: 50))
                         .foregroundColor(.accentColor)
 
-                    Text("Quick feedback?")
+                    Text("A moment of reflection")
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("Help us understand what's working and what's not")
+                    Text("Share what stirred you — Cassandra is listening")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
