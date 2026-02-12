@@ -15,8 +15,8 @@ struct StoryCard: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 16) {
-                // Genre badge
-                Text(story.genre.uppercased())
+                // Status badge
+                Text(story.status.uppercased())
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(.secondary)
@@ -34,14 +34,9 @@ struct StoryCard: View {
                     .multilineTextAlignment(.leading)
 
                 // Progress
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(story.progressText)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    ProgressView(value: story.progress)
-                        .tint(.accentColor)
-                }
+                Text(story.progressText)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
 
                 if isActive {
                     // Continue reading button
@@ -74,13 +69,17 @@ struct StoryCard: View {
                 id: "1",
                 userId: "user1",
                 title: "The Last Archive",
-                genre: "Mystery",
-                premise: "A mysterious archive holds secrets...",
-                currentChapter: 3,
-                totalChapters: 15,
-                createdAt: Date(),
-                updatedAt: Date(),
-                isActive: true
+                status: "active",
+                premiseId: "premise1",
+                bibleId: "bible1",
+                generationProgress: GenerationProgress(
+                    bibleComplete: true,
+                    arcComplete: true,
+                    chaptersGenerated: 3,
+                    currentStep: "chapters_ready",
+                    lastUpdated: Date().ISO8601Format()
+                ),
+                createdAt: Date()
             ),
             isActive: true,
             action: {}
@@ -92,13 +91,17 @@ struct StoryCard: View {
                 id: "2",
                 userId: "user1",
                 title: "Echoes of Tomorrow",
-                genre: "Sci-Fi",
-                premise: "Time travel paradox...",
-                currentChapter: 8,
-                totalChapters: 12,
-                createdAt: Date(),
-                updatedAt: Date(),
-                isActive: false
+                status: "generating",
+                premiseId: "premise2",
+                bibleId: "bible2",
+                generationProgress: GenerationProgress(
+                    bibleComplete: true,
+                    arcComplete: false,
+                    chaptersGenerated: 0,
+                    currentStep: "generating_chapters",
+                    lastUpdated: Date().ISO8601Format()
+                ),
+                createdAt: Date()
             ),
             isActive: false,
             action: {}
