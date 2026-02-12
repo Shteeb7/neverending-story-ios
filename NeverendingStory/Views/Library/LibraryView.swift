@@ -17,11 +17,11 @@ struct LibraryView: View {
     @State private var showFeedback = false
 
     var activeStory: Story? {
-        stories.first { $0.isActive }
+        stories.first { $0.status == "active" }
     }
 
     var pastStories: [Story] {
-        stories.filter { !$0.isActive }
+        stories.filter { $0.status != "active" }
     }
 
     var body: some View {
@@ -302,8 +302,8 @@ struct CompactStoryCard: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 12) {
-                // Genre badge
-                Text(story.genre.uppercased())
+                // Status badge
+                Text(story.status.uppercased())
                     .font(.caption2)
                     .fontWeight(.semibold)
                     .foregroundColor(.secondary)
