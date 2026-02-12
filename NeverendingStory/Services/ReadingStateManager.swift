@@ -27,11 +27,16 @@ class ReadingStateManager: ObservableObject {
 
     func loadStory(_ story: Story) async throws {
         self.currentStory = story
-        self.currentChapterIndex = story.currentChapter - 1 // Convert to 0-based index
+        self.currentChapterIndex = 0 // Start at beginning
         self.scrollPosition = 0
 
-        // Fetch chapters
-        self.chapters = try await APIManager.shared.getChapters(storyId: story.id)
+        // Fetch chapters (may be empty if still generating)
+        do {
+            self.chapters = try await APIManager.shared.getChapters(storyId: story.id)
+        } catch {
+            print("⚠️ No chapters available yet (story still generating)")
+            self.chapters = []
+        }
 
         persistState()
     }

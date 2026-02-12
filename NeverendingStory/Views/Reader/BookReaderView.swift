@@ -252,12 +252,10 @@ enum ReaderColorScheme: Int {
         id: "1",
         userId: "user1",
         title: "The Last Archive",
-        genre: "Mystery",
-        premise: "A mysterious archive...",
-        currentChapter: 1,
-        totalChapters: 15,
-        createdAt: Date(),
-        updatedAt: Date(),
-        isActive: true
+        status: "active",
+        premiseId: "premise1",
+        bibleId: "bible1",
+        generationProgress: nil,
+        createdAt: Date()
     ))
 }
