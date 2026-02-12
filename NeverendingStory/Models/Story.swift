@@ -11,33 +11,47 @@ struct Story: Codable, Identifiable, Hashable {
     let id: String
     let userId: String
     let title: String
-    let genre: String
-    let premise: String
-    let currentChapter: Int
-    let totalChapters: Int
+    let status: String
+    let premiseId: String?
+    let bibleId: String?
+    let generationProgress: GenerationProgress?
     let createdAt: Date
-    let updatedAt: Date
-    let isActive: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
         case title
-        case genre
-        case premise
-        case currentChapter = "current_chapter"
-        case totalChapters = "total_chapters"
+        case status
+        case premiseId = "premise_id"
+        case bibleId = "bible_id"
+        case generationProgress = "generation_progress"
         case createdAt = "created_at"
-        case updatedAt = "updated_at"
-        case isActive = "is_active"
     }
 
-    var progress: Double {
-        guard totalChapters > 0 else { return 0 }
-        return Double(currentChapter) / Double(totalChapters)
+    var isGenerating: Bool {
+        status == "generating" || status == "active"
     }
 
     var progressText: String {
-        return "Chapter \(currentChapter) of \(totalChapters)"
+        if let progress = generationProgress {
+            return "Generating: \(progress.chaptersGenerated) chapters"
+        }
+        return "Preparing your story..."
+    }
+}
+
+struct GenerationProgress: Codable, Hashable {
+    let bibleComplete: Bool
+    let arcComplete: Bool
+    let chaptersGenerated: Int
+    let currentStep: String
+    let lastUpdated: String
+
+    enum CodingKeys: String, CodingKey {
+        case bibleComplete = "bible_complete"
+        case arcComplete = "arc_complete"
+        case chaptersGenerated = "chapters_generated"
+        case currentStep = "current_step"
+        case lastUpdated = "last_updated"
     }
 }
