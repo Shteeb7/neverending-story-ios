@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct BookFormationView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var isAnimating = false
     @State private var bookScale: CGFloat = 0.8
     @State private var bookGlow: Double = 0.3
@@ -117,6 +118,22 @@ struct BookFormationView: View {
                         .opacity(bookGlow + 0.3)
                 }
                 .padding(.horizontal, 40)
+
+                // Return to Library button
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "books.vertical")
+                        Text("Return to Library")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.accentColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal, 40)
+                .padding(.top, 32)
             }
         }
         .onAppear {

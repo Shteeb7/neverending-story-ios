@@ -64,4 +64,12 @@ struct Premise: Codable, Identifiable {
 
 struct PremisesResponse: Codable {
     let premises: [Premise]
+    let allPremisesUsed: Bool?
+    let needsNewInterview: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case premises
+        case allPremisesUsed = "allPremisesUsed"
+        case needsNewInterview = "needsNewInterview"
+    }
 }

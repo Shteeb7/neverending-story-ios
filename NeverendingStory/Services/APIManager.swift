@@ -259,12 +259,20 @@ class APIManager: ObservableObject {
         }
     }
 
-    func getPremises(userId: String) async throws -> [Premise] {
+    struct PremisesResult {
+        let premises: [Premise]
+        let needsNewInterview: Bool
+    }
+
+    func getPremises(userId: String) async throws -> PremisesResult {
         let response: PremisesResponse = try await makeRequest(
             endpoint: "/onboarding/premises/\(userId)",
             requiresAuth: true
         )
-        return response.premises
+        return PremisesResult(
+            premises: response.premises,
+            needsNewInterview: response.needsNewInterview ?? false
+        )
     }
 
     func selectPremise(premiseId: String, userId: String) async throws -> Story {
@@ -362,6 +370,156 @@ class APIManager: ObservableObject {
             body: body
         )
     }
+
+    // MARK: - Checkpoint Feedback
+
+    func submitCheckpointFeedback(
+        storyId: String,
+        checkpoint: String,
+        response: String,
+        followUpAction: String? = nil,
+        voiceTranscript: String? = nil,
+        voiceSessionId: String? = nil
+    ) async throws -> CheckpointFeedbackResponse {
+        struct CheckpointFeedbackRequest: Encodable {
+            let storyId: String
+            let checkpoint: String
+            let response: String
+            let followUpAction: String?
+            let voiceTranscript: String?
+            let voiceSessionId: String?
+        }
+
+        let body = try encoder.encode(CheckpointFeedbackRequest(
+            storyId: storyId,
+            checkpoint: checkpoint,
+            response: response,
+            followUpAction: followUpAction,
+            voiceTranscript: voiceTranscript,
+            voiceSessionId: voiceSessionId
+        ))
+
+        return try await makeRequest(
+            endpoint: "/feedback/checkpoint",
+            method: "POST",
+            body: body
+        )
+    }
+
+    func getFeedbackStatus(storyId: String, checkpoint: String) async throws -> FeedbackStatusResponse {
+        return try await makeRequest(
+            endpoint: "/feedback/status/\(storyId)/\(checkpoint)"
+        )
+    }
+
+    // MARK: - Completion Interview
+
+    func submitCompletionInterview(
+        storyId: String,
+        transcript: String,
+        sessionId: String? = nil,
+        preferences: [String: Any]? = nil
+    ) async throws -> CompletionInterviewResponse {
+        struct CompletionInterviewRequest: Encodable {
+            let storyId: String
+            let transcript: String
+            let sessionId: String?
+            let preferences: [String: Any]?
+
+            enum CodingKeys: String, CodingKey {
+                case storyId, transcript, sessionId, preferences
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(storyId, forKey: .storyId)
+                try container.encode(transcript, forKey: .transcript)
+                try container.encodeIfPresent(sessionId, forKey: .sessionId)
+                if let preferences = preferences {
+                    try container.encode(AnyCodable(preferences), forKey: .preferences)
+                }
+            }
+        }
+
+        // Helper to encode [String: Any]
+        struct AnyCodable: Encodable {
+            let value: Any
+            init(_ value: Any) { self.value = value }
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                if let dict = value as? [String: Any] {
+                    try container.encode(dict.mapValues { AnyCodable($0) })
+                } else if let array = value as? [Any] {
+                    try container.encode(array.map { AnyCodable($0) })
+                } else if let string = value as? String {
+                    try container.encode(string)
+                } else {
+                    try container.encode("\(value)")
+                }
+            }
+        }
+
+        let body = try encoder.encode(CompletionInterviewRequest(
+            storyId: storyId,
+            transcript: transcript,
+            sessionId: sessionId,
+            preferences: preferences
+        ))
+
+        return try await makeRequest(
+            endpoint: "/feedback/completion-interview",
+            method: "POST",
+            body: body
+        )
+    }
+
+    // MARK: - Sequel Generation
+
+    func generateSequel(
+        storyId: String,
+        userPreferences: [String: Any]? = nil
+    ) async throws -> SequelGenerationResponse {
+        struct SequelRequest: Encodable {
+            let userPreferences: [String: Any]?
+
+            enum CodingKeys: String, CodingKey {
+                case userPreferences
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                if let preferences = userPreferences {
+                    try container.encode(AnyCodable(preferences), forKey: .userPreferences)
+                }
+            }
+        }
+
+        // Helper to encode [String: Any]
+        struct AnyCodable: Encodable {
+            let value: Any
+            init(_ value: Any) { self.value = value }
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                if let dict = value as? [String: Any] {
+                    try container.encode(dict.mapValues { AnyCodable($0) })
+                } else if let array = value as? [Any] {
+                    try container.encode(array.map { AnyCodable($0) })
+                } else if let string = value as? String {
+                    try container.encode(string)
+                } else {
+                    try container.encode("\(value)")
+                }
+            }
+        }
+
+        let body = try encoder.encode(SequelRequest(userPreferences: userPreferences))
+
+        return try await makeRequest(
+            endpoint: "/story/\(storyId)/generate-sequel",
+            method: "POST",
+            body: body
+        )
+    }
 }
 
 // Generation status response
@@ -375,3 +533,118 @@ struct GenerationStatus {
 
 // Empty response for endpoints that don't return data
 struct EmptyResponse: Decodable {}
+
+// MARK: - Feedback Response Types
+
+struct CheckpointFeedbackResponse: Decodable {
+    let success: Bool
+    let feedback: FeedbackData
+    let generatingChapters: [Int]
+
+    struct FeedbackData: Decodable {
+        let id: String
+        let userId: String
+        let storyId: String
+        let checkpoint: String
+        let response: String
+        let followUpAction: String?
+        let voiceTranscript: String?
+        let voiceSessionId: String?
+        let createdAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case id, checkpoint, response
+            case userId = "user_id"
+            case storyId = "story_id"
+            case followUpAction = "follow_up_action"
+            case voiceTranscript = "voice_transcript"
+            case voiceSessionId = "voice_session_id"
+            case createdAt = "created_at"
+        }
+    }
+}
+
+struct FeedbackStatusResponse: Decodable {
+    let success: Bool
+    let hasFeedback: Bool
+    let feedback: CheckpointFeedbackResponse.FeedbackData?
+}
+
+struct CompletionInterviewResponse: Decodable {
+    let success: Bool
+    let interview: InterviewData
+
+    struct InterviewData: Decodable {
+        let id: String
+        let userId: String
+        let storyId: String
+        let seriesId: String?
+        let bookNumber: Int
+        let transcript: String
+        let sessionId: String?
+        let preferencesExtracted: [String: AnyCodableValue]?
+        let createdAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case id, transcript
+            case userId = "user_id"
+            case storyId = "story_id"
+            case seriesId = "series_id"
+            case bookNumber = "book_number"
+            case sessionId = "session_id"
+            case preferencesExtracted = "preferences_extracted"
+            case createdAt = "created_at"
+        }
+    }
+}
+
+struct SequelGenerationResponse: Decodable {
+    let success: Bool
+    let book1: BookInfo
+    let book2: BookInfo
+
+    struct BookInfo: Decodable {
+        let id: String
+        let title: String
+        let seriesId: String?
+        let bookNumber: Int
+
+        enum CodingKeys: String, CodingKey {
+            case id, title
+            case seriesId = "series_id"
+            case bookNumber = "book_number"
+        }
+    }
+}
+
+// Helper for decoding any JSON value
+enum AnyCodableValue: Decodable {
+    case string(String)
+    case int(Int)
+    case double(Double)
+    case bool(Bool)
+    case array([AnyCodableValue])
+    case dictionary([String: AnyCodableValue])
+    case null
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let string = try? container.decode(String.self) {
+            self = .string(string)
+        } else if let int = try? container.decode(Int.self) {
+            self = .int(int)
+        } else if let double = try? container.decode(Double.self) {
+            self = .double(double)
+        } else if let bool = try? container.decode(Bool.self) {
+            self = .bool(bool)
+        } else if let array = try? container.decode([AnyCodableValue].self) {
+            self = .array(array)
+        } else if let dict = try? container.decode([String: AnyCodableValue].self) {
+            self = .dictionary(dict)
+        } else if container.decodeNil() {
+            self = .null
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode value")
+        }
+    }
+}

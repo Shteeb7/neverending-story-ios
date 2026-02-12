@@ -15,6 +15,7 @@ struct LibraryView: View {
     @State private var showOnboarding = false
     @State private var selectedStory: Story?
     @State private var showFeedback = false
+    @State private var pollTimer: Timer?
 
     var activeStory: Story? {
         stories.first { $0.status == "active" }
@@ -22,6 +23,16 @@ struct LibraryView: View {
 
     var pastStories: [Story] {
         stories.filter { $0.status != "active" }
+    }
+
+    // Check if any stories are currently generating
+    var hasGeneratingStories: Bool {
+        stories.contains { story in
+            if let progress = story.generationProgress {
+                return progress.chaptersGenerated < 3 // Still generating if less than 3 chapters
+            }
+            return false
+        }
     }
 
     var body: some View {
@@ -127,7 +138,13 @@ struct LibraryView: View {
                 })
             }
             .onAppear {
+                NSLog("📚 LibraryView appeared - loading library")
                 loadLibrary()
+                startPollingIfNeeded()
+            }
+            .onDisappear {
+                NSLog("📚 LibraryView disappeared - stopping polling")
+                stopPolling()
             }
         }
     }
@@ -176,6 +193,62 @@ struct LibraryView: View {
             } catch {
                 print("Failed to submit feedback: \(error)")
             }
+        }
+    }
+
+    // MARK: - Polling for Updates
+
+    private func startPollingIfNeeded() {
+        // Only poll if there are stories currently generating
+        guard hasGeneratingStories else {
+            NSLog("📊 No generating stories - skipping polling")
+            return
+        }
+
+        NSLog("🔄 Starting library polling (checking every 10 seconds)")
+        stopPolling() // Clear any existing timer
+
+        // Poll every 10 seconds
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { _ in
+            NSLog("🔄 Polling library for updates...")
+            Task { @MainActor in
+                await refreshLibrary()
+            }
+        }
+    }
+
+    private func stopPolling() {
+        pollTimer?.invalidate()
+        pollTimer = nil
+    }
+
+    private func refreshLibrary() async {
+        guard let userId = authManager.user?.id else { return }
+
+        do {
+            let updatedStories = try await APIManager.shared.getLibrary(userId: userId)
+
+            // Check if any stories have new chapters
+            for updated in updatedStories {
+                if let existing = stories.first(where: { $0.id == updated.id }) {
+                    let oldChapters = existing.generationProgress?.chaptersGenerated ?? 0
+                    let newChapters = updated.generationProgress?.chaptersGenerated ?? 0
+
+                    if newChapters > oldChapters {
+                        NSLog("📖 Story '\(updated.title)' now has \(newChapters) chapters (was \(oldChapters))")
+                    }
+                }
+            }
+
+            stories = updatedStories
+
+            // Stop polling if no more generating stories
+            if !hasGeneratingStories {
+                NSLog("✅ All stories complete - stopping polling")
+                stopPolling()
+            }
+        } catch {
+            NSLog("⚠️ Failed to refresh library: \(error.localizedDescription)")
         }
     }
 }
@@ -261,19 +334,40 @@ struct CompactStoryCard: View {
     let story: Story
     let action: () -> Void
 
+    private var isReadable: Bool {
+        // Story is readable if it has at least 1 chapter generated
+        if let progress = story.generationProgress {
+            return progress.chaptersGenerated > 0
+        }
+        // If no progress info, assume it's readable (older stories)
+        return true
+    }
+
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            // Only trigger action if readable
+            if isReadable {
+                action()
+            }
+        }) {
             VStack(alignment: .leading, spacing: 12) {
-                // Status badge
-                Text(story.status.uppercased())
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+                // Status badge with generating indicator
+                HStack(spacing: 6) {
+                    Text(story.status.uppercased())
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+
+                    if !isReadable {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    }
+                }
 
                 // Title
                 Text(story.title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(isReadable ? .primary : .secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
@@ -286,10 +380,12 @@ struct CompactStoryCard: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
-            .background(Color(.systemGray6))
+            .background(isReadable ? Color(.systemGray6) : Color(.systemGray6).opacity(0.5))
             .cornerRadius(12)
+            .opacity(isReadable ? 1.0 : 0.7)
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(!isReadable)
     }
 }
 

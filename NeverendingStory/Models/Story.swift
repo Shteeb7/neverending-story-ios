@@ -16,6 +16,9 @@ struct Story: Codable, Identifiable, Hashable {
     let bibleId: String?
     let generationProgress: GenerationProgress?
     let createdAt: Date
+    let chaptersGenerated: Int?
+    let seriesId: String?
+    let bookNumber: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -26,6 +29,9 @@ struct Story: Codable, Identifiable, Hashable {
         case bibleId = "bible_id"
         case generationProgress = "generation_progress"
         case createdAt = "created_at"
+        case chaptersGenerated = "chapters_generated"
+        case seriesId = "series_id"
+        case bookNumber = "book_number"
     }
 
     var isGenerating: Bool {

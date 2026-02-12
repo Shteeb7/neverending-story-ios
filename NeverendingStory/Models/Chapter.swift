@@ -14,7 +14,7 @@ struct Chapter: Codable, Identifiable {
     let title: String
     let content: String
     let wordCount: Int
-    let createdAt: Date
+    let generatedAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -23,6 +23,6 @@ struct Chapter: Codable, Identifiable {
         case title
         case content
         case wordCount = "word_count"
-        case createdAt = "created_at"
+        case generatedAt = "generated_at"
     }
 }

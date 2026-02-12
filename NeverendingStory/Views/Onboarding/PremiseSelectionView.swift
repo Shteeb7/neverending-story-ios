@@ -18,6 +18,8 @@ struct PremiseSelectionView: View {
     @State private var error: String?
     @State private var navigateToReader = false
     @State private var createdStory: Story?
+    @State private var needsNewInterview = false
+    @State private var navigateToNewInterview = false
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -84,6 +86,14 @@ struct PremiseSelectionView: View {
                             .padding(.horizontal, 24)
                         }
 
+                        // "Talk to Cassandra" card (if user needs new interview)
+                        if needsNewInterview {
+                            TalkToCassandraCard {
+                                navigateToNewInterview = true
+                            }
+                            .padding(.horizontal, 24)
+                        }
+
                         // Continue button
                         if selectedPremiseId != nil {
                             Button(action: createStory) {
@@ -113,6 +123,9 @@ struct PremiseSelectionView: View {
                 BookReaderView(story: story)
             }
         }
+        .navigationDestination(isPresented: $navigateToNewInterview) {
+            OnboardingView(forceNewInterview: true)
+        }
         .onAppear {
             loadPremises()
         }
@@ -140,12 +153,18 @@ struct PremiseSelectionView: View {
                 print("🎬 Loading premises for user...")
 
                 // Try to fetch existing premises first
-                let existingPremises = try? await APIManager.shared.getPremises(userId: userId)
+                let result = try? await APIManager.shared.getPremises(userId: userId)
 
-                if let existing = existingPremises, !existing.isEmpty {
-                    // Premises already exist, use them
-                    print("✅ Found existing premises: \(existing.count)")
-                    premises = existing
+                if let premisesResult = result, !premisesResult.premises.isEmpty {
+                    // Unused premises exist, use them
+                    print("✅ Found \(premisesResult.premises.count) unused premises")
+                    premises = premisesResult.premises
+                    needsNewInterview = premisesResult.needsNewInterview
+                } else if let premisesResult = result, premisesResult.needsNewInterview {
+                    // All premises used, need new interview
+                    print("📝 All premises used - showing new interview option")
+                    premises = []
+                    needsNewInterview = true
                 } else {
                     // No premises yet, generate them (takes 10-15 seconds)
                     print("🤖 No premises found, generating new ones...")
@@ -155,7 +174,9 @@ struct PremiseSelectionView: View {
                     print("✅ Generation complete, fetching premises...")
 
                     // Now fetch the generated premises
-                    premises = try await APIManager.shared.getPremises(userId: userId)
+                    let newResult = try await APIManager.shared.getPremises(userId: userId)
+                    premises = newResult.premises
+                    needsNewInterview = newResult.needsNewInterview
                     print("✅ Loaded \(premises.count) premises")
                 }
 
@@ -204,36 +225,88 @@ struct PremiseSelectionView: View {
                     )
                 }
 
-                // Poll backend until chapters are ready (every 10 seconds)
-                print("📚 Waiting for chapters to generate...")
-                var chaptersReady = false
-                var pollCount = 0
+                print("✅ Story created successfully!")
+                print("   Story ID: \(story.id)")
+                print("   Title: \(story.title)")
+                print("   User can now return to library and wait for chapters to generate")
 
-                while !chaptersReady {
-                    try await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
-                    pollCount += 1
-
-                    print("📡 Polling for chapters (attempt \(pollCount))...")
-
-                    let status = try await APIManager.shared.checkGenerationStatus(storyId: story.id)
-                    print("   Chapters available: \(status.chaptersAvailable)")
-                    print("   Status: \(status.status)")
-
-                    if status.chaptersAvailable > 0 {
-                        chaptersReady = true
-                        print("✅ Chapters ready! Navigating to reader...")
-                    } else {
-                        print("⏳ Still generating... (elapsed: \(pollCount * 10)s)")
-                    }
-                }
-
-                isCreatingStory = false
-                navigateToReader = true
+                // Story is now generating in the background
+                // User will see BookFormationView and can return to library
+                // LibraryView will poll and show the book when ready
+                // Keep isCreatingStory = true to show BookFormationView
             } catch {
                 self.error = error.localizedDescription
                 isCreatingStory = false
             }
         }
+    }
+}
+
+// MARK: - Talk to Cassandra Card
+
+struct TalkToCassandraCard: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Icon
+                HStack {
+                    Spacer()
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 40))
+                        .foregroundColor(.accentColor)
+                    Spacer()
+                }
+                .padding(.top, 8)
+
+                // Title
+                Text("Talk to Cassandra")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+
+                // Description
+                Text("Ready for something new? Tell me what you'd like to read next, and I'll create three fresh story ideas just for you.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // CTA
+                HStack {
+                    Image(systemName: "mic.fill")
+                    Text("Start New Interview")
+                        .fontWeight(.semibold)
+                }
+                .font(.subheadline)
+                .foregroundColor(.accentColor)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.accentColor.opacity(0.1))
+                .cornerRadius(8)
+            }
+            .padding(24)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color.accentColor.opacity(0.05),
+                        Color.accentColor.opacity(0.02)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.accentColor.opacity(0.2), lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

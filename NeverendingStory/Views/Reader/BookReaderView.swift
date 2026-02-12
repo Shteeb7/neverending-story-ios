@@ -2,7 +2,8 @@
 //  BookReaderView.swift
 //  NeverendingStory
 //
-//  Core reading experience - Apple Books style
+//  Core reading experience using SwiftUI TabView for native page-turning
+//  Features: Chapter pagination, tap zones, persistent toolbar, chapter menu
 //
 
 import SwiftUI
@@ -13,25 +14,42 @@ struct BookReaderView: View {
     @StateObject private var readingState = ReadingStateManager.shared
     @StateObject private var readerSettings = ReaderSettings.shared
 
-    @State private var showControls = false
+    @State private var showTopBar = true
     @State private var showSettings = false
-    @State private var scrollPosition: CGFloat = 0
+    @State private var showChapterList = false
+    @State private var topBarTimer: Timer?
+    @State private var scrollProgress: Double = 0
+    @State private var contentHeight: CGFloat = 0
+    @State private var visibleHeight: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
+
+    // MARK: - Feedback State
+    @State private var showFeedbackDialog = false
+    @State private var showMehFollowUp = false
+    @State private var currentCheckpoint: String = ""
+    @State private var checkedCheckpoints: Set<String> = []
+    @State private var showCompletionInterview = false
+    @State private var showSequelGeneration = false
+    @State private var interviewPreferences: [String: Any] = [:]
 
     var body: some View {
         ZStack {
-            // Reading area
-            ScrollView {
+            // Main reading area with vertical scrolling
+            if readingState.chapters.isEmpty {
+                LoadingView("Loading chapters...")
+            } else if let chapter = readingState.currentChapter {
                 ScrollViewReader { proxy in
-                    VStack(alignment: .leading, spacing: 0) {
-                        if let chapter = readingState.currentChapter {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
                             // Chapter title
                             Text(chapter.title)
                                 .font(.system(size: 28, weight: .bold, design: .default))
-                                .padding(.top, 40)
+                                .padding(.top, 60)
                                 .padding(.bottom, 32)
                                 .padding(.horizontal, 24)
                                 .frame(maxWidth: .infinity, alignment: .center)
+                                .foregroundColor(readerSettings.textColor)
+                                .id("chapter-top")
 
                             // Chapter content
                             Text(chapter.content)
@@ -42,34 +60,61 @@ struct BookReaderView: View {
                                 ))
                                 .lineSpacing(readerSettings.lineSpacing)
                                 .padding(.horizontal, 24)
-                                .padding(.bottom, 60)
+                                .padding(.bottom, 100)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .id("content")
-                        } else {
-                            LoadingView("Loading chapter...")
+                                .foregroundColor(readerSettings.textColor)
+                                .background(
+                                    GeometryReader { geometry in
+                                        Color.clear
+                                            .preference(key: ScrollOffsetPreferenceKey.self,
+                                                       value: geometry.frame(in: .named("scrollView")).minY)
+                                            .preference(key: ContentHeightPreferenceKey.self,
+                                                       value: geometry.size.height)
+                                    }
+                                )
                         }
                     }
+                    .coordinateSpace(name: "scrollView")
+                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                        readingState.updateScrollPosition(Double(value))
+                        // Calculate progress based on actual content height
+                        if contentHeight > 0 {
+                            // value is negative as we scroll down, so negate it
+                            let scrolled = max(-value, 0)
+                            let maxScroll = max(contentHeight - visibleHeight, 1)
+                            scrollProgress = min(scrolled / maxScroll, 1.0)
+                        }
+                        // Check for book completion as user scrolls through chapter 12
+                        checkForFeedbackCheckpoint()
+                    }
+                    .onPreferenceChange(ContentHeightPreferenceKey.self) { value in
+                        contentHeight = value
+                    }
                     .background(
-                        GeometryReader { geometry in
-                            Color.clear.preference(
-                                key: ScrollOffsetPreferenceKey.self,
-                                value: geometry.frame(in: .named("scroll")).minY
-                            )
+                        GeometryReader { geo in
+                            Color.clear.onAppear {
+                                visibleHeight = geo.size.height
+                            }
                         }
                     )
+                    .background(readerSettings.backgroundColor)
+                    .onTapGesture {
+                        showTopBarTemporarily()
+                    }
+                    .onChange(of: readingState.currentChapterIndex) { _ in
+                        // Scroll to top when chapter changes
+                        withAnimation {
+                            proxy.scrollTo("chapter-top", anchor: .top)
+                        }
+                        // Check for feedback checkpoint
+                        checkForFeedbackCheckpoint()
+                    }
                 }
             }
-            .coordinateSpace(name: "scroll")
-            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
-                scrollPosition = value
-                readingState.updateScrollPosition(Double(value))
-            }
-            .background(readerSettings.backgroundColor)
-            .foregroundColor(readerSettings.textColor)
 
-            // Top controls overlay
-            if showControls {
-                VStack {
+            // Auto-hiding top bar
+            VStack {
+                if showTopBar {
                     HStack {
                         // Back button
                         Button(action: { dismiss() }) {
@@ -79,6 +124,14 @@ struct BookReaderView: View {
                                 .padding(12)
                                 .background(Circle().fill(Color(.systemGray6).opacity(0.9)))
                         }
+
+                        Spacer()
+
+                        // Book title
+                        Text(story.title)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
 
                         Spacer()
 
@@ -92,65 +145,271 @@ struct BookReaderView: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 8)
-
-                    Spacer()
+                    .padding(.vertical, 8)
+                    .background(
+                        readerSettings.backgroundColor
+                            .opacity(0.95)
+                            .ignoresSafeArea(edges: .top)
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                .transition(.opacity)
+
+                Spacer()
             }
 
-            // Bottom progress indicator
+            // Compact bottom toolbar with progress
             VStack {
                 Spacer()
 
-                if let chapter = readingState.currentChapter {
-                    HStack {
-                        Spacer()
-                        Text("Chapter \(chapter.chapterNumber) of \(readingState.chapters.count)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Capsule().fill(Color(.systemGray6).opacity(0.9)))
-                        Spacer()
+                VStack(spacing: 0) {
+                    // Progress bar (more visible)
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            // Background
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(height: 3)
+
+                            // Progress
+                            Rectangle()
+                                .fill(Color.accentColor)
+                                .frame(width: geometry.size.width * scrollProgress, height: 3)
+                        }
                     }
-                    .padding(.bottom, 16)
-                    .opacity(showControls ? 1 : 0.3)
+                    .frame(height: 3)
+
+                    // Toolbar
+                    HStack(spacing: 24) {
+                        // Chapter menu button
+                        Button(action: { showChapterList = true }) {
+                            Image(systemName: "list.bullet")
+                                .font(.title3)
+                        }
+
+                        Spacer()
+
+                        // Progress text
+                        if let chapter = readingState.currentChapter {
+                            VStack(spacing: 2) {
+                                Text("Ch \(chapter.chapterNumber) of \(readingState.chapters.count)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("\(Int(scrollProgress * 100))% of chapter")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary.opacity(0.8))
+                            }
+                        }
+
+                        Spacer()
+
+                        // Settings button
+                        Button(action: { showSettings = true }) {
+                            Image(systemName: "textformat.size")
+                                .font(.title3)
+                        }
+                    }
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 8)
+                    .background(
+                        readerSettings.backgroundColor
+                            .opacity(0.98)
+                            .ignoresSafeArea(edges: .bottom)
+                    )
                 }
+                .shadow(color: .black.opacity(0.1), radius: 4, y: -2)
             }
         }
         .navigationBarHidden(true)
-        .statusBar(hidden: !showControls)
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                showControls.toggle()
-            }
-        }
-        .gesture(
-            DragGesture()
-                .onEnded { value in
-                    // Swipe left for next chapter
-                    if value.translation.width < -100 && readingState.canGoToNextChapter {
-                        withAnimation {
-                            readingState.goToNextChapter()
-                        }
-                    }
-                    // Swipe right for previous chapter
-                    else if value.translation.width > 100 && readingState.canGoToPreviousChapter {
-                        withAnimation {
-                            readingState.goToPreviousChapter()
-                        }
-                    }
-                }
-        )
         .sheet(isPresented: $showSettings) {
             ReaderSettingsView()
+        }
+        .sheet(isPresented: $showChapterList) {
+            ChapterListView(
+                chapters: readingState.chapters,
+                currentChapterIndex: $readingState.currentChapterIndex,
+                onSelectChapter: { index in
+                    readingState.goToChapter(index: index)
+                    showChapterList = false
+                }
+            )
+        }
+        .overlay {
+            if showFeedbackDialog {
+                StoryFeedbackDialog(checkpoint: currentCheckpoint) { response in
+                    handleFeedbackResponse(response)
+                }
+            }
+        }
+        .overlay {
+            if showMehFollowUp {
+                MehFollowUpDialog { action in
+                    handleMehFollowUpAction(action)
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showCompletionInterview) {
+            BookCompletionInterviewView(
+                story: story,
+                bookNumber: story.bookNumber ?? 1
+            ) { preferences in
+                NSLog("✅ Book completion interview finished with preferences: \(preferences)")
+                // Start sequel generation
+                interviewPreferences = preferences
+                showSequelGeneration = true
+            }
+        }
+        .fullScreenCover(isPresented: $showSequelGeneration) {
+            SequelGenerationView(
+                book1Story: story,
+                bookNumber: (story.bookNumber ?? 1) + 1,
+                userPreferences: interviewPreferences
+            ) { book2 in
+                NSLog("✅ Book 2 generated: \(book2.title)")
+                // Navigate to Book 2 reader
+                // For now, just dismiss back to library
+                dismiss()
+            }
         }
         .task {
             do {
                 try await readingState.loadStory(story)
+                startTopBarTimer()
             } catch {
                 print("Failed to load story: \(error)")
+            }
+        }
+        .onDisappear {
+            topBarTimer?.invalidate()
+        }
+    }
+
+    private func showTopBarTemporarily() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showTopBar = true
+        }
+        startTopBarTimer()
+    }
+
+    private func startTopBarTimer() {
+        topBarTimer?.invalidate()
+        topBarTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showTopBar = false
+            }
+        }
+    }
+
+    // MARK: - Feedback Checkpoint Logic
+
+    private func checkForFeedbackCheckpoint() {
+        guard let currentChapter = readingState.currentChapter else { return }
+        let chapterNum = currentChapter.chapterNumber
+
+        // Check if book is complete (just finished chapter 12)
+        if chapterNum == 12 && readingState.chapters.count >= 12 {
+            // Check if we've scrolled to near the end of chapter 12
+            if scrollProgress > 0.9 && !checkedCheckpoints.contains("chapter_12_complete") {
+                checkedCheckpoints.insert("chapter_12_complete")
+
+                // Show completion interview after a brief delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showCompletionInterview = true
+                }
+                return
+            }
+        }
+
+        // Determine checkpoint based on chapter number (chapters 4, 7, 10)
+        var checkpoint: String?
+        if chapterNum == 4 {
+            checkpoint = "chapter_3"
+        } else if chapterNum == 7 {
+            checkpoint = "chapter_6"
+        } else if chapterNum == 10 {
+            checkpoint = "chapter_9"
+        }
+
+        guard let checkpoint = checkpoint else { return }
+
+        // Don't show if already checked this session
+        guard !checkedCheckpoints.contains(checkpoint) else { return }
+        checkedCheckpoints.insert(checkpoint)
+
+        // Check if feedback already submitted
+        Task {
+            do {
+                let status = try await APIManager.shared.getFeedbackStatus(
+                    storyId: story.id,
+                    checkpoint: checkpoint
+                )
+
+                // Only show dialog if no feedback submitted yet
+                if !status.hasFeedback {
+                    await MainActor.run {
+                        currentCheckpoint = checkpoint
+                        showFeedbackDialog = true
+                    }
+                }
+            } catch {
+                NSLog("❌ Failed to check feedback status: \(error)")
+            }
+        }
+    }
+
+    private func handleFeedbackResponse(_ response: String) {
+        showFeedbackDialog = false
+
+        if response == "Meh" {
+            // Show follow-up dialog
+            showMehFollowUp = true
+        } else {
+            // Submit positive feedback (Great or Fantastic)
+            submitFeedback(response: response, followUpAction: nil)
+        }
+    }
+
+    private func handleMehFollowUpAction(_ action: String) {
+        showMehFollowUp = false
+
+        switch action {
+        case "different_story":
+            // Submit feedback with follow-up action, then navigate to library
+            submitFeedback(response: "Meh", followUpAction: "different_story")
+            dismiss()
+
+        case "keep_reading":
+            // Submit feedback to trigger chapter generation
+            submitFeedback(response: "Meh", followUpAction: "keep_reading")
+
+        case "voice_tips":
+            // TODO: Implement voice tips session
+            // For now, just submit the feedback
+            submitFeedback(response: "Meh", followUpAction: "voice_tips")
+            NSLog("⚠️ Voice tips not yet implemented")
+
+        default:
+            break
+        }
+    }
+
+    private func submitFeedback(response: String, followUpAction: String?) {
+        Task {
+            do {
+                let result = try await APIManager.shared.submitCheckpointFeedback(
+                    storyId: story.id,
+                    checkpoint: currentCheckpoint,
+                    response: response,
+                    followUpAction: followUpAction
+                )
+
+                NSLog("✅ Feedback submitted: \(response) for \(currentCheckpoint)")
+                NSLog("🚀 Generating chapters: \(result.generatingChapters)")
+
+                // TODO: Show toast notification about chapter generation
+            } catch {
+                NSLog("❌ Failed to submit feedback: \(error)")
+                // TODO: Show error alert
             }
         }
     }
@@ -163,6 +422,66 @@ struct ScrollOffsetPreferenceKey: PreferenceKey {
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
+    }
+}
+
+struct ContentHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+
+// MARK: - Chapter List View
+
+struct ChapterListView: View {
+    let chapters: [Chapter]
+    @Binding var currentChapterIndex: Int
+    let onSelectChapter: (Int) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(chapters.indices, id: \.self) { index in
+                    Button(action: {
+                        onSelectChapter(index)
+                    }) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Chapter \(chapters[index].chapterNumber)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                Text(chapters[index].title)
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(2)
+                            }
+
+                            Spacer()
+
+                            if index == currentChapterIndex {
+                                Image(systemName: "book.fill")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+            .navigationTitle("Chapters")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -249,13 +568,16 @@ enum ReaderColorScheme: Int {
 
 #Preview {
     BookReaderView(story: Story(
-        id: "1",
-        userId: "user1",
-        title: "The Last Archive",
+        id: "preview-story-1",
+        userId: "preview-user",
+        title: "Station Nine Is Forgetting",
         status: "active",
-        premiseId: "premise1",
-        bibleId: "bible1",
+        premiseId: nil,
+        bibleId: nil,
         generationProgress: nil,
-        createdAt: Date()
+        createdAt: Date(),
+        chaptersGenerated: 6,
+        seriesId: nil,
+        bookNumber: 1
     ))
 }

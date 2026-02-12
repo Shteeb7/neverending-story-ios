@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct OnboardingView: View {
+    let forceNewInterview: Bool
+
     @StateObject private var voiceManager = VoiceSessionManager()
     @State private var navigateToPremises = false
     @State private var showPermissionDenied = false
@@ -17,6 +19,10 @@ struct OnboardingView: View {
     @State private var isPulsing = false
     @State private var isCheckingForPremises = true
     @State private var existingPremisesFound = false
+
+    init(forceNewInterview: Bool = false) {
+        self.forceNewInterview = forceNewInterview
+    }
 
     var body: some View {
         NavigationStack {
@@ -212,6 +218,14 @@ struct OnboardingView: View {
 
     private func checkForExistingPremises() {
         NSLog("🔍 OnboardingView: checkForExistingPremises() called")
+
+        // If forcing new interview, skip checking and show interview directly
+        if forceNewInterview {
+            NSLog("🎙️ OnboardingView: Forcing new interview - skipping premise check")
+            isCheckingForPremises = false
+            return
+        }
+
         Task {
             guard let userId = AuthManager.shared.user?.id else {
                 NSLog("⚠️ OnboardingView: No user ID - showing voice interview")
@@ -225,13 +239,13 @@ struct OnboardingView: View {
 
             do {
                 // Check if premises already exist for this user
-                let premises = try await APIManager.shared.getPremises(userId: userId)
+                let result = try await APIManager.shared.getPremises(userId: userId)
 
-                NSLog("📊 OnboardingView: API returned %d premises", premises.count)
+                NSLog("📊 OnboardingView: API returned %d premises", result.premises.count)
 
-                if !premises.isEmpty {
+                if !result.premises.isEmpty {
                     // Premises exist! Skip voice interview and go straight to selection
-                    NSLog("✅ OnboardingView: Found %d existing premises - SKIPPING VOICE INTERVIEW", premises.count)
+                    NSLog("✅ OnboardingView: Found %d existing premises - SKIPPING VOICE INTERVIEW", result.premises.count)
                     NSLog("   → Navigating directly to PremiseSelectionView")
                     await MainActor.run {
                         isCheckingForPremises = false
