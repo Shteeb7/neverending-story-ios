@@ -19,6 +19,8 @@ struct PremiseSelectionView: View {
     @State private var navigateToReader = false
     @State private var createdStory: Story?
 
+    @Environment(\.scenePhase) private var scenePhase
+
     init(voiceConversation: String? = nil) {
         self.voiceConversation = voiceConversation
     }
@@ -31,17 +33,7 @@ struct PremiseSelectionView: View {
             if isLoading {
                 LoadingView("Generating your stories...")
             } else if isCreatingStory {
-                VStack(spacing: 24) {
-                    // Book forming animation
-                    Image(systemName: "book.closed.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(.accentColor)
-                        .symbolEffect(.pulse)
-
-                    Text("Your book is forming...")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                }
+                BookFormationView()
             } else if let error = error {
                 VStack(spacing: 24) {
                     Image(systemName: "exclamationmark.triangle")
@@ -123,6 +115,15 @@ struct PremiseSelectionView: View {
         }
         .onAppear {
             loadPremises()
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            // When user returns to app during story creation,
+            // the backend continues processing regardless of app state
+            if newPhase == .active && isCreatingStory {
+                print("📱 App returned to foreground during story creation")
+                print("   Backend continues processing regardless of app state")
+                // The async Task in createStory() will complete when ready
+            }
         }
     }
 
