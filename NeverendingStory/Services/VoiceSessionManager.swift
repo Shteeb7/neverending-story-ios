@@ -709,9 +709,10 @@ class VoiceSessionManager: ObservableObject {
                     "preferredThemes": ["type": "array", "items": ["type": "string"], "description": "Preferred themes like 'Magic', 'Technology', 'Dragons', 'Mystery', 'Friendship', 'Coming of Age'"],
                     "dislikedElements": ["type": "array", "items": ["type": "string"], "description": "Story elements, genres, or character types they DON'T like or want to avoid"],
                     "characterTypes": ["type": "string", "description": "Type of protagonist they prefer like 'Hero', 'Underdog', 'Anti-hero', 'Reluctant Hero', 'Chosen One'"],
-                    "mood": ["type": "string", "description": "Desired mood like 'Epic', 'Dark', 'Lighthearted', 'Suspenseful', 'Hopeful', 'Whimsical'"]
+                    "mood": ["type": "string", "description": "Desired mood like 'Epic', 'Dark', 'Lighthearted', 'Suspenseful', 'Hopeful', 'Whimsical'"],
+                    "ageRange": ["type": "string", "description": "Age of the reader - determines complexity and maturity level. Options: 'child' (8-12), 'teen' (13-17), 'young-adult' (18-25), 'adult' (25+)"]
                 ],
-                "required": ["name", "favoriteGenres", "mood"]
+                "required": ["name", "favoriteGenres", "mood", "ageRange"]
             ]
         ]]
 
@@ -736,6 +737,7 @@ class VoiceSessionManager: ObservableObject {
 
         YOUR QUEST: Build a MAGICAL story preference profile by discovering:
         - Their NAME (ask first with excitement!)
+        - Their AGE or life stage (child, teen, young adult, or adult) - this determines story complexity!
         - What stories/genres they ADORE (and WHY - dig deep!)
         - What stories/characters they DETEST (equally important!)
         - Character archetypes that RESONATE (heroes, underdogs, tricksters, anti-heroes)
@@ -786,9 +788,10 @@ class VoiceSessionManager: ObservableObject {
         User: "I mentioned I like underdogs earlier"
         You: "You're absolutely right - forgive my excitement! You crave the underdog's rise! Do you prefer them scrappy and street-smart, or reluctant souls thrust into greatness?"
 
-        WHEN TO CONCLUDE (after 5-6 magical exchanges):
+        WHEN TO CONCLUDE (after 5-7 magical exchanges):
         Once you have gathered:
         - Their name
+        - Their age/life stage
         - 2-3 genres/story types they LOVE
         - 1-2 things they DON'T like
         - Character preferences
