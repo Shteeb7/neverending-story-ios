@@ -15,6 +15,8 @@ struct OnboardingView: View {
     @State private var premisesReady = false
     @State private var storyPreferences: [String: Any]? = nil
     @State private var isPulsing = false
+    @State private var isCheckingForPremises = true
+    @State private var existingPremisesFound = false
 
     var body: some View {
         NavigationStack {
@@ -22,30 +24,40 @@ struct OnboardingView: View {
                 Color(.systemBackground)
                     .ignoresSafeArea()
 
-                VStack(spacing: 40) {
-                    Spacer()
-
-                    // Title
-                    VStack(spacing: 16) {
-                        Text("Let's create your story")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
-
-                        Text("Tell me what kind of story you'd love to read")
-                            .font(.title3)
+                if isCheckingForPremises {
+                    // Show loading while checking for existing premises
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Checking your library...")
+                            .font(.headline)
                             .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
                     }
+                } else {
+                    VStack(spacing: 40) {
+                        Spacer()
 
-                    // Voice visualization
-                    VoiceVisualizationView(audioLevel: voiceManager.audioLevel)
-                        .frame(height: 200)
+                        // Title
+                        VStack(spacing: 16) {
+                            Text("Let's create your story")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .multilineTextAlignment(.center)
 
-                    // State-based content
-                    VStack(spacing: 16) {
-                        switch voiceManager.state {
+                            Text("Tell me what kind of story you'd love to read")
+                                .font(.title3)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
+                        }
+
+                        // Voice visualization
+                        VoiceVisualizationView(audioLevel: voiceManager.audioLevel)
+                            .frame(height: 200)
+
+                        // State-based content
+                        VStack(spacing: 16) {
+                            switch voiceManager.state {
                         case .idle:
                             Button(action: startVoiceSession) {
                                 HStack {
@@ -177,7 +189,8 @@ struct OnboardingView: View {
                     }
                     .padding(.horizontal, 32)
 
-                    Spacer()
+                        Spacer()
+                    }
                 }
             }
             .navigationDestination(isPresented: $navigateToPremises) {
@@ -189,10 +202,53 @@ struct OnboardingView: View {
             } message: {
                 Text("Please enable microphone access in Settings to use voice onboarding.")
             }
+            .onAppear {
+                checkForExistingPremises()
+            }
         }
     }
 
     // MARK: - Actions
+
+    private func checkForExistingPremises() {
+        Task {
+            guard let userId = AuthManager.shared.user?.id else {
+                print("⚠️ No user ID - showing voice interview")
+                await MainActor.run {
+                    isCheckingForPremises = false
+                }
+                return
+            }
+
+            do {
+                // Check if premises already exist for this user
+                print("🔍 Checking for existing premises...")
+                let premises = try await APIManager.shared.getPremises(userId: userId)
+
+                if !premises.isEmpty {
+                    // Premises exist! Skip voice interview and go straight to selection
+                    print("✅ Found \(premises.count) existing premises - skipping interview")
+                    await MainActor.run {
+                        isCheckingForPremises = false
+                        existingPremisesFound = true
+                        navigateToPremises = true
+                    }
+                } else {
+                    // No premises - show voice interview
+                    print("📝 No premises found - showing voice interview")
+                    await MainActor.run {
+                        isCheckingForPremises = false
+                    }
+                }
+            } catch {
+                // Error checking - show voice interview as fallback
+                print("⚠️ Error checking premises: \(error) - showing voice interview")
+                await MainActor.run {
+                    isCheckingForPremises = false
+                }
+            }
+        }
+    }
 
     private func startVoiceSession() {
         Task {
