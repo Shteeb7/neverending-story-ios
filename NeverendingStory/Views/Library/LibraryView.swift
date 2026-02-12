@@ -30,44 +30,6 @@ struct LibraryView: View {
                 Color(.systemBackground)
                     .ignoresSafeArea()
 
-                // DEBUG OVERLAY
-                VStack {
-                    HStack {
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("DEBUG INFO:")
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                            Text("isAuth: \(authManager.isAuthenticated ? "✅" : "❌")")
-                                .font(.caption2)
-                            Text("User: \(authManager.user != nil ? "✅" : "❌")")
-                                .font(.caption2)
-                            Text("ID: \(authManager.user?.id ?? "NIL")")
-                                .font(.caption2)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.5)
-                            Text("Email: \(authManager.user?.email ?? "NIL")")
-                                .font(.caption2)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.5)
-                            if let error = error {
-                                Text("Error: \(error)")
-                                    .font(.caption2)
-                                    .foregroundColor(.yellow)
-                                    .lineLimit(2)
-                                    .minimumScaleFactor(0.4)
-                            }
-                        }
-                        .padding(8)
-                        .background(Color.red.opacity(0.8))
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                        .padding()
-                    }
-                    Spacer()
-                }
-                .zIndex(999)
-
                 if isLoading {
                     LoadingView()
                 } else if let error = error {

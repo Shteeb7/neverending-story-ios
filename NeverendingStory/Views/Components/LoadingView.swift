@@ -126,25 +126,18 @@ struct LoadingView: View {
                 }
 
                 // Message text with magical styling
-                VStack(spacing: 12) {
-                    Text("Preparing Your Choices")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color.purple, Color.blue],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                Text(message)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.purple, Color.blue],
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
-
-                    Text("(be patient...this is magic we are talking about...should take <30 seconds)")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                        .opacity(sparkleOpacity + 0.4)
-                }
+                    )
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
             }
         }
         .onAppear {
