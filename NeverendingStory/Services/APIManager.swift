@@ -200,19 +200,28 @@ class APIManager: ObservableObject {
     }
 
     func generatePremises() async throws {
+        NSLog("🔄 generatePremises() called - starting request")
+
         struct GenerateResponse: Decodable {
             let success: Bool
             let premises: [Premise]
             let premisesId: String
         }
 
-        let response: GenerateResponse = try await makeRequest(
-            endpoint: "/onboarding/generate-premises",
-            method: "POST",
-            requiresAuth: true
-        )
-
-        NSLog("✅ Generated \(response.premises.count) premises")
+        do {
+            NSLog("📡 Calling makeRequest for /onboarding/generate-premises")
+            let response: GenerateResponse = try await makeRequest(
+                endpoint: "/onboarding/generate-premises",
+                method: "POST",
+                requiresAuth: true
+            )
+            NSLog("✅ Generated \(response.premises.count) premises successfully")
+        } catch {
+            NSLog("❌ generatePremises() FAILED with error: \(error)")
+            NSLog("   Error type: \(type(of: error))")
+            NSLog("   Error description: \(error.localizedDescription)")
+            throw error
+        }
     }
 
     func getPremises(userId: String) async throws -> [Premise] {

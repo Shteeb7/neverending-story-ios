@@ -323,17 +323,24 @@ struct OnboardingView: View {
 
                 // STEP 2: Generate premises based on saved preferences
                 print("📤 Calling backend to generate premises...")
+                print("   This may take 10-30 seconds for AI generation...")
                 try await APIManager.shared.generatePremises()
-                print("✅ Premises generation started")
+                print("✅ Premises generation completed successfully!")
 
                 // Navigate to premise selection (which will show loading then cards)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                await MainActor.run {
                     navigateToPremises = true
                 }
             } catch {
-                print("❌ Failed to process onboarding: \(error)")
+                print("❌❌❌ CRITICAL ERROR in proceedToLibrary:")
+                print("   Error: \(error)")
+                print("   Error type: \(type(of: error))")
+                print("   Localized: \(error.localizedDescription)")
+                if let apiError = error as? APIError {
+                    print("   API Error details: \(apiError.errorDescription ?? "unknown")")
+                }
                 // Still navigate - PremiseSelectionView will handle error
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                await MainActor.run {
                     navigateToPremises = true
                 }
             }
