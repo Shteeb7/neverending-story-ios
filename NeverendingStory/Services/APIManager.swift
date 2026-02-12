@@ -40,6 +40,7 @@ class APIManager: ObservableObject {
     private let baseURL = AppConfig.apiBaseURL
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
+    private let urlSession: URLSession
 
     private init() {
         decoder = JSONDecoder()
@@ -47,6 +48,12 @@ class APIManager: ObservableObject {
 
         encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
+
+        // Create custom URLSession with 5-minute timeout for AI generation
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 300 // 5 minutes
+        configuration.timeoutIntervalForResource = 300
+        urlSession = URLSession(configuration: configuration)
     }
 
     // MARK: - Helper Methods
@@ -103,7 +110,7 @@ class APIManager: ObservableObject {
         NSLog("   Headers: %@", request.allHTTPHeaderFields ?? [:])
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await urlSession.data(for: request)
             NSLog("📥 Received response, status: %d", (response as? HTTPURLResponse)?.statusCode ?? 0)
 
             guard let httpResponse = response as? HTTPURLResponse else {

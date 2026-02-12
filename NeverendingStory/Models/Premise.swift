@@ -28,6 +28,18 @@ struct Premise: Codable, Identifiable {
         case generatedAt = "generated_at"
     }
 
+    // Regular initializer for creating instances directly (for previews/tests)
+    init(id: String, title: String, genre: String, description: String, hook: String? = nil, themes: [String]? = nil, ageRange: String? = nil, generatedAt: Date? = nil) {
+        self.id = id
+        self.title = title
+        self.genre = genre
+        self.description = description
+        self.hook = hook
+        self.themes = themes
+        self.ageRange = ageRange
+        self.generatedAt = generatedAt
+    }
+
     // Custom decoder to generate ID if missing
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
