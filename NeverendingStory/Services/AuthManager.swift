@@ -312,8 +312,12 @@ class AuthManager: ObservableObject {
             NSLog("   ID: %@", userId)
             NSLog("   Email: %@", session.user.email ?? "nil")
             NSLog("   isAuthenticated: %@", self.isAuthenticated ? "true" : "false")
-            NSLog("🔑 FULL ACCESS TOKEN FOR TESTING:")
-            NSLog("%@", session.accessToken)
+
+            // Write token to file for easy copying (won't get truncated)
+            let tokenPath = NSTemporaryDirectory() + "supabase_token.txt"
+            try? session.accessToken.write(toFile: tokenPath, atomically: true, encoding: .utf8)
+            NSLog("🔑 ACCESS TOKEN SAVED TO: %@", tokenPath)
+            NSLog("   Run: cat '\(tokenPath)' to get full token")
         } catch {
             print("❌ Supabase error: \(error)")
             print("❌ Error details: \(error.localizedDescription)")
