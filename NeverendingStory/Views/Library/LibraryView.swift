@@ -16,6 +16,7 @@ struct LibraryView: View {
     @State private var selectedStory: Story?
     @State private var showFeedback = false
     @State private var pollTimer: Timer?
+    @State private var showLogoutConfirmation = false
 
     var activeStory: Story? {
         stories.first { $0.status == "active" }
@@ -120,11 +121,23 @@ struct LibraryView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {}) {
+                    Button(action: {
+                        showLogoutConfirmation = true
+                    }) {
                         Image(systemName: "person.circle")
                             .font(.title3)
                     }
                 }
+            }
+            .confirmationDialog("Log Out", isPresented: $showLogoutConfirmation, titleVisibility: .visible) {
+                Button("Log Out", role: .destructive) {
+                    Task {
+                        await performLogout()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to log out?")
             }
             .navigationDestination(isPresented: $showOnboarding) {
                 OnboardingView()
@@ -193,6 +206,18 @@ struct LibraryView: View {
             } catch {
                 print("Failed to submit feedback: \(error)")
             }
+        }
+    }
+
+    private func performLogout() async {
+        NSLog("🔓 User initiated logout")
+        do {
+            try await authManager.signOut()
+            NSLog("✅ Logout successful")
+        } catch {
+            NSLog("❌ Logout failed: \(error.localizedDescription)")
+            // Even if logout fails, clear local state
+            authManager.user = nil
         }
     }
 
