@@ -25,6 +25,7 @@
 		87565DA8A93AC65544A0A539 /* StoryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83348A93FA5B6907AF98A84 /* StoryCard.swift */; };
 		89F5E8EB1F3F6E9C2B296E87 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = 7F9BA64BB5D0D2B50C3B4C7A /* OpenAI */; };
 		9C335BE7FE5654CBE96AD5F6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2661108E4232961D5696DF00 /* OnboardingView.swift */; };
+		F8E7D6C5B4A39281E0D9C8B7 /* DNATransferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */; };
 		9CE559EE551954215BF26615 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8695003D3086D0A0333FD562 /* Story.swift */; };
 		A0EC4B72AAD97A840838FE3E /* PremiseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3AF938CA8AE4F77E0D0845 /* PremiseSelectionView.swift */; };
 		A63DA7A865E40FDCAA672CEE /* VoiceSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C992418313E0D149445A242 /* VoiceSessionManager.swift */; };
@@ -45,6 +46,7 @@
 /* Begin PBXFileReference section */
 		25289B9307F5D81EC25FA5DC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		2661108E4232961D5696DF00 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNATransferView.swift; sourceTree = "<group>"; };
 		3534A61FFD543E4AAF93946E /* LaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchView.swift; sourceTree = "<group>"; };
 		39A8480BEB6A8F87CAB0E06F /* ReadingStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStateManager.swift; sourceTree = "<group>"; };
 		39DF5639056B31DA10387FF4 /* Premise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Premise.swift; sourceTree = "<group>"; };
@@ -199,6 +201,7 @@
 			isa = PBXGroup;
 			children = (
 				2661108E4232961D5696DF00 /* OnboardingView.swift */,
+				3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */,
 				4F3AF938CA8AE4F77E0D0845 /* PremiseSelectionView.swift */,
 			);
 			path = Onboarding;
@@ -312,6 +315,7 @@
 				6B46302ECDEB2E04041FF250 /* LoginView.swift in Sources */,
 				0D085741BDF97E0490A70393 /* NeverendingStoryApp.swift in Sources */,
 				9C335BE7FE5654CBE96AD5F6 /* OnboardingView.swift in Sources */,
+				F8E7D6C5B4A39281E0D9C8B7 /* DNATransferView.swift in Sources */,
 				02D24B7BE8CCED516AEC25AB /* Premise.swift in Sources */,
 				8250B66A88A2369D855D72B8 /* PremiseCard.swift in Sources */,
 				A0EC4B72AAD97A840838FE3E /* PremiseSelectionView.swift in Sources */,
