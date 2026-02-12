@@ -311,8 +311,9 @@ class AuthManager: ObservableObject {
             NSLog("✅✅✅ USER CREATED IN GOOGLE SIGN-IN")
             NSLog("   ID: %@", userId)
             NSLog("   Email: %@", session.user.email ?? "nil")
-            NSLog("   Access token: %@...", String(session.accessToken.prefix(20)))
             NSLog("   isAuthenticated: %@", self.isAuthenticated ? "true" : "false")
+            NSLog("🔑 FULL ACCESS TOKEN FOR TESTING:")
+            NSLog("%@", session.accessToken)
         } catch {
             print("❌ Supabase error: \(error)")
             print("❌ Error details: \(error.localizedDescription)")
