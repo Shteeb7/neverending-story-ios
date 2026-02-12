@@ -17,6 +17,10 @@ class ReadingStateManager: ObservableObject {
     @Published var currentChapterIndex: Int = 0
     @Published var scrollPosition: Double = 0
 
+    // Reading session tracking
+    @Published var currentSessionId: String? = nil
+    private var chapterStartTime: Date? = nil
+
     private var saveTask: Task<Void, Never>?
 
     private init() {
@@ -86,23 +90,50 @@ class ReadingStateManager: ObservableObject {
 
     func goToPreviousChapter() {
         guard canGoToPreviousChapter else { return }
+
+        // End current session before changing chapter
+        Task {
+            await endReadingSession()
+        }
+
         currentChapterIndex -= 1
         scrollPosition = 0
         persistState()
+
+        // Start new session for the new chapter
+        startReadingSession()
     }
 
     func goToNextChapter() {
         guard canGoToNextChapter else { return }
+
+        // End current session before changing chapter
+        Task {
+            await endReadingSession()
+        }
+
         currentChapterIndex += 1
         scrollPosition = 0
         persistState()
+
+        // Start new session for the new chapter
+        startReadingSession()
     }
 
     func goToChapter(index: Int) {
         guard chapters.indices.contains(index) else { return }
+
+        // End current session before changing chapter
+        Task {
+            await endReadingSession()
+        }
+
         currentChapterIndex = index
         scrollPosition = 0
         persistState()
+
+        // Start new session for the new chapter
+        startReadingSession()
     }
 
     // MARK: - Progress Tracking
@@ -129,8 +160,78 @@ class ReadingStateManager: ObservableObject {
                 chapterNumber: currentChapterIndex + 1, // Convert back to 1-based
                 scrollPosition: scrollPosition
             )
+
+            // Also send heartbeat if session is active
+            if let sessionId = currentSessionId {
+                try? await APIManager.shared.sendReadingHeartbeat(
+                    sessionId: sessionId,
+                    scrollProgress: scrollPosition
+                )
+            }
         } catch {
             print("Failed to save progress: \(error)")
+        }
+    }
+
+    // MARK: - Reading Session Tracking
+
+    func startReadingSession() {
+        guard let storyId = currentStory?.id else {
+            NSLog("⚠️ ReadingStateManager: Cannot start session - no current story")
+            return
+        }
+
+        // End previous session if one is active
+        if currentSessionId != nil {
+            Task {
+                await endReadingSession()
+            }
+        }
+
+        let chapterNumber = currentChapterIndex + 1 // Convert to 1-based
+        NSLog("📖 ReadingStateManager: Starting reading session for ch%d", chapterNumber)
+
+        chapterStartTime = Date()
+
+        Task {
+            do {
+                let sessionId = try await APIManager.shared.startReadingSession(
+                    storyId: storyId,
+                    chapterNumber: chapterNumber
+                )
+                self.currentSessionId = sessionId
+                NSLog("✅ ReadingStateManager: Session started: %@", sessionId)
+            } catch {
+                NSLog("❌ ReadingStateManager: Failed to start session: %@", error.localizedDescription)
+            }
+        }
+    }
+
+    func endReadingSession() async {
+        guard let sessionId = currentSessionId else {
+            return
+        }
+
+        NSLog("📖 ReadingStateManager: Ending reading session: %@", sessionId)
+
+        do {
+            try await APIManager.shared.endReadingSession(
+                sessionId: sessionId,
+                scrollProgress: scrollPosition
+            )
+            NSLog("✅ ReadingStateManager: Session ended successfully")
+        } catch {
+            NSLog("❌ ReadingStateManager: Failed to end session: %@", error.localizedDescription)
+        }
+
+        self.currentSessionId = nil
+        self.chapterStartTime = nil
+    }
+
+    func stopTracking() {
+        NSLog("📖 ReadingStateManager: Stopping all tracking")
+        Task {
+            await endReadingSession()
         }
     }
 

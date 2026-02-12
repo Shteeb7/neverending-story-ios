@@ -341,6 +341,64 @@ class APIManager: ObservableObject {
         )
     }
 
+    // MARK: - Reading Analytics
+
+    func startReadingSession(storyId: String, chapterNumber: Int) async throws -> String {
+        struct SessionStartRequest: Encodable {
+            let storyId: String
+            let chapterNumber: Int
+        }
+
+        struct SessionStartResponse: Decodable {
+            let sessionId: String
+        }
+
+        let body = try encoder.encode(SessionStartRequest(
+            storyId: storyId,
+            chapterNumber: chapterNumber
+        ))
+        let response: SessionStartResponse = try await makeRequest(
+            endpoint: "/analytics/session/start",
+            method: "POST",
+            body: body
+        )
+        return response.sessionId
+    }
+
+    func sendReadingHeartbeat(sessionId: String, scrollProgress: Double) async throws {
+        struct HeartbeatRequest: Encodable {
+            let sessionId: String
+            let scrollProgress: Double
+        }
+
+        let body = try encoder.encode(HeartbeatRequest(
+            sessionId: sessionId,
+            scrollProgress: scrollProgress
+        ))
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/analytics/session/heartbeat",
+            method: "POST",
+            body: body
+        )
+    }
+
+    func endReadingSession(sessionId: String, scrollProgress: Double) async throws {
+        struct SessionEndRequest: Encodable {
+            let sessionId: String
+            let scrollProgress: Double
+        }
+
+        let body = try encoder.encode(SessionEndRequest(
+            sessionId: sessionId,
+            scrollProgress: scrollProgress
+        ))
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/analytics/session/end",
+            method: "POST",
+            body: body
+        )
+    }
+
     // MARK: - Library Endpoints
 
     func getLibrary(userId: String) async throws -> [Story] {

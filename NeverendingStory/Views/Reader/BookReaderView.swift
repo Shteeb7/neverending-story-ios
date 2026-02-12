@@ -22,6 +22,7 @@ struct BookReaderView: View {
     @State private var contentHeight: CGFloat = 0
     @State private var visibleHeight: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     // MARK: - Feedback State
     @State private var showFeedbackDialog = false
@@ -275,12 +276,33 @@ struct BookReaderView: View {
             do {
                 try await readingState.loadStory(story)
                 startTopBarTimer()
+                // Start reading session for initial chapter
+                readingState.startReadingSession()
             } catch {
                 print("Failed to load story: \(error)")
             }
         }
         .onDisappear {
             topBarTimer?.invalidate()
+            // End reading session when leaving reader
+            readingState.stopTracking()
+        }
+        .onChange(of: scenePhase) { newPhase in
+            switch newPhase {
+            case .background:
+                // End session when app goes to background
+                Task {
+                    await readingState.endReadingSession()
+                }
+            case .active:
+                // Restart session when app comes to foreground
+                readingState.startReadingSession()
+            case .inactive:
+                // Do nothing on inactive (brief transition state)
+                break
+            @unknown default:
+                break
+            }
         }
     }
 
