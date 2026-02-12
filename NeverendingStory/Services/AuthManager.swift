@@ -86,14 +86,7 @@ class AuthManager: ObservableObject {
             guard !hasInitialized else { return }
             hasInitialized = true
 
-            NSLog("🧹 First init - clearing any old sessions")
-            do {
-                try await supabase.auth.signOut(scope: .global)
-                NSLog("✅ Old session cleared")
-            } catch {
-                NSLog("⚠️ Signout error: %@", error.localizedDescription)
-            }
-
+            NSLog("🔍 Checking for existing session...")
             await checkSession()
             initTask = nil // Clear reference when done
         }
@@ -388,6 +381,77 @@ class AuthManager: ObservableObject {
             provider: .apple,
             redirectTo: URL(string: "neverendingstory://auth/callback")
         )
+    }
+
+    // MARK: - Email/Password Authentication
+
+    func signInWithEmail(email: String, password: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        NSLog("📧 Signing in with email: %@", email)
+
+        // Sign in with Supabase
+        let session = try await supabase.auth.signIn(
+            email: email,
+            password: password
+        )
+
+        NSLog("✅ Email sign-in successful")
+        NSLog("   User ID: %@", session.user.id.uuidString)
+        NSLog("   Email: %@", session.user.email ?? "nil")
+
+        // Store access token
+        self.accessToken = session.accessToken
+
+        // Create User object
+        let user = User(
+            id: session.user.id.uuidString,
+            email: session.user.email ?? "",
+            name: session.user.userMetadata["name"] as? String,
+            avatarURL: nil,
+            createdAt: session.user.createdAt,
+            hasCompletedOnboarding: session.user.userMetadata["has_completed_onboarding"] as? Bool ?? false
+        )
+
+        self.user = user
+
+        NSLog("✅ Email sign-in complete")
+    }
+
+    func signUpWithEmail(email: String, password: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        NSLog("📧 Signing up with email: %@", email)
+
+        // Sign up with Supabase
+        let response = try await supabase.auth.signUp(
+            email: email,
+            password: password
+        )
+
+        NSLog("✅ Email sign-up successful")
+        NSLog("   User ID: %@", response.user.id.uuidString)
+
+        // Store access token
+        if let session = response.session {
+            self.accessToken = session.accessToken
+        }
+
+        // Create User object
+        let user = User(
+            id: response.user.id.uuidString,
+            email: response.user.email ?? "",
+            name: nil,
+            avatarURL: nil,
+            createdAt: response.user.createdAt,
+            hasCompletedOnboarding: false
+        )
+
+        self.user = user
+
+        NSLog("✅ Email sign-up complete")
     }
 
     // MARK: - OAuth Callback Handling

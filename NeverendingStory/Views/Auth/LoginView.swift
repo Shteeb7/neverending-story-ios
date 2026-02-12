@@ -2,14 +2,16 @@
 //  LoginView.swift
 //  NeverendingStory
 //
-//  OAuth authentication view
+//  Email/Password and Google authentication
 //
 
 import SwiftUI
-import AuthenticationServices
 
 struct LoginView: View {
     @StateObject private var authManager = AuthManager.shared
+    @State private var email = ""
+    @State private var password = ""
+    @State private var isSignUpMode = false
     @State private var showError = false
     @State private var errorMessage = ""
 
@@ -39,8 +41,57 @@ struct LoginView: View {
 
             Spacer()
 
-            // Authentication buttons
+            // Email/Password Form
             VStack(spacing: 16) {
+                // Email field
+                TextField("Email", text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+
+                // Password field
+                SecureField("Password", text: $password)
+                    .textContentType(isSignUpMode ? .newPassword : .password)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+
+                // Sign In / Sign Up button
+                Button(action: handleEmailAuth) {
+                    Text(isSignUpMode ? "Create Account" : "Sign In")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+                .disabled(authManager.isLoading || email.isEmpty || password.isEmpty)
+
+                // Toggle between Sign In / Sign Up
+                Button(action: { isSignUpMode.toggle() }) {
+                    Text(isSignUpMode ? "Already have an account? Sign In" : "New here? Create Account")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                }
+
+                // Divider
+                HStack {
+                    Rectangle()
+                        .frame(height: 1)
+                        .foregroundColor(.secondary.opacity(0.3))
+                    Text("or")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Rectangle()
+                        .frame(height: 1)
+                        .foregroundColor(.secondary.opacity(0.3))
+                }
+                .padding(.vertical, 8)
+
                 // Google Sign In
                 Button(action: signInWithGoogle) {
                     HStack(spacing: 12) {
@@ -57,22 +108,7 @@ struct LoginView: View {
                     .cornerRadius(12)
                 }
                 .disabled(authManager.isLoading)
-
-                // Apple Sign In
-                SignInWithAppleButton(
-                    .signIn,
-                    onRequest: { request in
-                        request.requestedScopes = [.fullName, .email]
-                    },
-                    onCompletion: handleAppleSignIn
-                )
-                .signInWithAppleButtonStyle(.black)
-                .frame(height: 56)
-                .frame(maxWidth: 375) // Prevent constraint conflict on wide screens
-                .cornerRadius(12)
-                .disabled(authManager.isLoading)
             }
-            .frame(maxWidth: .infinity) // Center the VStack
             .padding(.horizontal, 32)
 
             // Loading state
@@ -103,6 +139,21 @@ struct LoginView: View {
 
     // MARK: - Actions
 
+    private func handleEmailAuth() {
+        Task {
+            do {
+                if isSignUpMode {
+                    try await authManager.signUpWithEmail(email: email, password: password)
+                } else {
+                    try await authManager.signInWithEmail(email: email, password: password)
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+    }
+
     private func signInWithGoogle() {
         Task {
             do {
@@ -111,36 +162,6 @@ struct LoginView: View {
                 errorMessage = error.localizedDescription
                 showError = true
             }
-        }
-    }
-
-    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
-        switch result {
-        case .success(let authorization):
-            Task {
-                do {
-                    if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-                        // The actual token handling would need to be implemented
-                        // This is a placeholder structure
-                        print("Apple Sign In successful: \(appleIDCredential.user)")
-
-                        // In a real implementation, you would:
-                        // 1. Get the identity token and authorization code
-                        // 2. Send to your backend via APIManager
-                        // 3. Backend validates with Apple and creates/updates user
-                        // 4. Returns session token to client
-
-                        try await authManager.signInWithApple()
-                    }
-                } catch {
-                    errorMessage = error.localizedDescription
-                    showError = true
-                }
-            }
-
-        case .failure(let error):
-            errorMessage = error.localizedDescription
-            showError = true
         }
     }
 }
