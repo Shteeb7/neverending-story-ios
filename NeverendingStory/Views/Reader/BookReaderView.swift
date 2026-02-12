@@ -33,6 +33,10 @@ struct BookReaderView: View {
     @State private var showSequelGeneration = false
     @State private var interviewPreferences: [String: Any] = [:]
 
+    // MARK: - First Line Ceremony State
+    @State private var showFirstLineCeremony = false
+    @State private var firstLineCeremonyCompleted = false
+
     var body: some View {
         ZStack {
             // Main reading area with vertical scrolling
@@ -112,12 +116,14 @@ struct BookReaderView: View {
                         // Check for feedback checkpoint
                         checkForFeedbackCheckpoint()
                     }
+                    .opacity(showFirstLineCeremony ? 0 : (firstLineCeremonyCompleted ? 1 : 1))
+                    .animation(firstLineCeremonyCompleted ? .easeIn(duration: 0.8) : nil, value: showFirstLineCeremony)
                 }
             }
 
-            // Auto-hiding top bar
+            // Auto-hiding top bar (hidden during ceremony)
             VStack {
-                if showTopBar {
+                if showTopBar && !showFirstLineCeremony {
                     HStack {
                         // Back button
                         Button(action: { dismiss() }) {
@@ -160,11 +166,12 @@ struct BookReaderView: View {
                 Spacer()
             }
 
-            // Compact bottom toolbar with progress
+            // Compact bottom toolbar with progress (hidden during ceremony)
             VStack {
                 Spacer()
 
-                VStack(spacing: 0) {
+                if !showFirstLineCeremony {
+                    VStack(spacing: 0) {
                     // Progress bar (more visible)
                     GeometryReader { geometry in
                         ZStack(alignment: .leading) {
@@ -219,8 +226,23 @@ struct BookReaderView: View {
                             .opacity(0.98)
                             .ignoresSafeArea(edges: .bottom)
                     )
+                    }
+                    .shadow(color: .black.opacity(0.1), radius: 4, y: -2)
                 }
-                .shadow(color: .black.opacity(0.1), radius: 4, y: -2)
+            }
+
+            // First Line Ceremony Overlay
+            if showFirstLineCeremony, let chapter = readingState.currentChapter {
+                FirstLineCeremonyView(
+                    firstLine: FirstLineCeremonyView.extractFirstLine(from: chapter.content),
+                    readerSettings: readerSettings,
+                    onComplete: {
+                        firstLineCeremonyCompleted = true
+                        showFirstLineCeremony = false
+                        markCeremonyShown(for: story.id)
+                    }
+                )
+                .transition(.opacity)
             }
         }
         .navigationBarHidden(true)
@@ -280,6 +302,12 @@ struct BookReaderView: View {
                 startTopBarTimer()
                 // Start reading session for initial chapter
                 readingState.startReadingSession()
+
+                // Check if First Line Ceremony should play
+                // Only for Chapter 1 of stories that haven't had their ceremony yet
+                if readingState.currentChapterIndex == 0 && !hasShownCeremony(for: story.id) {
+                    showFirstLineCeremony = true
+                }
             } catch {
                 print("Failed to load story: \(error)")
             }
@@ -435,6 +463,21 @@ struct BookReaderView: View {
                 NSLog("❌ Failed to submit feedback: \(error)")
                 // TODO: Show error alert
             }
+        }
+    }
+
+    // MARK: - First Line Ceremony Helpers
+
+    private func hasShownCeremony(for storyId: String) -> Bool {
+        let shown = UserDefaults.standard.stringArray(forKey: "firstLineCeremonyShown") ?? []
+        return shown.contains(storyId)
+    }
+
+    private func markCeremonyShown(for storyId: String) {
+        var shown = UserDefaults.standard.stringArray(forKey: "firstLineCeremonyShown") ?? []
+        if !shown.contains(storyId) {
+            shown.append(storyId)
+            UserDefaults.standard.set(shown, forKey: "firstLineCeremonyShown")
         }
     }
 }
