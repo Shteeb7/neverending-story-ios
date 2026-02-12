@@ -211,23 +211,28 @@ struct OnboardingView: View {
     // MARK: - Actions
 
     private func checkForExistingPremises() {
+        NSLog("🔍 OnboardingView: checkForExistingPremises() called")
         Task {
             guard let userId = AuthManager.shared.user?.id else {
-                print("⚠️ No user ID - showing voice interview")
+                NSLog("⚠️ OnboardingView: No user ID - showing voice interview")
                 await MainActor.run {
                     isCheckingForPremises = false
                 }
                 return
             }
 
+            NSLog("🔍 OnboardingView: Checking for existing premises for user: %@", userId)
+
             do {
                 // Check if premises already exist for this user
-                print("🔍 Checking for existing premises...")
                 let premises = try await APIManager.shared.getPremises(userId: userId)
+
+                NSLog("📊 OnboardingView: API returned %d premises", premises.count)
 
                 if !premises.isEmpty {
                     // Premises exist! Skip voice interview and go straight to selection
-                    print("✅ Found \(premises.count) existing premises - skipping interview")
+                    NSLog("✅ OnboardingView: Found %d existing premises - SKIPPING VOICE INTERVIEW", premises.count)
+                    NSLog("   → Navigating directly to PremiseSelectionView")
                     await MainActor.run {
                         isCheckingForPremises = false
                         existingPremisesFound = true
@@ -235,14 +240,14 @@ struct OnboardingView: View {
                     }
                 } else {
                     // No premises - show voice interview
-                    print("📝 No premises found - showing voice interview")
+                    NSLog("📝 OnboardingView: No premises found - SHOWING VOICE INTERVIEW")
                     await MainActor.run {
                         isCheckingForPremises = false
                     }
                 }
             } catch {
                 // Error checking - show voice interview as fallback
-                print("⚠️ Error checking premises: \(error) - showing voice interview")
+                NSLog("❌ OnboardingView: Error checking premises: %@ - showing voice interview", error.localizedDescription)
                 await MainActor.run {
                     isCheckingForPremises = false
                 }
