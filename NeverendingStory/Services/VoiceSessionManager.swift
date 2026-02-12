@@ -238,9 +238,10 @@ class VoiceSessionManager: ObservableObject {
     private func setupAudioEngine() throws {
         let audioSession = AVAudioSession.sharedInstance()
         // Use playAndRecord for two-way audio conversation
-        // .voiceChat mode automatically handles Bluetooth routing
-        // Allow Bluetooth audio (AirPods, etc.) - removed .defaultToSpeaker to enable this
-        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothA2DP])
+        // .default mode works better for speaker/Bluetooth routing than .voiceChat
+        // .defaultToSpeaker: Routes to loudspeaker when no Bluetooth is connected
+        // .allowBluetoothA2DP: Routes to AirPods/Bluetooth with high-quality audio (takes priority over speaker)
+        try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothA2DP])
         try audioSession.setActive(true)
 
         // Prefer Bluetooth audio route if available (AirPods, etc.)
