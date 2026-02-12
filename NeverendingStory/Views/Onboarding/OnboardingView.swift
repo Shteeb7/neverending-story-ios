@@ -174,20 +174,6 @@ struct OnboardingView: View {
                         default:
                             EmptyView()
                         }
-
-                        // Conversation transcript (if available)
-                        if !voiceManager.conversationText.isEmpty {
-                            ScrollView {
-                                Text(voiceManager.conversationText)
-                                    .font(.body)
-                                    .foregroundColor(.primary)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(12)
-                            }
-                            .frame(maxHeight: 200)
-                        }
                     }
                     .padding(.horizontal, 32)
 
