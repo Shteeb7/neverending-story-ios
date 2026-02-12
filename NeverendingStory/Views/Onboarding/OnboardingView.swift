@@ -14,6 +14,7 @@ struct OnboardingView: View {
     @State private var conversationData: String? = nil
     @State private var premisesReady = false
     @State private var storyPreferences: [String: Any]? = nil
+    @State private var isPulsing = false
 
     var body: some View {
         NavigationStack {
@@ -68,37 +69,70 @@ struct OnboardingView: View {
                         case .listening:
                             VStack(spacing: 16) {
                                 if premisesReady {
-                                    // Show "ready" state with proceed button
-                                    VStack(spacing: 16) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 60))
-                                            .foregroundColor(.green)
+                                    // Show "ready to end interview" state with proceed button
+                                    VStack(spacing: 20) {
+                                        // Mystical portal animation
+                                        ZStack {
+                                            Circle()
+                                                .fill(
+                                                    RadialGradient(
+                                                        colors: [
+                                                            Color.accentColor.opacity(0.3),
+                                                            Color.accentColor.opacity(0.1),
+                                                            Color.clear
+                                                        ],
+                                                        center: .center,
+                                                        startRadius: 20,
+                                                        endRadius: 60
+                                                    )
+                                                )
+                                                .frame(width: 120, height: 120)
+                                                .scaleEffect(isPulsing ? 1.2 : 1.0)
+                                                .animation(
+                                                    .easeInOut(duration: 1.5)
+                                                    .repeatForever(autoreverses: true),
+                                                    value: isPulsing
+                                                )
 
-                                        Text("Story Premises Ready!")
-                                            .font(.headline)
-                                            .foregroundColor(.primary)
+                                            Image(systemName: "sparkles")
+                                                .font(.system(size: 50))
+                                                .foregroundColor(.accentColor)
+                                                .symbolEffect(.pulse)
+                                        }
+                                        .onAppear { isPulsing = true }
 
-                                        Button(action: {
-                                            voiceManager.endSession()
-                                            navigateToPremises = true
-                                        }) {
-                                            HStack {
+                                        VStack(spacing: 8) {
+                                            Text("✨ Portal Ready ✨")
+                                                .font(.title3)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.primary)
+
+                                            Text("Your infinite library awaits...")
+                                                .font(.callout)
+                                                .foregroundColor(.secondary)
+                                        }
+
+                                        Button(action: proceedToLibrary) {
+                                            HStack(spacing: 12) {
                                                 Image(systemName: "sparkles")
-                                                Text("Show Me Stories!")
+                                                Text("Enter My Infinite Library")
                                                     .font(.headline)
+                                                Image(systemName: "arrow.right")
                                             }
                                             .frame(maxWidth: .infinity)
                                             .padding(.vertical, 16)
                                             .background(
                                                 LinearGradient(
-                                                    colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
+                                                    colors: [Color.accentColor, Color.accentColor.opacity(0.7)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
                                                 )
                                             )
                                             .foregroundColor(.white)
                                             .cornerRadius(12)
+                                            .shadow(color: Color.accentColor.opacity(0.3), radius: 8, y: 4)
                                         }
+                                        .padding(.top, 8)
                                     }
                                 } else {
                                     // Normal listening state
@@ -158,14 +192,6 @@ struct OnboardingView: View {
                     .padding(.horizontal, 32)
 
                     Spacer()
-
-                    // Skip button
-                    Button("Skip voice, choose manually") {
-                        navigateToPremises = true
-                    }
-                    .font(.callout)
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 24)
                 }
             }
             .navigationDestination(isPresented: $navigateToPremises) {
@@ -196,25 +222,10 @@ struct OnboardingView: View {
                         self.storyPreferences = preferences
                         self.conversationData = self.voiceManager.conversationText
 
-                        // Call backend API to generate premises with preferences
-                        Task {
-                            do {
-                                // TODO: Update generatePremises() to accept preferences parameter
-                                // For now, calling without preferences - backend should use last conversation
-                                try await APIManager.shared.generatePremises()
-
-                                DispatchQueue.main.async {
-                                    self.premisesReady = true
-                                    print("✅ Premises generated - user can now proceed")
-                                }
-                            } catch {
-                                print("❌ Failed to generate premises: \(error)")
-                                // Still allow user to proceed - they can try manual selection
-                                DispatchQueue.main.async {
-                                    self.premisesReady = true
-                                }
-                            }
-                        }
+                        // Show "Enter Your Library" button
+                        // DON'T call backend yet - wait for user to tap button
+                        self.premisesReady = true
+                        print("✅ Interview complete - showing 'Enter Your Library' button")
                     }
                 }
 
@@ -240,6 +251,50 @@ struct OnboardingView: View {
         // Navigate to premise selection
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             navigateToPremises = true
+        }
+    }
+
+    private func proceedToLibrary() {
+        // Save conversation data
+        conversationData = voiceManager.conversationText
+
+        // End voice session first
+        voiceManager.endSession()
+
+        // Now call backend to save preferences and generate premises
+        Task {
+            guard let userId = AuthManager.shared.user?.id else {
+                print("❌ No user ID available")
+                return
+            }
+
+            guard let conversation = conversationData, !conversation.isEmpty else {
+                print("❌ No conversation data to submit")
+                return
+            }
+
+            do {
+                // STEP 1: Submit conversation transcript to extract and save preferences
+                print("📤 Submitting voice conversation to backend...")
+                try await APIManager.shared.submitVoiceConversation(userId: userId, conversation: conversation)
+                print("✅ Conversation submitted and preferences saved")
+
+                // STEP 2: Generate premises based on saved preferences
+                print("📤 Calling backend to generate premises...")
+                try await APIManager.shared.generatePremises()
+                print("✅ Premises generation started")
+
+                // Navigate to premise selection (which will show loading then cards)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    navigateToPremises = true
+                }
+            } catch {
+                print("❌ Failed to process onboarding: \(error)")
+                // Still navigate - PremiseSelectionView will handle error
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    navigateToPremises = true
+                }
+            }
         }
     }
 

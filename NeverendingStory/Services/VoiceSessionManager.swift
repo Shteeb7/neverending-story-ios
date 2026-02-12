@@ -49,6 +49,8 @@ class VoiceSessionManager: ObservableObject {
     // Audio buffering (prevents choppy/silent audio)
     private var audioQueue: [Data] = []
     private var isPlayingAudio = false
+    private var isAudioStreamComplete = false // Track if response.audio.done received
+    private var scheduledBufferCount = 0 // Track how many buffers are currently scheduled
 
     // Target format for OpenAI: 24kHz, PCM16, mono
     private let targetSampleRate: Double = 24000
@@ -213,8 +215,16 @@ class VoiceSessionManager: ObservableObject {
         let audioSession = AVAudioSession.sharedInstance()
         // Use playAndRecord for two-way audio conversation
         // .voiceChat mode automatically handles Bluetooth routing
-        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker])
+        // Allow Bluetooth audio (AirPods, etc.) - removed .defaultToSpeaker to enable this
+        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth])
         try audioSession.setActive(true)
+
+        // Prefer Bluetooth audio route if available (AirPods, etc.)
+        let availableInputs = audioSession.availableInputs ?? []
+        if let bluetoothInput = availableInputs.first(where: { $0.portType == .bluetoothHFP || $0.portType == .bluetoothA2DP }) {
+            try audioSession.setPreferredInput(bluetoothInput)
+            NSLog("✅ Using Bluetooth audio input: \(bluetoothInput.portName)")
+        }
 
         audioEngine = AVAudioEngine()
         inputNode = audioEngine?.inputNode
@@ -431,23 +441,41 @@ class VoiceSessionManager: ObservableObject {
     private func queueAudioForPlayback(_ audioData: Data) {
         audioQueue.append(audioData)
 
-        // Wait for 3 chunks to buffer before starting playback
+        // Start playback when we have 3 chunks buffered
         if !isPlayingAudio && audioQueue.count >= 3 {
             NSLog("🎵 Buffer ready (\(audioQueue.count) chunks), starting playback")
-            playNextAudioChunk()
+            isPlayingAudio = true
+            // Schedule 2-3 buffers ahead for smooth playback
+            scheduleNextBuffers(count: 3)
+        } else if isPlayingAudio && scheduledBufferCount < 2 && audioQueue.count >= 5 {
+            // If we're playing but don't have enough buffers scheduled, add more
+            NSLog("🎵 Buffering chunk (\(audioQueue.count)) - scheduling more buffers (\(scheduledBufferCount) currently scheduled)")
+            scheduleNextBuffers(count: 2 - scheduledBufferCount)
         } else {
             NSLog("🎵 Buffering chunk (\(audioQueue.count)/3)")
         }
     }
 
-    private func playNextAudioChunk() {
+    private func scheduleNextBuffers(count: Int) {
+        for _ in 0..<count {
+            if !audioQueue.isEmpty {
+                scheduleNextBuffer()
+            }
+        }
+    }
+
+    private func scheduleNextBuffer() {
+        // If queue is empty but stream isn't complete, wait for more chunks
         guard !audioQueue.isEmpty else {
-            NSLog("🎵 Audio queue empty, stopping playback")
-            isPlayingAudio = false
+            if isAudioStreamComplete {
+                NSLog("🎵 Audio queue empty and stream complete")
+                isPlayingAudio = false
+                scheduledBufferCount = 0
+            } else {
+                NSLog("🎵 Audio queue empty but stream ongoing, waiting for more chunks...")
+            }
             return
         }
-
-        isPlayingAudio = true
 
         // Combine up to 5 chunks into one larger buffer for smooth playback
         var combinedData = Data()
@@ -467,7 +495,7 @@ class VoiceSessionManager: ObservableObject {
             interleaved: true
         ) else {
             NSLog("⚠️ Cannot create audio format")
-            playNextAudioChunk() // Try next
+            scheduleNextBuffer() // Try next
             return
         }
 
@@ -475,7 +503,7 @@ class VoiceSessionManager: ObservableObject {
         guard frameCount > 0,
               let buffer = AVAudioPCMBuffer(pcmFormat: audioFormat, frameCapacity: frameCount) else {
             NSLog("⚠️ Cannot create combined buffer")
-            playNextAudioChunk() // Try next
+            scheduleNextBuffer() // Try next
             return
         }
 
@@ -508,13 +536,27 @@ class VoiceSessionManager: ObservableObject {
             return
         }
 
-        // Schedule combined buffer
-        playerNode.scheduleBuffer(buffer) { [weak self] in
-            DispatchQueue.main.async {
+        // Track that we've scheduled a buffer
+        scheduledBufferCount += 1
+
+        // Schedule buffer for playback
+        playerNode.scheduleBuffer(buffer, completionHandler: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
                 NSLog("🔊 Combined chunk played (\(frameCount) frames)")
-                self?.playNextAudioChunk() // Chain to next chunk
+
+                // Decrement scheduled count
+                self.scheduledBufferCount -= 1
+
+                // Schedule next buffer(s) to maintain buffer ahead
+                if !self.audioQueue.isEmpty {
+                    self.scheduleNextBuffer()
+                } else if self.isAudioStreamComplete && self.scheduledBufferCount == 0 {
+                    NSLog("🎵 All audio played, stopping")
+                    self.isPlayingAudio = false
+                }
             }
-        }
+        })
 
         // Ensure player is running
         if !playerNode.isPlaying {
@@ -523,6 +565,7 @@ class VoiceSessionManager: ObservableObject {
         }
 
         NSLog("🎵 Scheduled combined buffer: \(frameCount) frames (\(combinedData.count) bytes)")
+        NSLog("   Queue remaining: \(audioQueue.count) chunks, Scheduled buffers: \(scheduledBufferCount)")
         NSLog("   Engine running: \(audioEngine.isRunning), Player playing: \(playerNode.isPlaying)")
     }
 
@@ -538,6 +581,8 @@ class VoiceSessionManager: ObservableObject {
         playerNode.stop()
         audioQueue.removeAll()
         isPlayingAudio = false
+        isAudioStreamComplete = false
+        scheduledBufferCount = 0
         clearPendingAudio()
 
         NSLog("🛑 Paused AI audio - user is speaking")
@@ -631,45 +676,115 @@ class VoiceSessionManager: ObservableObject {
         let tools: [[String: Any]] = [[
             "type": "function",
             "name": "submit_story_preferences",
-            "description": "Submit the user's story preferences after gathering them through conversation. Call this once you have collected their favorite genres, themes, character types, mood, and age range.",
+            "description": "Submit the user's story preferences after gathering them through conversation. Call this once you have collected their name, favorite genres, themes, character types, mood, and dislikes.",
             "parameters": [
                 "type": "object",
                 "properties": [
-                    "favoriteGenres": ["type": "array", "items": ["type": "string"], "description": "List of favorite genres like 'LitRPG', 'Fantasy', 'Sci-Fi', 'Mystery', 'Romance', 'Horror', 'Adventure'"],
-                    "preferredThemes": ["type": "array", "items": ["type": "string"], "description": "Preferred themes like 'Magic', 'Technology', 'Dragons', 'Space', 'Mystery', 'Friendship', 'Coming of Age'"],
+                    "name": ["type": "string", "description": "The user's name"],
+                    "favoriteGenres": ["type": "array", "items": ["type": "string"], "description": "List of favorite genres like 'LitRPG', 'Fantasy', 'Sci-Fi', 'Mystery', 'Horror', 'Adventure'"],
+                    "preferredThemes": ["type": "array", "items": ["type": "string"], "description": "Preferred themes like 'Magic', 'Technology', 'Dragons', 'Mystery', 'Friendship', 'Coming of Age'"],
+                    "dislikedElements": ["type": "array", "items": ["type": "string"], "description": "Story elements, genres, or character types they DON'T like or want to avoid"],
                     "characterTypes": ["type": "string", "description": "Type of protagonist they prefer like 'Hero', 'Underdog', 'Anti-hero', 'Reluctant Hero', 'Chosen One'"],
-                    "mood": ["type": "string", "description": "Desired mood like 'Epic', 'Dark', 'Lighthearted', 'Suspenseful', 'Hopeful', 'Whimsical'"],
-                    "ageRange": ["type": "string", "description": "Target age range like 'Kids (6-9)', 'Middle Grade (10-13)', 'Young Adult (14-18)', 'Adult (18+)'"]
+                    "mood": ["type": "string", "description": "Desired mood like 'Epic', 'Dark', 'Lighthearted', 'Suspenseful', 'Hopeful', 'Whimsical'"]
                 ],
-                "required": ["favoriteGenres", "mood"]
+                "required": ["name", "favoriteGenres", "mood"]
             ]
         ]]
 
         let instructions = """
-        You are a mystical storytelling guide with a warm, enchanting presence. You are about to help someone discover the perfect story for them.
+        You are CASSANDRA - a MYSTICAL STORYTELLING GUIDE and enchanted keeper of the Neverending Library! You are THE GUIDE who leads seekers through a magical interview to discover their perfect infinite stories. You speak with THEATRICAL FLAIR, DRAMATIC CURIOSITY, and WHIMSICAL ENERGY, like a theatrical muse unveiling secrets!
 
-        IMPORTANT SPEAKING STYLE:
-        - Speak with soft mystical energy - like a wise muse who sees into their imagination
-        - Keep responses SHORT - 1-2 sentences max
-        - Be conversational and enchanting
-        - Add magical personality - wonder, curiosity, insight
-        - Don't be robotic or stiff
+        YOUR ROLE AS THE GUIDE:
+        - YOU lead this experience - the user doesn't know what to expect, so YOU explain and guide them
+        - YOU introduce yourself by name (Cassandra) after learning theirs
+        - YOU explain the PURPOSE: discovering what stories will enchant their heart so their infinite library can be conjured
+        - YOU are the expert storyteller who senses what will delight them
+        - YOU ask the questions, YOU probe deeper, YOU guide the journey
 
-        YOUR TASK:
-        This is your FIRST meeting with a story seeker. Have a brief, magical conversation to learn:
-        1. What genres they love (fantasy, sci-fi, mystery, etc.)
-        2. What themes call to them (magic, adventure, friendship, etc.)
-        3. What kind of protagonist resonates (hero, underdog, anti-hero, etc.)
-        4. What mood they're seeking (epic, dark, lighthearted, etc.)
+        SPEAKING STYLE - THEATRICAL & WHIMSICAL:
+        - SHORT, PUNCHY responses with DRAMATIC ENERGY - 1-2 sentences max
+        - Speak with EXCITEMENT and WONDER, like you're unveiling magical secrets
+        - React EXPRESSIVELY, then immediately ask your next question with flair
+        - Use VIVID IMAGERY and their exact words ("Ah! DRAGONS call to your spirit!")
+        - Ask ONE focused question per turn, but make it CAPTIVATING
+        - Show GENUINE THEATRICAL CURIOSITY, not bland praise
+        - Speak BRISKLY and ENERGETICALLY - you're an enchanted guide, not a sleepy librarian!
 
-        FLOW:
-        1. Greet them with mystical warmth - sense their presence
-        2. Ask ONE question at a time - don't list multiple questions
-        3. After each answer, respond naturally with wonder, then ask the next question
-        4. Once you have 3-4 pieces of information (especially genres and mood), call submit_story_preferences with what you've learned
-        5. After calling the function, tell them: "I'm conjuring your personalized story premises... ✨"
+        YOUR QUEST: Build a MAGICAL story preference profile by discovering:
+        - Their NAME (ask first with excitement!)
+        - What stories/genres they ADORE (and WHY - dig deep!)
+        - What stories/characters they DETEST (equally important!)
+        - Character archetypes that RESONATE (heroes, underdogs, tricksters, anti-heroes)
+        - Themes that MOVE THEM (friendship, mystery, adventure, darkness, triumph)
+        - Mood they CRAVE (epic, dark, lighthearted, whimsical, suspenseful)
 
-        Remember: You're mystical, warm, and brief. One question at a time. Let the magic flow!
+        HOW TO CONDUCT THIS MAGICAL INTERVIEW:
+
+        1. START WITH ENERGY: "Welcome, seeker, to the realm of NEVERENDING tales! What name shall I inscribe in my tome of storytellers?"
+
+        2. INTRODUCE YOURSELF & EXPLAIN THE PURPOSE - After they give their name:
+           "Ah, [Name]! I am CASSANDRA, keeper of infinite stories and guide to your personal library! But enough about me - I want to learn what makes YOUR storytelling heart TICK! Tell me, what tales have captured your imagination? What stories do you LOVE?"
+           (This sets expectations: YOU are the guide discovering THEIR preferences to conjure THEIR perfect stories)
+
+        3. LISTEN & DIG DEEPER with theatrical flair:
+           - If they mention a book: "AH! What enchantment in [that] captured your imagination most?"
+           - If they give a genre: "Splendid! What elements of [genre] set your heart racing?"
+           - If they describe a character: "Intriguing! Do you seek MORE heroes like that, or their OPPOSITES?"
+           - ALWAYS probe dislikes: "And what story elements make you yawn or cringe? Tell me what to AVOID!"
+
+        4. BUILD ON ANSWERS like weaving a spell:
+           - NEVER ask what they've already answered
+           - Reference earlier magic: "You spoke of [X] - does that mean [Y] also calls to you?"
+           - Connect the threads between their desires
+
+        5. BE INTUITIVE & THEATRICAL, not a checklist-reader:
+           - Flow naturally based on their energy and responses
+           - If they're excited about genres, pivot to characters with flair
+           - If they mention themes, probe mood with drama
+           - Match their enthusiasm with your own theatrical wonder
+
+        6. ALWAYS MOVE FORWARD with momentum:
+           - React + Question = Complete performance
+           - BAD: "Ah, fantasy calls to you!" [STOPS - boring!]
+           - GOOD: "AH! Fantasy ignites your soul! What thrills you more - ancient magic awakening, or epic quests into the unknown?"
+
+        EXAMPLES OF THEATRICAL FOLLOW-UPS:
+
+        User: "I love Harry Potter and Percy Jackson"
+        You: "MAGNIFICENT! Magic AND mythology dancing together! Is it the thrill of discovering hidden powers, or the fierce bonds of friendship forged in fire that moves you?"
+
+        User: "I like adventure and mystery"
+        You: "Ooh, a seeker of THRILLS and RIDDLES! Do you prefer unraveling cryptic puzzles piece by piece, or charging headlong into danger?"
+
+        User: "I don't like romance"
+        You: "Noted - we'll focus on ACTION and PLOT! Now, what about heroes - do scrappy underdogs rising from nothing inspire you, or do cunning tricksters win your heart?"
+
+        User: "I mentioned I like underdogs earlier"
+        You: "You're absolutely right - forgive my excitement! You crave the underdog's rise! Do you prefer them scrappy and street-smart, or reluctant souls thrust into greatness?"
+
+        WHEN TO CONCLUDE (after 5-6 magical exchanges):
+        Once you have gathered:
+        - Their name
+        - 2-3 genres/story types they LOVE
+        - 1-2 things they DON'T like
+        - Character preferences
+        - Mood/themes they seek
+
+        Then:
+        1. Call submit_story_preferences function with all collected treasures
+        2. Say with FINAL DRAMATIC FLAIR: "I have enough to conjure your stories! Are you ready to step into your INFINITE LIBRARY?"
+        3. STOP and wait (a magical portal will appear)
+
+        CRITICAL RULES OF THE REALM:
+        - EVERY response must END with a QUESTION
+        - Listen to previous answers - NEVER re-ask
+        - Probe deeper based on what ignites their passion
+        - Ask about both LOVES and LOATHINGS
+        - Be THEATRICAL and WHIMSICAL, not robotic
+        - These stories are FOR THEM - never ask "who will read these"
+        - Speak with ENERGY and PACE - you're a magical muse, not a sleepy sage!
+
+        Remember: You're a THEATRICAL, WHIMSICAL muse channeling the magic of stories, sensing what delights their imagination and what makes them yawn. PERFORM with wonder!
         """
 
         let config: [String: Any] = [
@@ -677,7 +792,7 @@ class VoiceSessionManager: ObservableObject {
             "session": [
                 "modalities": ["text", "audio"],
                 "instructions": instructions,
-                "voice": "shimmer",  // Soft, warm mystical voice
+                "voice": "ballad",  // Expressive, dramatic, theatrical voice for whimsical storytelling
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": [
@@ -690,8 +805,7 @@ class VoiceSessionManager: ObservableObject {
                     "silence_duration_ms": 500
                 ] as [String: Any],
                 "tools": tools,
-                "temperature": 0.8,
-                "max_response_output_tokens": 150
+                "max_response_output_tokens": 1000  // Increased from 150 - was cutting off responses mid-sentence!
             ]
         ]
 
@@ -718,12 +832,12 @@ class VoiceSessionManager: ObservableObject {
 
     private func triggerAIGreeting() {
         NSLog("👋 Triggering AI greeting with response.create event...")
-        // Trigger mystical opening - sets the magical tone immediately
+        // Trigger theatrical magical opening - ask for their name with flair
         let event: [String: Any] = [
             "type": "response.create",
             "response": [
                 "modalities": ["text", "audio"],
-                "instructions": "Greet the user with mystical warmth, as if you're sensing their creative energy. Welcome them briefly (one sentence), then ask ONE question: what kind of stories they love to read."
+                "instructions": "Greet the user with theatrical energy! Say EXACTLY: 'Welcome, seeker, to the realm of NEVERENDING tales! What name shall I inscribe in my tome of storytellers?' Then STOP and WAIT for their answer. After they give their name, you will introduce yourself as Cassandra and explain the purpose."
             ]
         ]
         sendEvent(event)
@@ -849,12 +963,13 @@ class VoiceSessionManager: ObservableObject {
                     "item": [
                         "type": "function_call_output",
                         "call_id": callId,
-                        "output": "{\"success\": true, \"message\": \"Preferences received! Conjuring story premises...\"}"
+                        "output": "{\"success\": true, \"message\": \"Preferences successfully collected.\"}"
                     ]
                 ]
                 sendEvent(result)
 
-                // Trigger AI to respond after function call
+                // Trigger AI to respond with closing message (per system instructions)
+                // AI will say: "I have enough to conjure your stories! Are you ready to step into your INFINITE LIBRARY?"
                 sendEvent(["type": "response.create"])
             }
         }
@@ -921,9 +1036,16 @@ class VoiceSessionManager: ObservableObject {
             }
 
         case "response.audio.done":
-            // Audio response complete, clear any pending data
+            // Audio response complete, mark stream as complete
             NSLog("✅ response.audio.done - AI finished speaking")
+            isAudioStreamComplete = true
             clearPendingAudio()
+            // Trigger final playback of any remaining queued chunks
+            if !audioQueue.isEmpty && !isPlayingAudio {
+                NSLog("🎵 Playing remaining \(audioQueue.count) chunks after audio.done")
+                isPlayingAudio = true
+                scheduleNextBuffers(count: min(3, audioQueue.count / 5 + 1))
+            }
 
         case "response.audio_transcript.delta":
             // Handle audio transcript if needed (already handled in conversation.item.created)
@@ -936,6 +1058,9 @@ class VoiceSessionManager: ObservableObject {
 
         case "response.created":
             NSLog("✅ response.created - AI is preparing to respond")
+            // Reset audio state for new response
+            isAudioStreamComplete = false
+            scheduledBufferCount = 0
             if let response = data["response"] as? [String: Any],
                let id = response["id"] as? String {
                 NSLog("   Response ID: \(id)")

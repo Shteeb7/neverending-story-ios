@@ -68,9 +68,11 @@ struct LoginView: View {
                 )
                 .signInWithAppleButtonStyle(.black)
                 .frame(height: 56)
+                .frame(maxWidth: 375) // Prevent constraint conflict on wide screens
                 .cornerRadius(12)
                 .disabled(authManager.isLoading)
             }
+            .frame(maxWidth: .infinity) // Center the VStack
             .padding(.horizontal, 32)
 
             // Loading state
