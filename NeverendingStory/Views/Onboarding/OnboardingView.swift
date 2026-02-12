@@ -19,6 +19,7 @@ struct OnboardingView: View {
     @State private var isPulsing = false
     @State private var isCheckingForPremises = true
     @State private var existingPremisesFound = false
+    @State private var showDNATransfer = false
 
     init(forceNewInterview: Bool = false) {
         self.forceNewInterview = forceNewInterview
@@ -130,7 +131,7 @@ struct OnboardingView: View {
                                                 .foregroundColor(.secondary)
                                         }
 
-                                        Button(action: proceedToLibrary) {
+                                        Button(action: startDNATransfer) {
                                             HStack(spacing: 12) {
                                                 Image(systemName: "sparkles")
                                                 Text("Enter My Infinite Library")
@@ -207,6 +208,14 @@ struct OnboardingView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Please enable microphone access in Settings to use voice onboarding.")
+            }
+            .fullScreenCover(isPresented: $showDNATransfer) {
+                DNATransferView(
+                    userId: AuthManager.shared.user?.id ?? ""
+                ) {
+                    showDNATransfer = false
+                    navigateToPremises = true
+                }
             }
             .onAppear {
                 checkForExistingPremises()
@@ -317,6 +326,33 @@ struct OnboardingView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             navigateToPremises = true
         }
+    }
+
+    private func startDNATransfer() {
+        // End voice session immediately
+        voiceManager.endSession()
+
+        // Start backend submission in parallel (fire and forget)
+        Task {
+            guard let userId = AuthManager.shared.user?.id else { return }
+            let conversation = conversationData ?? voiceManager.conversationText
+            guard !conversation.isEmpty else { return }
+
+            do {
+                try await APIManager.shared.submitVoiceConversation(
+                    userId: userId,
+                    conversation: conversation,
+                    preferences: storyPreferences
+                )
+                NSLog("✅ Backend submission complete during DNA Transfer")
+            } catch {
+                NSLog("❌ Backend submission failed: \(error)")
+                // DNA Transfer will handle the error via premise polling timeout
+            }
+        }
+
+        // Show ceremony immediately (don't wait for backend)
+        showDNATransfer = true
     }
 
     private func proceedToLibrary() {
