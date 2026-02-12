@@ -84,6 +84,8 @@ struct BookReaderView: View {
                             let scrolled = max(-value, 0)
                             let maxScroll = max(contentHeight - visibleHeight, 1)
                             scrollProgress = min(scrolled / maxScroll, 1.0)
+                            // Update scroll percentage (0-100) for analytics
+                            readingState.updateScrollPercentage(scrollProgress * 100)
                         }
                         // Check for book completion as user scrolls through chapter 12
                         checkForFeedbackCheckpoint()

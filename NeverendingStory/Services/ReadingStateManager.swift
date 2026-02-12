@@ -16,6 +16,7 @@ class ReadingStateManager: ObservableObject {
     @Published var chapters: [Chapter] = []
     @Published var currentChapterIndex: Int = 0
     @Published var scrollPosition: Double = 0
+    @Published var scrollPercentage: Double = 0  // 0-100
 
     // Reading session tracking
     @Published var currentSessionId: String? = nil
@@ -143,6 +144,10 @@ class ReadingStateManager: ObservableObject {
         debouncedSave()
     }
 
+    func updateScrollPercentage(_ percentage: Double) {
+        self.scrollPercentage = min(max(percentage, 0), 100)
+    }
+
     private func debouncedSave() {
         saveTask?.cancel()
         saveTask = Task {
@@ -165,7 +170,7 @@ class ReadingStateManager: ObservableObject {
             if let sessionId = currentSessionId {
                 try? await APIManager.shared.sendReadingHeartbeat(
                     sessionId: sessionId,
-                    scrollProgress: scrollPosition
+                    scrollProgress: scrollPercentage
                 )
             }
         } catch {
@@ -217,7 +222,7 @@ class ReadingStateManager: ObservableObject {
         do {
             try await APIManager.shared.endReadingSession(
                 sessionId: sessionId,
-                scrollProgress: scrollPosition
+                scrollProgress: scrollPercentage
             )
             NSLog("✅ ReadingStateManager: Session ended successfully")
         } catch {
