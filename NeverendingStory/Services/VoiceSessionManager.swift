@@ -8,6 +8,7 @@
 import Foundation
 import AVFoundation
 import Combine
+import UIKit
 
 enum VoiceSessionState {
     case idle
@@ -224,7 +225,7 @@ class VoiceSessionManager: ObservableObject {
         // Use playAndRecord for two-way audio conversation
         // .voiceChat mode automatically handles Bluetooth routing
         // Allow Bluetooth audio (AirPods, etc.) - removed .defaultToSpeaker to enable this
-        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth])
+        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothA2DP])
         try audioSession.setActive(true)
 
         // Prefer Bluetooth audio route if available (AirPods, etc.)
