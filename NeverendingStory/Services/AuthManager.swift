@@ -313,11 +313,21 @@ class AuthManager: ObservableObject {
             NSLog("   Email: %@", session.user.email ?? "nil")
             NSLog("   isAuthenticated: %@", self.isAuthenticated ? "true" : "false")
 
-            // Write token to file for easy copying (won't get truncated)
-            let tokenPath = NSTemporaryDirectory() + "supabase_token.txt"
-            try? session.accessToken.write(toFile: tokenPath, atomically: true, encoding: .utf8)
-            NSLog("🔑 ACCESS TOKEN SAVED TO: %@", tokenPath)
-            NSLog("   Run: cat '\(tokenPath)' to get full token")
+            // Print token in chunks to avoid console truncation
+            NSLog("🔑 FULL ACCESS TOKEN (copy all parts together):")
+            let token = session.accessToken
+            let chunkSize = 100
+            var startIndex = token.startIndex
+            var partNumber = 1
+
+            while startIndex < token.endIndex {
+                let endIndex = token.index(startIndex, offsetBy: chunkSize, limitedBy: token.endIndex) ?? token.endIndex
+                let chunk = String(token[startIndex..<endIndex])
+                NSLog("   Part %d: %@", partNumber, chunk)
+                startIndex = endIndex
+                partNumber += 1
+            }
+            NSLog("🔑 END TOKEN (combine all parts above)")
         } catch {
             print("❌ Supabase error: \(error)")
             print("❌ Error details: \(error.localizedDescription)")
