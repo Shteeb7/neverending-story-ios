@@ -1098,9 +1098,45 @@ class VoiceSessionManager: ObservableObject {
                 scheduleNextBuffers(count: min(3, audioQueue.count / 5 + 1))
             }
 
+        case "conversation.item.input_audio_transcription.completed":
+            // This is where user speech transcripts actually arrive!
+            NSLog("📝 input_audio_transcription.completed - capturing USER transcript")
+
+            if let itemId = data["item_id"] as? String,
+               let transcript = data["transcript"] as? String {
+                NSLog("   ✅ TRANSCRIPT CAPTURED: \"\(transcript)\"")
+                NSLog("   Item ID: \(itemId)")
+
+                // Add to conversation text
+                conversationText += "You: \(transcript)\n\n"
+                transcription = transcript
+
+                NSLog("   📝 Added to conversationText")
+                NSLog("   Total conversationText length now: \(conversationText.count)")
+            } else {
+                NSLog("   ❌ Missing item_id or transcript in event")
+                NSLog("   Event data keys: \(data.keys)")
+            }
+
         case "response.audio_transcript.delta":
-            // Handle audio transcript if needed (already handled in conversation.item.created)
+            // Handled by response.audio_transcript.done
             break
+
+        case "response.audio_transcript.done":
+            // This is where AI assistant speech transcripts arrive!
+            NSLog("📝 audio_transcript.done - capturing ASSISTANT transcript")
+
+            if let transcript = data["transcript"] as? String, !transcript.isEmpty {
+                NSLog("   ✅ ASSISTANT TRANSCRIPT CAPTURED: \"\(transcript)\"")
+
+                // Add to conversation text
+                conversationText += "AI: \(transcript)\n\n"
+
+                NSLog("   📝 Added to conversationText")
+                NSLog("   Total conversationText length now: \(conversationText.count)")
+            } else {
+                NSLog("   ⚠️ Empty or missing transcript in audio_transcript.done")
+            }
 
         case "response.done":
             NSLog("✅ response.done - conversation turn complete")
@@ -1130,7 +1166,19 @@ class VoiceSessionManager: ObservableObject {
 
         default:
             // Log unhandled event types for debugging
-            if !["response.output_item.added", "response.content_part.added", "response.audio_transcript.delta", "response.audio_transcript.done", "rate_limits.updated"].contains(type) {
+            let ignoredEvents = [
+                "response.output_item.added",
+                "response.content_part.added",
+                "response.audio_transcript.delta",
+                "response.audio_transcript.done",
+                "rate_limits.updated",
+                "conversation.item.input_audio_transcription.delta",
+                "input_audio_buffer.committed",
+                "response.content_part.done",
+                "response.output_item.done",
+                "response.function_call_arguments.delta"
+            ]
+            if !ignoredEvents.contains(type) {
                 NSLog("ℹ️ Unhandled event type: \(type)")
             }
             break
