@@ -9,6 +9,7 @@ import SwiftUI
 
 struct BookFormationView: View {
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var authManager = AuthManager.shared
     @State private var isAnimating = false
     @State private var bookScale: CGFloat = 0.8
     @State private var bookGlow: Double = 0.3
@@ -120,7 +121,21 @@ struct BookFormationView: View {
                 .padding(.horizontal, 40)
 
                 // Check Status button
-                Button(action: { dismiss() }) {
+                Button(action: {
+                    // Update local auth state to trigger LaunchView → LibraryView
+                    // (Server-side flag was already set when premise was selected)
+                    if let currentUser = authManager.user {
+                        authManager.user = User(
+                            id: currentUser.id,
+                            email: currentUser.email,
+                            name: currentUser.name,
+                            avatarURL: currentUser.avatarURL,
+                            createdAt: currentUser.createdAt,
+                            hasCompletedOnboarding: true
+                        )
+                    }
+                    // dismiss() not needed — LaunchView swap handles navigation
+                }) {
                     HStack(spacing: 8) {
                         Image(systemName: "eye")
                         Text("Check Status")

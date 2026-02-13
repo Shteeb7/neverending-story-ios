@@ -196,21 +196,10 @@ struct PremiseSelectionView: View {
 
         Task {
             do {
-                // Mark onboarding complete IMMEDIATELY — don't wait for story creation
-                // This prevents the loop where users get stuck in onboarding forever
+                // Mark onboarding complete on server (persists for next app launch)
+                // Do NOT update authManager.user locally here — that would trigger
+                // LaunchView to swap to LibraryView and destroy BookFormationView
                 try? await APIManager.shared.markOnboardingComplete(userId: userId)
-
-                // Update local user state right away
-                if let currentUser = authManager.user {
-                    authManager.user = User(
-                        id: currentUser.id,
-                        email: currentUser.email,
-                        name: currentUser.name,
-                        avatarURL: currentUser.avatarURL,
-                        createdAt: currentUser.createdAt,
-                        hasCompletedOnboarding: true
-                    )
-                }
 
                 let story = try await APIManager.shared.selectPremise(
                     premiseId: premise.id,
