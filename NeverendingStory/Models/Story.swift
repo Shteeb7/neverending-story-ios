@@ -35,14 +35,21 @@ struct Story: Codable, Identifiable, Hashable {
     }
 
     var isGenerating: Bool {
-        status == "generating" || status == "active"
+        if let progress = generationProgress {
+            return status == "active" && progress.chaptersGenerated < 6
+        }
+        return status == "active"
     }
 
     var progressText: String {
         if let progress = generationProgress {
-            return "Generating: \(progress.chaptersGenerated) chapters"
+            if progress.chaptersGenerated >= 6 {
+                return "\(progress.chaptersGenerated) chapters ready"
+            } else if progress.chaptersGenerated > 0 {
+                return "Writing chapter \(progress.chaptersGenerated + 1) of 6..."
+            }
         }
-        return "Preparing your story..."
+        return "Starting your story..."
     }
 }
 

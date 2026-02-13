@@ -24,7 +24,7 @@
 		7890ABCD1234EF567890FEDC /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F1E8A9B2C4567890FEDCBA /* Secrets.swift */; };
 		8250B66A88A2369D855D72B8 /* PremiseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE889A414CE445BBEE5172B5 /* PremiseCard.swift */; };
 		FE273B336776849CF06BA453 /* PremiseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */; };
-		87565DA8A93AC65544A0A539 /* StoryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83348A93FA5B6907AF98A84 /* StoryCard.swift */; };
+		EC125E2C1DA74F4E986920BF /* BookCoverCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */; };
 		89F5E8EB1F3F6E9C2B296E87 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = 7F9BA64BB5D0D2B50C3B4C7A /* OpenAI */; };
 		9C335BE7FE5654CBE96AD5F6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2661108E4232961D5696DF00 /* OnboardingView.swift */; };
 		F8E7D6C5B4A39281E0D9C8B7 /* DNATransferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */; };
@@ -68,9 +68,9 @@
 		B07861C92F3AFE57007F78C3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B07861CF2F3BB277007F78C3 /* NeverendingStoryDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NeverendingStoryDebug.entitlements; sourceTree = "<group>"; };
 		B299E9B89218A56A35F0B5D7 /* FeedbackModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackModalView.swift; sourceTree = "<group>"; };
-		B83348A93FA5B6907AF98A84 /* StoryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryCard.swift; sourceTree = "<group>"; };
 		BE889A414CE445BBEE5172B5 /* PremiseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseCard.swift; sourceTree = "<group>"; };
 		DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseDetailSheet.swift; sourceTree = "<group>"; };
+		BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverCard.swift; sourceTree = "<group>"; };
 		C09C936859098AB469AB3C37 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		C188CAFDD9DAE8521F761700 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		D3F1E8A9B2C4567890FEDCBA /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
@@ -228,7 +228,7 @@
 				8D3C65D53A89A44386F2D70D /* LoadingView.swift */,
 				BE889A414CE445BBEE5172B5 /* PremiseCard.swift */,
 				DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */,
-				B83348A93FA5B6907AF98A84 /* StoryCard.swift */,
+				BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -326,6 +326,7 @@
 				02D24B7BE8CCED516AEC25AB /* Premise.swift in Sources */,
 				8250B66A88A2369D855D72B8 /* PremiseCard.swift in Sources */,
 				FE273B336776849CF06BA453 /* PremiseDetailSheet.swift in Sources */,
+				EC125E2C1DA74F4E986920BF /* BookCoverCard.swift in Sources */,
 				A0EC4B72AAD97A840838FE3E /* PremiseSelectionView.swift in Sources */,
 				1DBCE177DF4E586ED495BD97 /* ReaderSettingsView.swift in Sources */,
 				CB87444C8AB3D556F1C9ED9A /* ReadingStateManager.swift in Sources */,
@@ -335,7 +336,6 @@
 				A9B8C7D6E5F4A3B2C1D0E9F8 /* BookCompleteView.swift in Sources */,
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* SequelGenerationView.swift in Sources */,
 				9CE559EE551954215BF26615 /* Story.swift in Sources */,
-				87565DA8A93AC65544A0A539 /* StoryCard.swift in Sources */,
 				60FE83E01B4959709B91D422 /* User.swift in Sources */,
 				A63DA7A865E40FDCAA672CEE /* VoiceSessionManager.swift in Sources */,
 			);

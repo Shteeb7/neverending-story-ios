@@ -18,8 +18,8 @@ struct LibraryView: View {
     @State private var pollTimer: Timer?
     @State private var showLogoutConfirmation = false
 
-    var activeStory: Story? {
-        stories.first { $0.status == "active" }
+    var activeStories: [Story] {
+        stories.filter { $0.status == "active" }
     }
 
     var pastStories: [Story] {
@@ -30,9 +30,9 @@ struct LibraryView: View {
     var hasGeneratingStories: Bool {
         stories.contains { story in
             if let progress = story.generationProgress {
-                return progress.chaptersGenerated < 3 // Still generating if less than 3 chapters
+                return story.status == "active" && progress.chaptersGenerated < 6
             }
-            return false
+            return story.status == "active"
         }
     }
 
@@ -55,18 +55,24 @@ struct LibraryView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 32) {
-                            // Active story
-                            if let active = activeStory {
+                            // Active stories
+                            if !activeStories.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text("Continue Reading")
                                         .font(.title2)
                                         .fontWeight(.bold)
                                         .padding(.horizontal, 24)
 
-                                    StoryCard(story: active, isActive: true) {
-                                        selectedStory = active
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 16) {
+                                            ForEach(activeStories) { story in
+                                                BookCoverCard(story: story) {
+                                                    selectedStory = story
+                                                }
+                                            }
+                                        }
+                                        .padding(.horizontal, 24)
                                     }
-                                    .padding(.horizontal, 24)
                                 }
                                 .padding(.top, 16)
                             }
@@ -112,26 +118,22 @@ struct LibraryView: View {
 
                             // Past stories
                             if !pastStories.isEmpty {
-                                VStack(alignment: .leading, spacing: 16) {
+                                VStack(alignment: .leading, spacing: 12) {
                                     Text("Your Stories")
                                         .font(.title2)
                                         .fontWeight(.bold)
                                         .padding(.horizontal, 24)
 
-                                    LazyVGrid(
-                                        columns: [
-                                            GridItem(.flexible(), spacing: 16),
-                                            GridItem(.flexible(), spacing: 16)
-                                        ],
-                                        spacing: 16
-                                    ) {
-                                        ForEach(pastStories) { story in
-                                            CompactStoryCard(story: story) {
-                                                selectedStory = story
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 16) {
+                                            ForEach(pastStories) { story in
+                                                BookCoverCard(story: story, isSmall: true) {
+                                                    selectedStory = story
+                                                }
                                             }
                                         }
+                                        .padding(.horizontal, 24)
                                     }
-                                    .padding(.horizontal, 24)
                                 }
                             }
                         }
@@ -220,7 +222,7 @@ struct LibraryView: View {
     }
 
     private func submitFeedback(_ feedback: String) {
-        guard let storyId = activeStory?.id else { return }
+        guard let storyId = selectedStory?.id else { return }
 
         Task {
             do {
@@ -375,66 +377,6 @@ struct ErrorView: View {
     }
 }
 
-// MARK: - Compact Story Card
-
-struct CompactStoryCard: View {
-    let story: Story
-    let action: () -> Void
-
-    private var isReadable: Bool {
-        // Story is readable if it has at least 1 chapter generated
-        if let progress = story.generationProgress {
-            return progress.chaptersGenerated > 0
-        }
-        // If no progress info, assume it's readable (older stories)
-        return true
-    }
-
-    var body: some View {
-        Button(action: {
-            // Only trigger action if readable
-            if isReadable {
-                action()
-            }
-        }) {
-            VStack(alignment: .leading, spacing: 12) {
-                // Status badge with generating indicator
-                HStack(spacing: 6) {
-                    Text(story.status.uppercased())
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-
-                    if !isReadable {
-                        ProgressView()
-                            .scaleEffect(0.6)
-                    }
-                }
-
-                // Title
-                Text(story.title)
-                    .font(.headline)
-                    .foregroundColor(isReadable ? .primary : .secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-
-                Spacer()
-
-                // Progress
-                Text(story.progressText)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
-            .background(isReadable ? Color(.systemGray6) : Color(.systemGray6).opacity(0.5))
-            .cornerRadius(12)
-            .opacity(isReadable ? 1.0 : 0.7)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(!isReadable)
-    }
-}
 
 #Preview {
     LibraryView()
