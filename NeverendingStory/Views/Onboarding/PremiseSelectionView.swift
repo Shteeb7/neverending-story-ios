@@ -12,7 +12,7 @@ struct PremiseSelectionView: View {
 
     @StateObject private var authManager = AuthManager.shared
     @State private var premises: [Premise] = []
-    @State private var selectedPremiseId: String?
+    @State private var expandedPremise: Premise?
     @State private var isLoading = true
     @State private var isCreatingStory = false
     @State private var error: String?
@@ -76,13 +76,9 @@ struct PremiseSelectionView: View {
 
                         // Premise cards
                         ForEach(premises) { premise in
-                            PremiseCard(
-                                premise: premise,
-                                isSelected: selectedPremiseId == premise.id,
-                                action: {
-                                    selectPremise(premise)
-                                }
-                            )
+                            PremiseCard(premise: premise) {
+                                expandedPremise = premise
+                            }
                             .padding(.horizontal, 24)
                         }
 
@@ -92,25 +88,6 @@ struct PremiseSelectionView: View {
                                 navigateToNewInterview = true
                             }
                             .padding(.horizontal, 24)
-                        }
-
-                        // Continue button
-                        if selectedPremiseId != nil {
-                            Button(action: createStory) {
-                                HStack {
-                                    Text("Begin Your Journey")
-                                        .font(.headline)
-                                    Image(systemName: "arrow.right")
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(Color.accentColor)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                            }
-                            .padding(.horizontal, 24)
-                            .padding(.top, 8)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                     }
                     .padding(.bottom, 32)
@@ -125,6 +102,11 @@ struct PremiseSelectionView: View {
         }
         .navigationDestination(isPresented: $navigateToNewInterview) {
             OnboardingView(forceNewInterview: true)
+        }
+        .sheet(item: $expandedPremise) { premise in
+            PremiseDetailSheet(premise: premise) {
+                createStoryFromPremise(premise)
+            }
         }
         .onAppear {
             loadPremises()
@@ -150,6 +132,24 @@ struct PremiseSelectionView: View {
 
         Task {
             do {
+                // Guard: Check if user already has a story generating
+                let library = try? await APIManager.shared.getLibrary(userId: userId)
+                if let stories = library {
+                    let hasActiveGeneration = stories.contains { story in
+                        if let progress = story.generationProgress {
+                            return story.status == "active" && progress.chaptersGenerated < 6
+                        }
+                        return false
+                    }
+                    if hasActiveGeneration {
+                        // Story already generating — show the formation view
+                        NSLog("⚠️ User already has a story generating — showing BookFormationView")
+                        isCreatingStory = true
+                        isLoading = false
+                        return
+                    }
+                }
+
                 print("🎬 Loading premises for user...")
 
                 // Try to fetch existing premises first
@@ -189,22 +189,15 @@ struct PremiseSelectionView: View {
         }
     }
 
-    private func selectPremise(_ premise: Premise) {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            selectedPremiseId = premise.id
-        }
-    }
-
-    private func createStory() {
-        guard let premiseId = selectedPremiseId,
-              let userId = authManager.user?.id else { return }
+    private func createStoryFromPremise(_ premise: Premise) {
+        guard let userId = authManager.user?.id else { return }
 
         isCreatingStory = true
 
         Task {
             do {
                 let story = try await APIManager.shared.selectPremise(
-                    premiseId: premiseId,
+                    premiseId: premise.id,
                     userId: userId
                 )
 

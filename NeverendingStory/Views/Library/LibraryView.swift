@@ -71,22 +71,44 @@ struct LibraryView: View {
                                 .padding(.top, 16)
                             }
 
-                            // New story button
-                            Button(action: { showOnboarding = true }) {
+                            // New story button — disabled during generation
+                            if hasGeneratingStories {
+                                // Show "writing in progress" indicator instead of new story button
                                 HStack(spacing: 12) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.title2)
+                                    ProgressView()
+                                        .tint(.accentColor)
 
-                                    Text("Start a New Story")
-                                        .font(.headline)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Your book is being written...")
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                        Text("New stories available when this one's ready")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(Color.accentColor)
-                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(16)
+                                .background(Color(.systemGray6))
                                 .cornerRadius(12)
+                                .padding(.horizontal, 24)
+                            } else {
+                                Button(action: { showOnboarding = true }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.title2)
+
+                                        Text("Start a New Story")
+                                            .font(.headline)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(Color.accentColor)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                }
+                                .padding(.horizontal, 24)
                             }
-                            .padding(.horizontal, 24)
 
                             // Past stories
                             if !pastStories.isEmpty {

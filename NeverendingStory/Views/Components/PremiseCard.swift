@@ -9,7 +9,6 @@ import SwiftUI
 
 struct PremiseCard: View {
     let premise: Premise
-    let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
@@ -27,12 +26,6 @@ struct PremiseCard: View {
                         .cornerRadius(8)
 
                     Spacer()
-
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.accentColor)
-                    }
                 }
 
                 // Title
@@ -43,24 +36,31 @@ struct PremiseCard: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
-                // Description
+                // Description preview
                 Text(premise.description)
                     .font(.body)
                     .foregroundColor(.secondary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
                     .lineSpacing(4)
+
+                // "Tap to read more" indicator
+                HStack(spacing: 6) {
+                    Text("Tap to read more")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(.accentColor)
+                }
+                .padding(.top, 4)
             }
             .padding(24)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color(.systemGray6))
                     .shadow(color: Color.black.opacity(0.1), radius: 12, y: 4)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -77,7 +77,6 @@ struct PremiseCard: View {
                 description: "In a world where memories can be stored and traded, you discover a hidden archive containing secrets that could unravel society.",
                 generatedAt: Date()
             ),
-            isSelected: false,
             action: {}
         )
 
@@ -89,7 +88,6 @@ struct PremiseCard: View {
                 description: "You wake up with the ability to see 24 hours into the future, but every vision you have changes the timeline in unexpected ways.",
                 generatedAt: Date()
             ),
-            isSelected: true,
             action: {}
         )
     }
