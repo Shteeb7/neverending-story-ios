@@ -22,7 +22,7 @@ struct StoryFeedbackDialog: View {
     private var message: String {
         switch checkpoint {
         case "chapter_3":
-            return "You're halfway through! How are you feeling about this story?"
+            return "What do you think so far?"
         case "chapter_6":
             return "We're getting close to the end! How's the adventure going?"
         case "chapter_9":
