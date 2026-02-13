@@ -19,6 +19,9 @@ struct Story: Codable, Identifiable, Hashable {
     let chaptersGenerated: Int?
     let seriesId: String?
     let bookNumber: Int?
+    let coverImageUrl: String?
+    let genre: String?
+    let description: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -32,6 +35,9 @@ struct Story: Codable, Identifiable, Hashable {
         case chaptersGenerated = "chapters_generated"
         case seriesId = "series_id"
         case bookNumber = "book_number"
+        case coverImageUrl = "cover_image_url"
+        case genre
+        case description
     }
 
     var isGenerating: Bool {
@@ -46,10 +52,10 @@ struct Story: Codable, Identifiable, Hashable {
             if progress.chaptersGenerated >= 6 {
                 return "\(progress.chaptersGenerated) chapters ready"
             } else if progress.chaptersGenerated > 0 {
-                return "Writing chapter \(progress.chaptersGenerated + 1) of 6..."
+                return "Conjuring chapter \(progress.chaptersGenerated + 1) of 6..."
             }
         }
-        return "Starting your story..."
+        return "Prospero is preparing your tale..."
     }
 }
 
