@@ -849,10 +849,8 @@ class VoiceSessionManager: ObservableObject {
                     "model": "whisper-1"
                 ] as [String: Any],
                 "turn_detection": [
-                    "type": "server_vad",
-                    "threshold": 0.5,
-                    "prefix_padding_ms": 300,
-                    "silence_duration_ms": 500
+                    "type": "semantic_vad",
+                    "eagerness": "low"
                 ] as [String: Any],
                 "tools": tools,
                 "max_response_output_tokens": 1000  // Increased from 150 - was cutting off responses mid-sentence!
