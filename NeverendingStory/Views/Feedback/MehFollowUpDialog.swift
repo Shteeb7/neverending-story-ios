@@ -90,7 +90,7 @@ struct MehFollowUpDialog: View {
                                 Text("Give Story Tips")
                                     .font(.headline)
                             }
-                            Text("Talk to Cassandra about what could be better")
+                            Text("Talk to Prospero about what could be better")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }

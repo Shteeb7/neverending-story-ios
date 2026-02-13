@@ -57,7 +57,7 @@ Initial Generation:        Chapters 1-6 (pre-generated)
 ### Feedback Checkpoints
 
 #### Checkpoint 1: Starting Chapter 4 (after reading Ch 3)
-**Dialog:** "Cassandra here! You're halfway through! How are you feeling about this story?"
+**Dialog:** "Prospero here! You're halfway through! How are you feeling about this story?"
 
 **Options:**
 - 🤩 **Fantastic** → Generate 7-9, continue reading
@@ -65,9 +65,9 @@ Initial Generation:        Chapters 1-6 (pre-generated)
 - 😐 **Meh** → Show follow-up dialog
 
 **Meh Follow-up:**
-- 📚 **Start a Different Story** → Navigate to premise selection (2 remaining + Talk to Cassandra)
+- 📚 **Start a Different Story** → Navigate to premise selection (2 remaining + Talk to Prospero)
 - 📖 **Keep Reading** → Generate 7-9, continue reading
-- 🎙️ **Give Story Tips** → Voice interview with Cassandra, collect feedback, generate 7-9
+- 🎙️ **Give Story Tips** → Voice interview with Prospero, collect feedback, generate 7-9
 
 #### Checkpoint 2: Starting Chapter 7 (after reading Ch 6)
 **Same as Checkpoint 1** but generates chapters 10-12
@@ -80,7 +80,7 @@ Initial Generation:        Chapters 1-6 (pre-generated)
 **Result:** Store response, no chapter generation
 
 #### Checkpoint 4: After Chapter 12 (book complete)
-**UNIQUE: Full Cassandra Voice Interview**
+**UNIQUE: Full Prospero Voice Interview**
 
 **Questions Asked:**
 - "What did you love most about this story?"
@@ -321,7 +321,7 @@ Generate next book in series
 
 #### ✅ Feedback Dialog Components
 - **File:** `Views/Feedback/StoryFeedbackDialog.swift`
-- **UI:** Beautiful Cassandra avatar, animated glow, 3 response buttons (Fantastic/Great/Meh)
+- **UI:** Beautiful Prospero avatar, animated glow, 3 response buttons (Fantastic/Great/Meh)
 - **Props:** Accepts checkpoint, onResponse callback
 - **Styling:** Purple/blue gradient theme, emojis, full-screen modal
 
@@ -433,16 +433,16 @@ func generateSequel(storyId: String, userPreferences: [String: Any]? = nil) asyn
 **Requirements:**
 - Full-screen voice interview UI
 - Reuse VoiceSessionManager
-- Cassandra-themed (match onboarding aesthetic)
+- Prospero-themed (match onboarding aesthetic)
 - Questions about favorite parts, characters, what's next
-- "Talk to Cassandra" button to start
+- "Talk to Prospero" button to start
 - "Return" button to exit
 - Keep reader dimmed in background
 
-**Different Prompt for Cassandra:**
+**Different Prompt for Prospero:**
 ```swift
 systemInstructions = """
-You are Cassandra, having a friendly chat with a reader who just finished a book.
+You are Prospero, having a friendly chat with a reader who just finished a book.
 
 Ask about:
 - What they loved most

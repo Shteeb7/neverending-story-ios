@@ -74,7 +74,7 @@ struct BookCompleteView: View {
                 }
 
                 // Description
-                Text("You've completed an incredible journey! Cassandra has heard what you loved and is ready to conjure Book \(bookNumber + 1) with even more of what you enjoyed.")
+                Text("You've completed an incredible journey! Prospero has heard what you loved and is ready to conjure Book \(bookNumber + 1) with even more of what you enjoyed.")
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)

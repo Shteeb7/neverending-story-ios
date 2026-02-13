@@ -2,7 +2,7 @@
 //  BookCompletionInterviewView.swift
 //  NeverendingStory
 //
-//  Voice interview with Cassandra after finishing chapter 12
+//  Voice interview with Prospero after finishing chapter 12
 //
 
 import SwiftUI
@@ -74,7 +74,7 @@ struct BookCompletionInterviewView: View {
         VStack(spacing: 32) {
             Spacer()
 
-            // Cassandra avatar
+            // Prospero avatar
             ZStack {
                 Circle()
                     .fill(
@@ -116,7 +116,7 @@ struct BookCompletionInterviewView: View {
             }
 
             // Description
-            Text("Cassandra wants to hear what you thought about the story! This quick voice chat lets her sense what stirred your soul so she can conjure the perfect Book 2.")
+            Text("Prospero wants to hear what you thought about the story! This quick voice chat lets him sense what stirred your soul so he can conjure the perfect Book 2.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -228,7 +228,7 @@ struct BookCompletionInterviewView: View {
     @ViewBuilder
     private var statusView: some View {
         VStack(spacing: 12) {
-            // Cassandra avatar (smaller)
+            // Prospero avatar (smaller)
             ZStack {
                 Circle()
                     .fill(
@@ -265,13 +265,13 @@ struct BookCompletionInterviewView: View {
     private var statusText: String {
         switch voiceSession.state {
         case .connecting:
-            return "Connecting to Cassandra..."
+            return "Connecting to Prospero..."
         case .connected:
-            return "Connected! Cassandra is ready to listen."
+            return "Connected! Prospero is ready to listen."
         case .listening:
-            return "Cassandra is listening..."
+            return "Prospero is listening..."
         case .processing:
-            return "Cassandra is thinking..."
+            return "Prospero is thinking..."
         case .conversationComplete:
             return "Interview complete!"
         case .error(let message):

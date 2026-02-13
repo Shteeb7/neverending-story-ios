@@ -38,7 +38,7 @@ This plan overhauled the generation engine prompts, quality review system, model
 - Database: `story_feedback` table with RLS
 
 **Book Completion Voice Interview (COMPLETE):**
-- AI voice interview with Cassandra after chapter 12
+- AI voice interview with Prospero after chapter 12
 - Extracts structured preferences: liked themes, wants_more, favorite_character, sequel interest
 - Auto-triggers preference analysis in background after interview completion
 - Backend: `POST /feedback/completion-interview`

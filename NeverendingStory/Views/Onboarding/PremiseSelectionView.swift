@@ -82,9 +82,9 @@ struct PremiseSelectionView: View {
                             .padding(.horizontal, 24)
                         }
 
-                        // "Talk to Cassandra" card (if user needs new interview)
+                        // "Talk to Prospero" card (if user needs new interview)
                         if needsNewInterview {
-                            TalkToCassandraCard {
+                            TalkToProsperoCard {
                                 navigateToNewInterview = true
                             }
                             .padding(.horizontal, 24)
@@ -225,9 +225,9 @@ struct PremiseSelectionView: View {
     }
 }
 
-// MARK: - Talk to Cassandra Card
+// MARK: - Talk to Prospero Card
 
-struct TalkToCassandraCard: View {
+struct TalkToProsperoCard: View {
     let action: () -> Void
 
     var body: some View {
@@ -244,7 +244,7 @@ struct TalkToCassandraCard: View {
                 .padding(.top, 8)
 
                 // Title
-                Text("Talk to Cassandra")
+                Text("Talk to Prospero")
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
@@ -252,7 +252,7 @@ struct TalkToCassandraCard: View {
                     .frame(maxWidth: .infinity)
 
                 // Description
-                Text("Ready for something new? Tell me what you'd like to read next, and I'll create three fresh story ideas just for you.")
+                Text("Ready for something new? Tell me what you'd like to read next, and I'll conjure three fresh story ideas just for you.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

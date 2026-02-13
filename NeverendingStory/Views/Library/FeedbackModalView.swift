@@ -33,7 +33,7 @@ struct FeedbackModalView: View {
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("Share what stirred you — Cassandra is listening")
+                    Text("Share what stirred you — Prospero is listening")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)

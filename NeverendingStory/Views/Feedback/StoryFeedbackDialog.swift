@@ -2,7 +2,7 @@
 //  StoryFeedbackDialog.swift
 //  NeverendingStory
 //
-//  Cassandra's check-in dialog at chapter checkpoints
+//  Prospero's check-in dialog at chapter checkpoints
 //
 
 import SwiftUI
@@ -40,7 +40,7 @@ struct StoryFeedbackDialog: View {
                 .onTapGesture { } // Prevent dismissal
             
             VStack(spacing: 32) {
-                // Cassandra avatar with animation
+                // Prospero avatar with animation
                 ZStack {
                     Circle()
                         .fill(
@@ -72,7 +72,7 @@ struct StoryFeedbackDialog: View {
                 
                 // Message
                 VStack(spacing: 12) {
-                    Text("Cassandra here!")
+                    Text("Prospero here!")
                         .font(.title2)
                         .fontWeight(.bold)
                     

@@ -41,7 +41,7 @@ struct SequelGenerationView: View {
             VStack(spacing: 40) {
                 Spacer()
 
-                // Cassandra avatar with animation
+                // Prospero avatar with animation
                 ZStack {
                     Circle()
                         .fill(
@@ -98,7 +98,7 @@ struct SequelGenerationView: View {
                 Spacer()
 
                 // Tips
-                Text("Cassandra is weaving the threads of your previous adventure into an epic new tale...")
+                Text("Prospero is weaving the threads of your previous adventure into an epic new tale...")
                     .font(.subheadline)
                     .foregroundColor(.secondary.opacity(0.8))
                     .multilineTextAlignment(.center)
