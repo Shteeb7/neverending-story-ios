@@ -119,11 +119,11 @@ struct BookFormationView: View {
                 }
                 .padding(.horizontal, 40)
 
-                // Return to Library button
+                // Check Status button
                 Button(action: { dismiss() }) {
                     HStack(spacing: 8) {
-                        Image(systemName: "books.vertical")
-                        Text("Return to Library")
+                        Image(systemName: "eye")
+                        Text("Check Status")
                             .font(.headline)
                     }
                     .frame(maxWidth: .infinity)

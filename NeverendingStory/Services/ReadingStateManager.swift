@@ -24,6 +24,10 @@ class ReadingStateManager: ObservableObject {
 
     private var saveTask: Task<Void, Never>?
 
+    // Chapter polling (for books still generating)
+    private var chapterPollTimer: Timer?
+    private let maxExpectedChapters = 6  // First batch generates 6
+
     private init() {
         loadPersistedState()
     }
@@ -64,14 +68,64 @@ class ReadingStateManager: ObservableObject {
         NSLog("   currentChapterIndex: %d", currentChapterIndex)
 
         persistState()
+
+        // Start polling for new chapters if book is still generating
+        startChapterPolling()
     }
 
     func clearStory() {
+        stopChapterPolling()
         currentStory = nil
         chapters = []
         currentChapterIndex = 0
         scrollPosition = 0
         clearPersistedState()
+    }
+
+    // MARK: - Chapter Polling
+
+    func startChapterPolling() {
+        // Only poll if we don't have all chapters yet
+        guard chapters.count < maxExpectedChapters else {
+            NSLog("📚 All %d chapters loaded - no polling needed", chapters.count)
+            return
+        }
+
+        guard let storyId = currentStory?.id else { return }
+
+        NSLog("🔄 Starting chapter polling (have %d of %d chapters)", chapters.count, maxExpectedChapters)
+        stopChapterPolling()
+
+        chapterPollTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                await self.checkForNewChapters(storyId: storyId)
+            }
+        }
+    }
+
+    func stopChapterPolling() {
+        chapterPollTimer?.invalidate()
+        chapterPollTimer = nil
+    }
+
+    private func checkForNewChapters(storyId: String) async {
+        do {
+            let updatedChapters = try await APIManager.shared.getChapters(storyId: storyId)
+
+            if updatedChapters.count > chapters.count {
+                NSLog("📖 New chapters available! %d → %d", chapters.count, updatedChapters.count)
+                self.chapters = updatedChapters
+
+                // Stop polling once we have all expected chapters
+                if updatedChapters.count >= maxExpectedChapters {
+                    NSLog("✅ All %d chapters now available - stopping poll", maxExpectedChapters)
+                    stopChapterPolling()
+                }
+            }
+        } catch {
+            NSLog("⚠️ Chapter poll failed: %@", error.localizedDescription)
+        }
     }
 
     // MARK: - Navigation

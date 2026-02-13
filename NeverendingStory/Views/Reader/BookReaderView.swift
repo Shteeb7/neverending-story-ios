@@ -205,9 +205,15 @@ struct BookReaderView: View {
                                 Text("Ch \(chapter.chapterNumber) of \(readingState.chapters.count)")
                                     .font(.caption)
                                     .foregroundColor(readerSettings.textColor.opacity(0.6))
-                                Text("\(Int(scrollProgress * 100))% of chapter")
-                                    .font(.caption2)
-                                    .foregroundColor(readerSettings.textColor.opacity(0.4))
+                                if readingState.chapters.count < 6 {
+                                    Text("More chapters on the way...")
+                                        .font(.caption2)
+                                        .foregroundColor(readerSettings.textColor.opacity(0.4))
+                                } else {
+                                    Text("\(Int(scrollProgress * 100))% of chapter")
+                                        .font(.caption2)
+                                        .foregroundColor(readerSettings.textColor.opacity(0.4))
+                                }
                             }
                         }
 
@@ -317,6 +323,7 @@ struct BookReaderView: View {
             topBarTimer?.invalidate()
             // End reading session when leaving reader
             readingState.stopTracking()
+            readingState.stopChapterPolling()
         }
         .onChange(of: scenePhase) { newPhase in
             switch newPhase {
