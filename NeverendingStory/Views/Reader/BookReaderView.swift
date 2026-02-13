@@ -194,6 +194,7 @@ struct BookReaderView: View {
                         Button(action: { showChapterList = true }) {
                             Image(systemName: "list.bullet")
                                 .font(.title3)
+                                .foregroundColor(readerSettings.textColor)
                         }
 
                         Spacer()
@@ -203,10 +204,10 @@ struct BookReaderView: View {
                             VStack(spacing: 2) {
                                 Text("Ch \(chapter.chapterNumber) of \(readingState.chapters.count)")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(readerSettings.textColor.opacity(0.6))
                                 Text("\(Int(scrollProgress * 100))% of chapter")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary.opacity(0.8))
+                                    .foregroundColor(readerSettings.textColor.opacity(0.4))
                             }
                         }
 
@@ -216,9 +217,9 @@ struct BookReaderView: View {
                         Button(action: { showSettings = true }) {
                             Image(systemName: "textformat.size")
                                 .font(.title3)
+                                .foregroundColor(readerSettings.textColor)
                         }
                     }
-                    .foregroundColor(.primary)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 8)
                     .background(
