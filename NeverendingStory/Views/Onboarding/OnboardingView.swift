@@ -345,9 +345,13 @@ struct OnboardingView: View {
                     preferences: storyPreferences
                 )
                 NSLog("✅ Backend submission complete during DNA Transfer")
+
+                // Now trigger premise generation (runs during finger ceremony)
+                try await APIManager.shared.generatePremises()
+                NSLog("✅ Premise generation triggered during DNA Transfer")
             } catch {
-                NSLog("❌ Backend submission failed: \(error)")
-                // DNA Transfer will handle the error via premise polling timeout
+                NSLog("❌ Backend submission/generation failed: \(error)")
+                // DNA Transfer will handle via polling timeout + retry button
             }
         }
 
