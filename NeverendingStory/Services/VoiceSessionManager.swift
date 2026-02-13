@@ -240,9 +240,27 @@ class VoiceSessionManager: ObservableObject {
         // Use playAndRecord for two-way audio conversation
         // .default mode works better for speaker/Bluetooth routing than .voiceChat
         // .defaultToSpeaker: Routes to loudspeaker when no Bluetooth is connected
+        // .allowBluetooth: Enables Bluetooth HFP (Hands-Free Profile) for bidirectional audio with AirPods mic
         // .allowBluetoothA2DP: Routes to AirPods/Bluetooth with high-quality audio (takes priority over speaker)
-        try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothA2DP])
+        try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP])
         try audioSession.setActive(true)
+
+        // Observe audio route changes (e.g., AirPods connect/disconnect)
+        NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] notification in
+            guard let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+                  let routeChangeReason = AVAudioSession.RouteChangeReason(rawValue: reason) else { return }
+
+            NSLog("🔊 Audio route changed: \(routeChangeReason.rawValue)")
+
+            if routeChangeReason == .newDeviceAvailable {
+                // New device (e.g., AirPods connected) — prefer Bluetooth input
+                let session = AVAudioSession.sharedInstance()
+                if let btInput = session.availableInputs?.first(where: { $0.portType == .bluetoothHFP || $0.portType == .bluetoothA2DP }) {
+                    try? session.setPreferredInput(btInput)
+                    NSLog("✅ Switched to Bluetooth: \(btInput.portName)")
+                }
+            }
+        }
 
         // Prefer Bluetooth audio route if available (AirPods, etc.)
         let availableInputs = audioSession.availableInputs ?? []
@@ -250,6 +268,10 @@ class VoiceSessionManager: ObservableObject {
             try audioSession.setPreferredInput(bluetoothInput)
             NSLog("✅ Using Bluetooth audio input: \(bluetoothInput.portName)")
         }
+
+        // Debug: Log current audio route for verification
+        NSLog("🔊 Current route outputs: \(audioSession.currentRoute.outputs.map { "\($0.portName) (\($0.portType.rawValue))" })")
+        NSLog("🎤 Current route inputs: \(audioSession.currentRoute.inputs.map { "\($0.portName) (\($0.portType.rawValue))" })")
 
         audioEngine = AVAudioEngine()
         inputNode = audioEngine?.inputNode
