@@ -87,9 +87,16 @@ struct BookReaderView: View {
                             // value is negative as we scroll down, so negate it
                             let scrolled = max(-value, 0)
                             let maxScroll = max(contentHeight - visibleHeight, 1)
-                            scrollProgress = min(scrolled / maxScroll, 1.0)
-                            // Update scroll percentage (0-100) for analytics
-                            readingState.updateScrollPercentage(scrollProgress * 100)
+                            let newProgress = min(scrolled / maxScroll, 1.0)
+
+                            // Only update state when percentage actually changes (prevents scroll stuttering)
+                            let newPercent = Int(newProgress * 100)
+                            let currentPercent = Int(scrollProgress * 100)
+
+                            if newPercent != currentPercent {
+                                scrollProgress = Double(newPercent) / 100.0
+                                readingState.updateScrollPercentage(Double(newPercent))
+                            }
                         }
                         // Check for book completion as user scrolls through chapter 12
                         checkForFeedbackCheckpoint()
