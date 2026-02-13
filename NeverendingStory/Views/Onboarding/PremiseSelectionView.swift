@@ -196,17 +196,11 @@ struct PremiseSelectionView: View {
 
         Task {
             do {
-                let story = try await APIManager.shared.selectPremise(
-                    premiseId: premise.id,
-                    userId: userId
-                )
+                // Mark onboarding complete IMMEDIATELY — don't wait for story creation
+                // This prevents the loop where users get stuck in onboarding forever
+                try? await APIManager.shared.markOnboardingComplete(userId: userId)
 
-                createdStory = story
-
-                // Mark onboarding as complete
-                try await APIManager.shared.markOnboardingComplete(userId: userId)
-
-                // Update local user state
+                // Update local user state right away
                 if let currentUser = authManager.user {
                     authManager.user = User(
                         id: currentUser.id,
@@ -217,6 +211,13 @@ struct PremiseSelectionView: View {
                         hasCompletedOnboarding: true
                     )
                 }
+
+                let story = try await APIManager.shared.selectPremise(
+                    premiseId: premise.id,
+                    userId: userId
+                )
+
+                createdStory = story
 
                 print("✅ Story created successfully!")
                 print("   Story ID: \(story.id)")
