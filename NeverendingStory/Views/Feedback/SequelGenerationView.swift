@@ -150,7 +150,10 @@ struct SequelGenerationView: View {
                     createdAt: Date(),
                     chaptersGenerated: 0,
                     seriesId: response.book2.seriesId,
-                    bookNumber: response.book2.bookNumber
+                    bookNumber: response.book2.bookNumber,
+                    coverImageUrl: nil,
+                    genre: nil,
+                    description: nil
                 )
 
                 book2Story = book2
@@ -236,7 +239,10 @@ struct SequelGenerationView: View {
             createdAt: Date(),
             chaptersGenerated: 12,
             seriesId: nil,
-            bookNumber: 1
+            bookNumber: 1,
+            coverImageUrl: nil,
+            genre: "Fantasy",
+            description: "An epic dragon adventure"
         ),
         bookNumber: 2,
         userPreferences: [:],
