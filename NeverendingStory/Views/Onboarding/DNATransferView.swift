@@ -159,6 +159,7 @@ struct DNATransferView: View {
     @State private var showClimaxFlash = false
     @State private var pulseRings: [PulseRing] = []
     @State private var breathingOpacity: Double = 0.7
+    @State private var isViewActive = true  // Guard to prevent zombie polling
 
     struct PulseRing: Identifiable {
         let id = UUID()
@@ -517,6 +518,8 @@ struct DNATransferView: View {
     // MARK: - Premise Polling
 
     private func startPremisePolling() {
+        NSLog("🔄 Starting premise polling (every 2.5 seconds)")
+
         // Fire one immediate check
         checkForPremises()
 
@@ -524,15 +527,30 @@ struct DNATransferView: View {
         premiseTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { _ in
             checkForPremises()
         }
+
+        NSLog("   ✅ Timer scheduled")
     }
 
     private func checkForPremises() {
         Task {
+            // GUARD: Stop if view is no longer active (prevents zombie polling)
+            guard isViewActive else {
+                NSLog("🛑 checkForPremises() aborted - view is no longer active")
+                return
+            }
+
             do {
                 let result = try await APIManager.shared.getPremises(userId: userId)
 
+                // GUARD: Check again after async operation (view might have dismissed during API call)
+                guard isViewActive else {
+                    NSLog("🛑 checkForPremises() result discarded - view dismissed during API call")
+                    return
+                }
+
                 if !result.premises.isEmpty {
                     await MainActor.run {
+                        NSLog("✅ Premises found! Stopping timer and finishing ceremony")
                         premiseTimer?.invalidate()
                         premiseTimer = nil
                         finishCeremony()
@@ -540,13 +558,16 @@ struct DNATransferView: View {
                 }
             } catch {
                 NSLog("⚠️ Premise polling error: \(error)")
-                // Silently retry on next poll
+                // Silently retry on next poll (only if view is still active)
             }
 
             // Timeout after 60 seconds total
             await MainActor.run {
+                guard isViewActive else { return }
+
                 totalElapsed += 2.5
                 if totalElapsed > 60 {
+                    NSLog("⏱️ Premise polling timeout after 60 seconds")
                     premiseTimer?.invalidate()
                     premiseTimer = nil
                     showError = true
@@ -557,6 +578,16 @@ struct DNATransferView: View {
     }
 
     private func finishCeremony() {
+        NSLog("🎉 finishCeremony() - premises ready, cleaning up BEFORE dismissing")
+
+        // CRITICAL: Stop timer IMMEDIATELY before any dismissal or navigation
+        // This prevents the timer from continuing if .onDisappear doesn't fire
+        premiseTimer?.invalidate()
+        premiseTimer = nil
+        isViewActive = false
+
+        NSLog("   ✅ Timer stopped and view marked inactive")
+
         phase = .complete
 
         // Wait 1 second, then fade and call onComplete
@@ -577,6 +608,7 @@ struct DNATransferView: View {
         showError = false
         totalElapsed = 0.0
         phase = .sustaining
+        isViewActive = true  // Re-enable polling for retry
 
         Task {
             do {
@@ -606,8 +638,21 @@ struct DNATransferView: View {
     // MARK: - Cleanup
 
     private func cleanup() {
+        NSLog("🧹 DNATransferView cleanup() called - stopping all timers")
+
+        // Mark view as inactive to stop any in-flight async tasks
+        isViewActive = false
+
+        // Invalidate timers
         transferTimer?.invalidate()
+        transferTimer = nil
+
         premiseTimer?.invalidate()
+        premiseTimer = nil
+
+        NSLog("   ✅ Timers invalidated")
+
+        // Stop haptics
         try? hapticPlayer?.stop(atTime: CHHapticTimeImmediate)
         hapticEngine?.stop()
     }

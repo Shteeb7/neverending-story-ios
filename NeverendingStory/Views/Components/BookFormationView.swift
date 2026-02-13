@@ -107,7 +107,7 @@ struct BookFormationView: View {
                         .multilineTextAlignment(.center)
                         .foregroundColor(.primary)
 
-                    Text("Think you can wait about 10 minutes?")
+                    Text("Think you can wait about 10 minutes for the first few chapters?")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)

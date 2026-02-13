@@ -177,7 +177,8 @@ struct LibraryView: View {
             .onAppear {
                 NSLog("📚 LibraryView appeared - loading library")
                 loadLibrary()
-                startPollingIfNeeded()
+                // NOTE: startPollingIfNeeded() is now called from inside loadLibrary()
+                // after stories are loaded, not here where stories array is still empty
             }
             .onDisappear {
                 NSLog("📚 LibraryView disappeared - stopping polling")
@@ -209,6 +210,9 @@ struct LibraryView: View {
                 stories = try await APIManager.shared.getLibrary(userId: userId)
                 isLoading = false
                 NSLog("✅ Got %d stories", stories.count)
+
+                // Start polling AFTER stories are loaded (not in .onAppear where array is empty)
+                startPollingIfNeeded()
             } catch let apiError as APIError {
                 NSLog("❌ LibraryView: APIError type: %@", String(describing: apiError))
                 self.error = apiError.localizedDescription
