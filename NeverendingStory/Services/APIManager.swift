@@ -63,7 +63,8 @@ class APIManager: ObservableObject {
         method: String = "GET",
         body: Data? = nil,
         requiresAuth: Bool = true,
-        userId: String? = nil  // NEW: Allow passing userId directly
+        userId: String? = nil,  // NEW: Allow passing userId directly
+        isRetry: Bool = false   // NEW: Track if this is a retry after token refresh
     ) async throws -> T {
         guard let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
@@ -118,6 +119,22 @@ class APIManager: ObservableObject {
             }
 
             if httpResponse.statusCode == 401 {
+                // If we get 401 and haven't already retried, try refreshing the session
+                if !isRetry {
+                    NSLog("🔄 Got 401, attempting to refresh session...")
+                    await AuthManager.shared.checkSession()
+
+                    // Retry the request with the new token
+                    NSLog("🔄 Retrying request with refreshed token...")
+                    return try await makeRequest(
+                        endpoint: endpoint,
+                        method: method,
+                        body: body,
+                        requiresAuth: requiresAuth,
+                        userId: userId,
+                        isRetry: true  // Mark as retry to prevent infinite loop
+                    )
+                }
                 throw APIError.unauthorized
             }
 
