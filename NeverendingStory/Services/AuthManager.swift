@@ -106,18 +106,27 @@ class AuthManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        NSLog("🔍 Checking session...")
+        NSLog("🔍 Checking for existing session...")
 
-        // Try to refresh the session first - this validates it's still good
+        // First, try to get the current session (without refreshing)
+        guard let currentSession = try? await supabase.auth.session else {
+            NSLog("ℹ️ No existing session found - user needs to sign in")
+            self.user = nil
+            return
+        }
+
+        NSLog("✅ Found existing session, now refreshing...")
+
+        // Now refresh the session to ensure it's still valid
         let refreshedSession: Session
         do {
             refreshedSession = try await supabase.auth.refreshSession()
             NSLog("✅ Session refreshed successfully")
         } catch {
-            NSLog("❌ Session refresh failed, signing out...")
+            NSLog("❌ Session refresh failed: \(error.localizedDescription)")
+            NSLog("   Clearing invalid session...")
             try? await supabase.auth.signOut()
             self.user = nil
-            // isAuthenticated is now computed from user
             return
         }
 
