@@ -54,57 +54,120 @@ struct LibraryView: View {
                     }
                 } else {
                     ScrollView {
-                        VStack(spacing: 32) {
-                            // Active stories
-                            if !activeStories.isEmpty {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("Continue Reading")
-                                        .font(.title2)
-                                        .fontWeight(.bold)
+                        VStack(spacing: 28) {
+
+                            // MARK: - Hero: Currently Reading
+                            if let currentStory = activeStories.first(where: { !$0.isGenerating }) {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text("Continue Your Tale")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
                                         .padding(.horizontal, 24)
 
-                                    ScrollView(.horizontal, showsIndicators: false) {
+                                    Button(action: { selectedStory = currentStory }) {
                                         HStack(spacing: 16) {
-                                            ForEach(activeStories) { story in
-                                                BookCoverCard(story: story) {
-                                                    selectedStory = story
+                                            // Cover thumbnail
+                                            BookCoverCard(story: currentStory, isSmall: true, action: {})
+                                                .disabled(true) // Outer button handles tap
+                                                .allowsHitTesting(false)
+
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Text(currentStory.title)
+                                                    .font(.title3)
+                                                    .fontWeight(.bold)
+                                                    .foregroundColor(.primary)
+                                                    .lineLimit(2)
+
+                                                if let genre = currentStory.genre {
+                                                    Text(genre)
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .foregroundColor(.white)
+                                                        .padding(.horizontal, 8)
+                                                        .padding(.vertical, 3)
+                                                        .background(Color.accentColor.opacity(0.8))
+                                                        .cornerRadius(4)
                                                 }
+
+                                                // Reading progress
+                                                if let progress = currentStory.generationProgress {
+                                                    VStack(alignment: .leading, spacing: 4) {
+                                                        ProgressView(value: Double(progress.chaptersGenerated), total: 12.0)
+                                                            .tint(.accentColor)
+
+                                                        Text("Chapter \(progress.chaptersGenerated) of 12")
+                                                            .font(.caption)
+                                                            .foregroundColor(.secondary)
+                                                    }
+                                                }
+
+                                                Spacer()
+
+                                                Text("Continue Reading →")
+                                                    .font(.subheadline)
+                                                    .fontWeight(.semibold)
+                                                    .foregroundColor(.accentColor)
                                             }
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.vertical, 8)
                                         }
-                                        .padding(.horizontal, 24)
+                                        .padding(16)
+                                        .background(Color(.secondarySystemBackground))
+                                        .cornerRadius(16)
                                     }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .padding(.horizontal, 24)
                                 }
-                                .padding(.top, 16)
+                                .padding(.top, 8)
                             }
 
-                            // New story button — disabled during generation
+                            // MARK: - Currently Generating
                             if hasGeneratingStories {
-                                // Show "writing in progress" indicator instead of new story button
-                                HStack(spacing: 12) {
-                                    ProgressView()
-                                        .tint(.accentColor)
+                                let generatingStories = activeStories.filter { $0.isGenerating }
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Being Conjured")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal, 24)
 
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Your book is being written...")
-                                            .font(.headline)
-                                            .foregroundColor(.primary)
-                                        Text("New stories available when this one's ready")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                                    ForEach(generatingStories) { story in
+                                        HStack(spacing: 12) {
+                                            BookCoverCard(story: story, isSmall: true, action: {})
+                                                .scaleEffect(0.6)
+                                                .frame(width: 84, height: 126)
+
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(story.title)
+                                                    .font(.headline)
+                                                    .foregroundColor(.primary)
+                                                    .lineLimit(1)
+                                                Text(story.progressText)
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+
+                                            Spacer()
+
+                                            ProgressView()
+                                                .tint(.accentColor)
+                                        }
+                                        .padding(12)
+                                        .background(Color(.secondarySystemBackground))
+                                        .cornerRadius(12)
+                                        .padding(.horizontal, 24)
                                     }
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(16)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(12)
-                                .padding(.horizontal, 24)
-                            } else {
+                            }
+
+                            // MARK: - New Story CTA
+                            if !hasGeneratingStories {
                                 Button(action: { showOnboarding = true }) {
                                     HStack(spacing: 12) {
-                                        Image(systemName: "plus.circle.fill")
-                                            .font(.title2)
-
-                                        Text("Start a New Story")
+                                        Image(systemName: "sparkles")
+                                            .font(.title3)
+                                        Text("Begin a New Tale")
                                             .font(.headline)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -116,17 +179,65 @@ struct LibraryView: View {
                                 .padding(.horizontal, 24)
                             }
 
-                            // Past stories
+                            // MARK: - Your Collection (2-column grid)
                             if !pastStories.isEmpty {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    HStack {
+                                        Text("Your Collection")
+                                            .font(.title3)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text("\(pastStories.count) tales")
+                                            .font(.caption)
+                                            .foregroundColor(.tertiary)
+                                    }
+                                    .padding(.horizontal, 24)
+
+                                    LazyVGrid(
+                                        columns: [
+                                            GridItem(.flexible(), spacing: 16),
+                                            GridItem(.flexible(), spacing: 16)
+                                        ],
+                                        spacing: 20
+                                    ) {
+                                        ForEach(pastStories) { story in
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                BookCoverCard(story: story, isSmall: true) {
+                                                    selectedStory = story
+                                                }
+
+                                                Text(story.title)
+                                                    .font(.caption)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.primary)
+                                                    .lineLimit(1)
+
+                                                if let genre = story.genre {
+                                                    Text(genre)
+                                                        .font(.caption2)
+                                                        .foregroundColor(.secondary)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 24)
+                                }
+                            }
+
+                            // MARK: - Additional Active Stories (if more than one non-generating)
+                            let otherActive = activeStories.filter { !$0.isGenerating }.dropFirst()
+                            if !otherActive.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
-                                    Text("Your Stories")
-                                        .font(.title2)
-                                        .fontWeight(.bold)
+                                    Text("Also Reading")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
                                         .padding(.horizontal, 24)
 
                                     ScrollView(.horizontal, showsIndicators: false) {
                                         HStack(spacing: 16) {
-                                            ForEach(pastStories) { story in
+                                            ForEach(Array(otherActive)) { story in
                                                 BookCoverCard(story: story, isSmall: true) {
                                                     selectedStory = story
                                                 }
@@ -141,7 +252,7 @@ struct LibraryView: View {
                     }
                 }
             }
-            .navigationTitle("Library")
+            .navigationTitle("Your Library")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -312,29 +423,37 @@ struct EmptyLibraryView: View {
     let action: () -> Void
 
     var body: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 40) {
             Spacer()
 
-            VStack(spacing: 16) {
-                Image(systemName: "book.closed")
-                    .font(.system(size: 80))
-                    .foregroundColor(.secondary)
+            VStack(spacing: 20) {
+                Image(systemName: "books.vertical")
+                    .font(.system(size: 70))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.purple.opacity(0.7), .indigo.opacity(0.5)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
 
-                VStack(spacing: 8) {
-                    Text("Your Library is Empty")
+                VStack(spacing: 10) {
+                    Text("Your shelves await")
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Text("Start your first never-ending story")
+                    Text("Speak with Prospero and he'll conjure\na tale written just for you")
                         .font(.body)
                         .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
                 }
             }
 
             Button(action: action) {
-                HStack(spacing: 12) {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Create Your First Story")
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                    Text("Begin Your First Tale")
                         .font(.headline)
                 }
                 .frame(maxWidth: .infinity)
@@ -345,6 +464,7 @@ struct EmptyLibraryView: View {
             }
             .padding(.horizontal, 48)
 
+            Spacer()
             Spacer()
         }
     }
@@ -362,11 +482,16 @@ struct ErrorView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
 
-            Text(message)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+            VStack(spacing: 8) {
+                Text("Something went awry")
+                    .font(.headline)
+
+                Text(message)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
 
             Button("Try Again") {
                 retry()
