@@ -92,14 +92,9 @@ struct LibraryView: View {
 
                                                 // Reading progress
                                                 if let progress = currentStory.generationProgress {
-                                                    VStack(alignment: .leading, spacing: 4) {
-                                                        ProgressView(value: Double(progress.chaptersGenerated), total: 12.0)
-                                                            .tint(.accentColor)
-
-                                                        Text("Chapter \(progress.chaptersGenerated) of 12")
-                                                            .font(.caption)
-                                                            .foregroundColor(.secondary)
-                                                    }
+                                                    Text("\(progress.chaptersGenerated) of 12 Chapters written")
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
                                                 }
 
                                                 Spacer()
