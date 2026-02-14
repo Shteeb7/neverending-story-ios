@@ -37,6 +37,9 @@ struct BookReaderView: View {
     @State private var showFirstLineCeremony = false
     @State private var firstLineCeremonyCompleted = false
 
+    // MARK: - Next Chapter Alert State
+    @State private var showNextChapterUnavailableAlert = false
+
     var body: some View {
         ZStack {
             // Main reading area with vertical scrolling
@@ -65,7 +68,7 @@ struct BookReaderView: View {
                                 ))
                                 .lineSpacing(readerSettings.lineSpacing)
                                 .padding(.horizontal, 24)
-                                .padding(.bottom, 100)
+                                .padding(.bottom, 40)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .foregroundColor(readerSettings.textColor)
                                 .background(
@@ -77,6 +80,23 @@ struct BookReaderView: View {
                                                        value: geometry.size.height)
                                     }
                                 )
+
+                            // Next Chapter button
+                            Button(action: handleNextChapterTap) {
+                                HStack(spacing: 12) {
+                                    Text("Next Chapter")
+                                        .font(.headline)
+                                    Image(systemName: "arrow.right")
+                                        .font(.headline)
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.accentColor)
+                                .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 100)
                         }
                     }
                     .coordinateSpace(name: "scrollView")
@@ -310,6 +330,13 @@ struct BookReaderView: View {
                 dismiss()
             }
         }
+        .alert("Chapter Still Conjuring", isPresented: $showNextChapterUnavailableAlert) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Prospero is still conjuring up your next chapter. Please return to the library.")
+        }
         .task {
             do {
                 try await readingState.loadStory(story)
@@ -364,6 +391,17 @@ struct BookReaderView: View {
             withAnimation(.easeInOut(duration: 0.3)) {
                 showTopBar = false
             }
+        }
+    }
+
+    private func handleNextChapterTap() {
+        // Check if next chapter is available
+        if readingState.canGoToNextChapter {
+            // Next chapter exists - navigate to it
+            readingState.goToNextChapter()
+        } else {
+            // Next chapter doesn't exist yet - show alert
+            showNextChapterUnavailableAlert = true
         }
     }
 
