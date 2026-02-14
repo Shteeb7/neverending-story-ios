@@ -16,120 +16,178 @@ struct LoginView: View {
     @State private var errorMessage = ""
 
     var body: some View {
-        VStack(spacing: 40) {
-            Spacer()
+        ZStack {
+            // Dark magical background
+            LinearGradient(
+                colors: [
+                    Color(red: 0.25, green: 0.1, blue: 0.4), // Purple
+                    Color(red: 0.1, green: 0.15, blue: 0.35), // Blue
+                    Color.black.opacity(0.9) // Dark base
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-            // Branding
-            VStack(spacing: 16) {
-                Image(systemName: "book.circle.fill")
-                    .font(.system(size: 100))
-                    .foregroundColor(.accentColor)
-                    .symbolRenderingMode(.hierarchical)
+            VStack(spacing: 40) {
+                Spacer()
 
-                VStack(spacing: 8) {
-                    Text("Neverending Story")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                // Branding
+                VStack(spacing: 16) {
+                    ZStack {
+                        // Subtle glow
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        Color.purple.opacity(0.3),
+                                        Color.clear
+                                    ],
+                                    center: .center,
+                                    startRadius: 30,
+                                    endRadius: 70
+                                )
+                            )
+                            .frame(width: 140, height: 140)
+                            .blur(radius: 15)
 
-                    Text("AI-powered books that never end")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
+                        Image("AppIconImage")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 100, height: 100)
+                            .clipShape(Circle())
+                            .shadow(color: .purple.opacity(0.5), radius: 15)
+                    }
+
+                    VStack(spacing: 8) {
+                        Text("Mythweaver")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+
+                        Text("Where Stories Never End")
+                            .font(.title3)
+                            .foregroundColor(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
                 }
-            }
 
-            Spacer()
+                Spacer()
 
-            // Email/Password Form
-            VStack(spacing: 16) {
-                // Email field
-                TextField("Email", text: $email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-
-                // Password field
-                SecureField("Password", text: $password)
-                    .textContentType(isSignUpMode ? .newPassword : .password)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-
-                // Sign In / Sign Up button
-                Button(action: handleEmailAuth) {
-                    Text(isSignUpMode ? "Create Account" : "Sign In")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.accentColor)
+                // Email/Password Form
+                VStack(spacing: 16) {
+                    // Email field
+                    TextField("Email", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                        .padding()
+                        .background(Color.white.opacity(0.1))
                         .foregroundColor(.white)
                         .cornerRadius(12)
-                }
-                .disabled(authManager.isLoading || email.isEmpty || password.isEmpty)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
 
-                // Toggle between Sign In / Sign Up
-                Button(action: { isSignUpMode.toggle() }) {
-                    Text(isSignUpMode ? "Already have an account? Sign In" : "New here? Create Account")
-                        .font(.subheadline)
-                        .foregroundColor(.accentColor)
-                }
+                    // Password field
+                    SecureField("Password", text: $password)
+                        .textContentType(isSignUpMode ? .newPassword : .password)
+                        .padding()
+                        .background(Color.white.opacity(0.1))
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
 
-                // Divider
-                HStack {
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(.secondary.opacity(0.3))
-                    Text("or")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(.secondary.opacity(0.3))
-                }
-                .padding(.vertical, 8)
-
-                // Google Sign In
-                Button(action: signInWithGoogle) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "globe")
-                            .font(.title3)
-
-                        Text("Continue with Google")
+                    // Sign In / Sign Up button
+                    Button(action: handleEmailAuth) {
+                        Text(isSignUpMode ? "Create Account" : "Sign In")
                             .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                LinearGradient(
+                                    colors: [.purple, .blue],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .shadow(color: .purple.opacity(0.3), radius: 8)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color(.systemGray6))
-                    .foregroundColor(.primary)
-                    .cornerRadius(12)
+                    .disabled(authManager.isLoading || email.isEmpty || password.isEmpty)
+                    .opacity((authManager.isLoading || email.isEmpty || password.isEmpty) ? 0.5 : 1.0)
+
+                    // Toggle between Sign In / Sign Up
+                    Button(action: { isSignUpMode.toggle() }) {
+                        Text(isSignUpMode ? "Already have an account? Sign In" : "New here? Create Account")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+
+                    // Divider
+                    HStack {
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(.white.opacity(0.3))
+                        Text("or")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.6))
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundColor(.white.opacity(0.3))
+                    }
+                    .padding(.vertical, 8)
+
+                    // Google Sign In
+                    Button(action: signInWithGoogle) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "globe")
+                                .font(.title3)
+
+                            Text("Continue with Google")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.white.opacity(0.15))
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                    }
+                    .disabled(authManager.isLoading)
+                    .opacity(authManager.isLoading ? 0.5 : 1.0)
                 }
-                .disabled(authManager.isLoading)
-            }
-            .padding(.horizontal, 32)
-
-            // Loading state
-            if authManager.isLoading {
-                ProgressView()
-                    .scaleEffect(1.2)
-                    .padding()
-            }
-
-            Spacer()
-
-            // Privacy note
-            Text("By continuing, you agree to our Terms of Service and Privacy Policy")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-                .padding(.bottom, 24)
+
+                // Loading state
+                if authManager.isLoading {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .tint(.white)
+                        .padding()
+                }
+
+                Spacer()
+
+                // Privacy note
+                Text("By continuing, you agree to our Terms of Service and Privacy Policy")
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.5))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 24)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
         .alert("Authentication Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {

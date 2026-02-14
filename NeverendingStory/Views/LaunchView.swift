@@ -15,32 +15,84 @@ struct LaunchView: View {
         Group {
             if !showContent {
                 // Splash screen
-                VStack(spacing: 24) {
-                    Spacer()
+                ZStack {
+                    // Dark magical background
+                    RadialGradient(
+                        colors: [
+                            Color(red: 0.1, green: 0.05, blue: 0.2), // Deep navy center
+                            Color.black.opacity(0.95) // Near-black edges
+                        ],
+                        center: .center,
+                        startRadius: 50,
+                        endRadius: 600
+                    )
+                    .ignoresSafeArea()
 
-                    // App icon/logo (using SF Symbol as placeholder)
-                    Image(systemName: "book.circle.fill")
-                        .font(.system(size: 120))
-                        .foregroundColor(.accentColor)
-                        .symbolRenderingMode(.hierarchical)
+                    VStack(spacing: 24) {
+                        Spacer()
 
-                    VStack(spacing: 8) {
-                        Text("Neverending Story")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
+                        // Actual app icon with glow
+                        ZStack {
+                            // Pulsing glow effect
+                            Circle()
+                                .fill(
+                                    RadialGradient(
+                                        colors: [
+                                            Color.purple.opacity(0.4),
+                                            Color.blue.opacity(0.3),
+                                            Color.clear
+                                        ],
+                                        center: .center,
+                                        startRadius: 40,
+                                        endRadius: 80
+                                    )
+                                )
+                                .frame(width: 160, height: 160)
+                                .blur(radius: 20)
 
-                        Text("Every page is a new adventure")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
+                            Image("AppIconImage")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                                .shadow(color: .purple.opacity(0.5), radius: 20)
+
+                            // Sparkle particles
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white.opacity(0.8))
+                                .offset(x: -50, y: -50)
+
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 15))
+                                .foregroundColor(.white.opacity(0.6))
+                                .offset(x: 60, y: -40)
+
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 18))
+                                .foregroundColor(.white.opacity(0.7))
+                                .offset(x: -55, y: 55)
+                        }
+
+                        VStack(spacing: 8) {
+                            Text("Mythweaver")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+
+                            Text("Where Stories Never End")
+                                .font(.title3)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+
+                        Spacer()
+
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .tint(.white)
                     }
-
-                    Spacer()
-
-                    ProgressView()
-                        .scaleEffect(1.2)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
             } else {
                 // Navigate based on auth state and onboarding completion
                 if authManager.isAuthenticated {

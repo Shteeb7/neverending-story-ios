@@ -126,7 +126,7 @@ struct OnboardingView: View {
                                                 .fontWeight(.semibold)
                                                 .foregroundColor(.primary)
 
-                                            Text("Your infinite library awaits...")
+                                            Text("Your Mythweaver library awaits...")
                                                 .font(.callout)
                                                 .foregroundColor(.secondary)
                                         }
@@ -134,7 +134,7 @@ struct OnboardingView: View {
                                         Button(action: startDNATransfer) {
                                             HStack(spacing: 12) {
                                                 Image(systemName: "sparkles")
-                                                Text("Enter My Infinite Library")
+                                                Text("Enter the Mythweaver")
                                                     .font(.headline)
                                                 Image(systemName: "arrow.right")
                                             }
