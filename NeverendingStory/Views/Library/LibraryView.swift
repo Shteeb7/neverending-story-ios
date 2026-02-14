@@ -190,7 +190,7 @@ struct LibraryView: View {
                                         Spacer()
                                         Text("\(pastStories.count) tales")
                                             .font(.caption)
-                                            .foregroundColor(.tertiary)
+                                            .foregroundStyle(.tertiary)
                                     }
                                     .padding(.horizontal, 24)
 
