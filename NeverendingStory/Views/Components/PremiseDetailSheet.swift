@@ -53,46 +53,23 @@ struct PremiseDetailSheet: View {
                     .lineSpacing(6)
                     .fixedSize(horizontal: false, vertical: true)
 
-                // Hook section (if exists)
-                if let hook = premise.hook, !hook.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("The Hook")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
+                Spacer(minLength: 32)
 
-                        Text(hook)
-                            .font(.body)
-                            .foregroundColor(.primary)
-                            .lineSpacing(6)
-                            .fixedSize(horizontal: false, vertical: true)
+                // Choose Another button (dismisses sheet)
+                Button(action: {
+                    dismiss()
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("Choose Another")
+                            .font(.headline)
                     }
-                    .padding(16)
-                    .background(Color(.systemGray6))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color(.systemGray5))
+                    .foregroundColor(.primary)
                     .cornerRadius(12)
                 }
-
-                // Themes (if exist)
-                if let themes = premise.themes, !themes.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Themes")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-
-                        FlowLayout(spacing: 8) {
-                            ForEach(themes, id: \.self) { theme in
-                                Text(theme)
-                                    .font(.subheadline)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.accentColor.opacity(0.1))
-                                    .foregroundColor(.accentColor)
-                                    .cornerRadius(16)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(minLength: 32)
 
                 // Choose This Story button
                 Button(action: {
@@ -119,63 +96,6 @@ struct PremiseDetailSheet: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden) // We have our own
-    }
-}
-
-// MARK: - Flow Layout for Theme Tags
-
-struct FlowLayout: Layout {
-    var spacing: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(
-            in: proposal.replacingUnspecifiedDimensions().width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(
-            in: bounds.width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        for (index, subview) in subviews.enumerated() {
-            subview.place(at: result.positions[index], proposal: .unspecified)
-        }
-    }
-
-    struct FlowResult {
-        var positions: [CGPoint] = []
-        var size: CGSize = .zero
-
-        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var x: CGFloat = 0
-            var y: CGFloat = 0
-            var lineHeight: CGFloat = 0
-
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-
-                if x + size.width > maxWidth && x > 0 {
-                    // Move to next line
-                    x = 0
-                    y += lineHeight + spacing
-                    lineHeight = 0
-                }
-
-                positions.append(CGPoint(x: x, y: y))
-                lineHeight = max(lineHeight, size.height)
-                x += size.width + spacing
-            }
-
-            self.size = CGSize(
-                width: maxWidth,
-                height: y + lineHeight
-            )
-        }
     }
 }
 
