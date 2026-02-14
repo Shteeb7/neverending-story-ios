@@ -493,27 +493,11 @@ struct BookReaderView: View {
         }
     }
 
-    // Fetch protagonist name from story bible for check-in
+    // Set protagonist name for check-in
+    // TODO: Fetch from story bible when backend endpoint is available
     private func fetchProtagonistName() async {
-        do {
-            // Get story bible to fetch protagonist name
-            let bible = try await APIManager.shared.getStoryBible(storyId: story.id)
-            if let characters = bible["characters"] as? [String: Any],
-               let protagonist = characters["protagonist"] as? [String: Any],
-               let name = protagonist["name"] as? String {
-                await MainActor.run {
-                    self.protagonistName = name
-                }
-            } else {
-                await MainActor.run {
-                    self.protagonistName = "the protagonist"
-                }
-            }
-        } catch {
-            NSLog("❌ Failed to fetch protagonist name: \(error)")
-            await MainActor.run {
-                self.protagonistName = "the protagonist"
-            }
+        await MainActor.run {
+            self.protagonistName = "the protagonist"
         }
     }
 
