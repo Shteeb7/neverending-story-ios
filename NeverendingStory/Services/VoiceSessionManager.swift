@@ -850,7 +850,10 @@ class VoiceSessionManager: ObservableObject {
                 ] as [String: Any],
                 "turn_detection": [
                     "type": "semantic_vad",
-                    "eagerness": "low"
+                    "eagerness": "medium"
+                ] as [String: Any],
+                "input_audio_noise_reduction": [
+                    "type": "near_field"
                 ] as [String: Any],
                 "tools": tools,
                 "max_response_output_tokens": 1000  // Increased from 150 - was cutting off responses mid-sentence!
