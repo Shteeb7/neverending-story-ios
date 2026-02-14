@@ -39,8 +39,21 @@ class ReadingStateManager: ObservableObject {
         NSLog("   Story ID: %@", story.id)
 
         self.currentStory = story
-        self.currentChapterIndex = 0 // Start at beginning
-        self.scrollPosition = 0
+
+        // Restore previous reading position if this is the same story
+        let savedStoryId = UserDefaults.standard.string(forKey: "currentStoryId")
+        if savedStoryId == story.id {
+            let savedChapterIndex = UserDefaults.standard.integer(forKey: "currentChapterIndex")
+            let savedScrollPosition = UserDefaults.standard.double(forKey: "scrollPosition")
+            self.currentChapterIndex = savedChapterIndex
+            self.scrollPosition = savedScrollPosition
+            NSLog("📖 Restored reading position: chapter %d, scroll %.2f", savedChapterIndex, savedScrollPosition)
+        } else {
+            // Different story - start at beginning
+            self.currentChapterIndex = 0
+            self.scrollPosition = 0
+            NSLog("📖 Starting new story from beginning")
+        }
 
         // Fetch chapters (may be empty if still generating)
         NSLog("📡 ReadingStateManager: Fetching chapters from API...")
