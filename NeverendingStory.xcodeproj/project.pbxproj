@@ -14,7 +14,6 @@
 		1DBCE177DF4E586ED495BD97 /* ReaderSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 791ABA3F795282196823DBCC /* ReaderSettingsView.swift */; };
 		39B303E18D2D435877B7BD53 /* BookReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6325427DEA71DD9807039F2E /* BookReaderView.swift */; };
 		4AA2314D04169970D788F77C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = BDD92E43D4F1D00BA71A6B51 /* Supabase */; };
-		4BD93E34EF8B659C12C40738 /* StoryFeedbackDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDC92B427099862231FF748B /* StoryFeedbackDialog.swift */; };
 		5FBDD2CA9BC1F60C8793FF27 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F95DABAFB4DEFE47A9F2CD /* AuthManager.swift */; };
 		60FE83E01B4959709B91D422 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = C188CAFDD9DAE8521F761700 /* User.swift */; };
 		616D669164FCBBE32D7C7EFA /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = C09C936859098AB469AB3C37 /* AppConfig.swift */; };
@@ -24,7 +23,6 @@
 		7890ABCD1234EF567890FEDC /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F1E8A9B2C4567890FEDCBA /* Secrets.swift */; };
 		8250B66A88A2369D855D72B8 /* PremiseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE889A414CE445BBEE5172B5 /* PremiseCard.swift */; };
 		89F5E8EB1F3F6E9C2B296E87 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = 7F9BA64BB5D0D2B50C3B4C7A /* OpenAI */; };
-		9A1D9C6569C291B5546C13D3 /* MehFollowUpDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 433DEB30BD2C58E6DC5D7F25 /* MehFollowUpDialog.swift */; };
 		9C335BE7FE5654CBE96AD5F6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2661108E4232961D5696DF00 /* OnboardingView.swift */; };
 		9CE559EE551954215BF26615 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8695003D3086D0A0333FD562 /* Story.swift */; };
 		A0EC4B72AAD97A840838FE3E /* PremiseSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3AF938CA8AE4F77E0D0845 /* PremiseSelectionView.swift */; };
@@ -55,7 +53,6 @@
 		39A9D66D3EE1466B4AB229D6 /* DedicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DedicationView.swift; sourceTree = "<group>"; };
 		39DF5639056B31DA10387FF4 /* Premise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Premise.swift; sourceTree = "<group>"; };
 		3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNATransferView.swift; sourceTree = "<group>"; };
-		433DEB30BD2C58E6DC5D7F25 /* MehFollowUpDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MehFollowUpDialog.swift; sourceTree = "<group>"; };
 		4F3AF938CA8AE4F77E0D0845 /* PremiseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseSelectionView.swift; sourceTree = "<group>"; };
 		5C992418313E0D149445A242 /* VoiceSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionManager.swift; sourceTree = "<group>"; };
 		6325427DEA71DD9807039F2E /* BookReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookReaderView.swift; sourceTree = "<group>"; };
@@ -72,7 +69,6 @@
 		B0C1D2E3F4A5B6C7D8E9F0A1 /* SequelGenerationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequelGenerationView.swift; sourceTree = "<group>"; };
 		B299E9B89218A56A35F0B5D7 /* FeedbackModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackModalView.swift; sourceTree = "<group>"; };
 		BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverCard.swift; sourceTree = "<group>"; };
-		BDC92B427099862231FF748B /* StoryFeedbackDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryFeedbackDialog.swift; sourceTree = "<group>"; };
 		BE889A414CE445BBEE5172B5 /* PremiseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseCard.swift; sourceTree = "<group>"; };
 		C09C936859098AB469AB3C37 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		C188CAFDD9DAE8521F761700 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
@@ -184,8 +180,6 @@
 		D3FC2537F5F8CF4F83F24397 /* Feedback */ = {
 			isa = PBXGroup;
 			children = (
-				BDC92B427099862231FF748B /* StoryFeedbackDialog.swift */,
-				433DEB30BD2C58E6DC5D7F25 /* MehFollowUpDialog.swift */,
 				E8F7A2B9C3D4E5F601234567 /* BookCompletionInterviewView.swift */,
 				F9A8B7C6D5E4F3A2B1C0D9E8 /* BookCompleteView.swift */,
 				B0C1D2E3F4A5B6C7D8E9F0A1 /* SequelGenerationView.swift */,
@@ -334,8 +328,6 @@
 				A0EC4B72AAD97A840838FE3E /* PremiseSelectionView.swift in Sources */,
 				1DBCE177DF4E586ED495BD97 /* ReaderSettingsView.swift in Sources */,
 				CB87444C8AB3D556F1C9ED9A /* ReadingStateManager.swift in Sources */,
-				4BD93E34EF8B659C12C40738 /* StoryFeedbackDialog.swift in Sources */,
-				9A1D9C6569C291B5546C13D3 /* MehFollowUpDialog.swift in Sources */,
 				A1B2C3D4E5F67890ABCDEF01 /* BookCompletionInterviewView.swift in Sources */,
 				A9B8C7D6E5F4A3B2C1D0E9F8 /* BookCompleteView.swift in Sources */,
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* SequelGenerationView.swift in Sources */,
