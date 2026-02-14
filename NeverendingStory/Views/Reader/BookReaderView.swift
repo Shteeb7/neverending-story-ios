@@ -115,7 +115,7 @@ struct BookReaderView: View {
                     .onTapGesture {
                         showTopBarTemporarily()
                     }
-                    .onChange(of: readingState.currentChapterIndex) { _ in
+                    .onChange(of: readingState.currentChapterIndex) {
                         // Scroll to top when chapter changes
                         withAnimation {
                             proxy.scrollTo("chapter-top", anchor: .top)
@@ -332,7 +332,7 @@ struct BookReaderView: View {
             readingState.stopTracking()
             readingState.stopChapterPolling()
         }
-        .onChange(of: scenePhase) { newPhase in
+        .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .background:
                 // End session when app goes to background

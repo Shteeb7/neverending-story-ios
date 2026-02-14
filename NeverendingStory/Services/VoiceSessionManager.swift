@@ -240,9 +240,9 @@ class VoiceSessionManager: ObservableObject {
         // Use playAndRecord for two-way audio conversation
         // .default mode works better for speaker/Bluetooth routing than .voiceChat
         // .defaultToSpeaker: Routes to loudspeaker when no Bluetooth is connected
-        // .allowBluetooth: Enables Bluetooth HFP (Hands-Free Profile) for bidirectional audio with AirPods mic
+        // .allowBluetoothHFP: Enables Bluetooth HFP (Hands-Free Profile) for bidirectional audio with AirPods mic
         // .allowBluetoothA2DP: Routes to AirPods/Bluetooth with high-quality audio (takes priority over speaker)
-        try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP])
+        try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
         try audioSession.setActive(true)
 
         // Observe audio route changes (e.g., AirPods connect/disconnect)
@@ -588,7 +588,7 @@ class VoiceSessionManager: ObservableObject {
 
         // Schedule buffer for playback
         playerNode.scheduleBuffer(buffer, completionHandler: { [weak self] in
-            Task { @MainActor [weak self] in
+            Task { @MainActor in
                 guard let self = self else { return }
                 NSLog("🔊 Combined chunk played (\(frameCount) frames)")
 

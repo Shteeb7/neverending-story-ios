@@ -109,7 +109,7 @@ class AuthManager: ObservableObject {
         NSLog("🔍 Checking for existing session...")
 
         // First, try to get the current session (without refreshing)
-        guard let currentSession = try? await supabase.auth.session else {
+        guard (try? await supabase.auth.session) != nil else {
             NSLog("ℹ️ No existing session found - user needs to sign in")
             self.user = nil
             return
