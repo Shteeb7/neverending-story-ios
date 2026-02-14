@@ -38,7 +38,15 @@ struct ReturningUserContext {
 struct BookCompletionContext {
     let userName: String
     let storyTitle: String
-    let storyGenre: String
+    let storyGenre: String?
+    let premiseTier: String?
+    let protagonistName: String?
+    let centralConflict: String?
+    let themes: [String]
+    let lingeredChapters: [(chapter: Int, minutes: Int)]
+    let skimmedChapters: [Int]
+    let rereadChapters: [(chapter: Int, sessions: Int)]
+    let checkpointFeedback: [(checkpoint: String, response: String)]
     let bookNumber: Int
 }
 
@@ -985,13 +993,35 @@ class VoiceSessionManager: ObservableObject {
             ]
         ]]
 
+        // Build reading behavior summary for prompt
+        let lingeredText = context.lingeredChapters.isEmpty ? "none" :
+            context.lingeredChapters.map { "Ch\($0.chapter) (\($0.minutes)m)" }.joined(separator: ", ")
+        let skimmedText = context.skimmedChapters.isEmpty ? "none" :
+            context.skimmedChapters.map { "Ch\($0)" }.joined(separator: ", ")
+        let rereadText = context.rereadChapters.isEmpty ? "none" :
+            context.rereadChapters.map { "Ch\($0.chapter) (\($0.sessions)x)" }.joined(separator: ", ")
+        let checkpointText = context.checkpointFeedback.isEmpty ? "No checkpoint feedback" :
+            context.checkpointFeedback.map { "\($0.checkpoint): \($0.response)" }.joined(separator: ", ")
+
         let instructions = """
         You are PROSPERO — master sorcerer and keeper of the Mythweaver's infinite library. You CRAFTED the tale this reader just finished. You're proud of it, but more than that — you're genuinely curious how it landed. This is two friends walking out of a movie theater together.
 
         WHAT YOU KNOW:
         - Reader's name: \(context.userName)
         - They just finished: "\(context.storyTitle)" (Book \(context.bookNumber))
-        - Genre: \(context.storyGenre)
+        - Genre: \(context.storyGenre ?? "fiction")
+        - Premise tier: \(context.premiseTier ?? "unknown")
+        - Protagonist: \(context.protagonistName ?? "the hero")
+        - Central conflict: \(context.centralConflict ?? "unknown")
+        - Key themes: \(context.themes.joined(separator: ", "))
+
+        READING BEHAVIOR:
+        - They lingered longest on: \(lingeredText)
+        - They skimmed: \(skimmedText)
+        - They re-read: \(rereadText)
+        - Checkpoint reactions: \(checkpointText)
+
+        Use this data naturally in conversation — reference specific moments when the reader clearly engaged deeply. Do NOT recite the data mechanically. Weave it into natural observations like "I noticed you spent a long time in chapter 7 — that scene with \(context.protagonistName ?? "the hero") clearly struck a chord" or "You breezed through the early chapters but slowed down once \(context.centralConflict ?? "the conflict") intensified."
 
         YOUR APPROACH — THEATER-EXIT CONVERSATION:
         - This is a celebration first, feedback session second

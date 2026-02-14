@@ -300,6 +300,89 @@ class APIManager: ObservableObject {
         }
     }
 
+    func getCompletionContext(storyId: String) async throws -> [String: Any]? {
+        struct CompletionContextResponse: Decodable {
+            let success: Bool
+            let story: StoryInfo
+            let bible: BibleInfo
+            let readingBehavior: ReadingBehavior
+            let checkpointFeedback: [CheckpointFeedback]
+
+            struct StoryInfo: Decodable {
+                let title: String
+                let genre: String?
+                let premiseTier: String?
+            }
+
+            struct BibleInfo: Decodable {
+                let protagonistName: String?
+                let supportingCast: [String]
+                let centralConflict: String
+                let themes: [String]
+                let keyLocations: [String]
+            }
+
+            struct ReadingBehavior: Decodable {
+                let totalReadingMinutes: Int
+                let lingeredChapters: [LingeredChapter]
+                let skimmedChapters: [Int]
+                let rereadChapters: [RereadChapter]
+
+                struct LingeredChapter: Decodable {
+                    let chapter: Int
+                    let minutes: Int
+                }
+
+                struct RereadChapter: Decodable {
+                    let chapter: Int
+                    let sessions: Int
+                }
+            }
+
+            struct CheckpointFeedback: Decodable {
+                let checkpoint: String
+                let response: String
+                let action: String?
+            }
+        }
+
+        do {
+            let response: CompletionContextResponse = try await makeRequest(
+                endpoint: "/feedback/completion-context/\(storyId)",
+                method: "GET",
+                requiresAuth: true
+            )
+
+            // Convert to dictionary for easier consumption
+            return [
+                "story": [
+                    "title": response.story.title,
+                    "genre": response.story.genre ?? "",
+                    "premiseTier": response.story.premiseTier ?? ""
+                ],
+                "bible": [
+                    "protagonistName": response.bible.protagonistName ?? "",
+                    "supportingCast": response.bible.supportingCast,
+                    "centralConflict": response.bible.centralConflict,
+                    "themes": response.bible.themes,
+                    "keyLocations": response.bible.keyLocations
+                ],
+                "readingBehavior": [
+                    "totalReadingMinutes": response.readingBehavior.totalReadingMinutes,
+                    "lingeredChapters": response.readingBehavior.lingeredChapters.map { ["chapter": $0.chapter, "minutes": $0.minutes] },
+                    "skimmedChapters": response.readingBehavior.skimmedChapters,
+                    "rereadChapters": response.readingBehavior.rereadChapters.map { ["chapter": $0.chapter, "sessions": $0.sessions] }
+                ],
+                "checkpointFeedback": response.checkpointFeedback.map {
+                    ["checkpoint": $0.checkpoint, "response": $0.response, "action": $0.action ?? ""]
+                }
+            ]
+        } catch {
+            NSLog("⚠️ Failed to fetch completion context: \(error)")
+            return nil
+        }
+    }
+
     func generatePremises() async throws {
         NSLog("🔄 generatePremises() called - starting request")
 

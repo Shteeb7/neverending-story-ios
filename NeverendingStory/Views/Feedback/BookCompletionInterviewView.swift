@@ -331,7 +331,7 @@ struct BookCompletionInterviewView: View {
     }
 
     private func configureBookCompletionSession() async {
-        // Get user's name from stored preferences
+        // Fetch rich completion context from backend
         guard let userId = AuthManager.shared.user?.id else {
             NSLog("⚠️ No user ID for book completion session")
             return
@@ -339,15 +339,73 @@ struct BookCompletionInterviewView: View {
 
         let userName = await fetchUserName(userId: userId) ?? "friend"
 
+        // Fetch completion context (story + bible + reading behavior + checkpoint feedback)
+        guard let contextData = try? await APIManager.shared.getCompletionContext(storyId: story.id) else {
+            NSLog("⚠️ Failed to fetch completion context, using minimal context")
+            let minimalContext = BookCompletionContext(
+                userName: userName,
+                storyTitle: story.title,
+                storyGenre: story.genre,
+                premiseTier: nil,
+                protagonistName: nil,
+                centralConflict: nil,
+                themes: [],
+                lingeredChapters: [],
+                skimmedChapters: [],
+                rereadChapters: [],
+                checkpointFeedback: [],
+                bookNumber: bookNumber
+            )
+            voiceSession.interviewType = .bookCompletion(context: minimalContext)
+            return
+        }
+
+        // Extract data from API response
+        let storyInfo = contextData["story"] as? [String: Any]
+        let bibleInfo = contextData["bible"] as? [String: Any]
+        let readingBehavior = contextData["readingBehavior"] as? [String: Any]
+        let checkpointFeedback = contextData["checkpointFeedback"] as? [[String: Any]]
+
+        // Build lingered chapters array
+        let lingered: [(chapter: Int, minutes: Int)] = (readingBehavior?["lingeredChapters"] as? [[String: Any]])?.compactMap {
+            guard let chapter = $0["chapter"] as? Int, let minutes = $0["minutes"] as? Int else { return nil }
+            return (chapter, minutes)
+        } ?? []
+
+        // Build skimmed chapters array
+        let skimmed = readingBehavior?["skimmedChapters"] as? [Int] ?? []
+
+        // Build reread chapters array
+        let reread: [(chapter: Int, sessions: Int)] = (readingBehavior?["rereadChapters"] as? [[String: Any]])?.compactMap {
+            guard let chapter = $0["chapter"] as? Int, let sessions = $0["sessions"] as? Int else { return nil }
+            return (chapter, sessions)
+        } ?? []
+
+        // Build checkpoint feedback array
+        let feedback: [(checkpoint: String, response: String)] = checkpointFeedback?.compactMap {
+            guard let checkpoint = $0["checkpoint"] as? String,
+                  let response = $0["response"] as? String else { return nil }
+            return (checkpoint, response)
+        } ?? []
+
         let context = BookCompletionContext(
             userName: userName,
-            storyTitle: story.title,
-            storyGenre: story.genre ?? "fiction",
+            storyTitle: storyInfo?["title"] as? String ?? story.title,
+            storyGenre: storyInfo?["genre"] as? String,
+            premiseTier: storyInfo?["premiseTier"] as? String,
+            protagonistName: bibleInfo?["protagonistName"] as? String,
+            centralConflict: bibleInfo?["centralConflict"] as? String,
+            themes: bibleInfo?["themes"] as? [String] ?? [],
+            lingeredChapters: lingered,
+            skimmedChapters: skimmed,
+            rereadChapters: reread,
+            checkpointFeedback: feedback,
             bookNumber: bookNumber
         )
 
         voiceSession.interviewType = .bookCompletion(context: context)
         NSLog("✅ Configured book completion session for \(userName) - \"\(story.title)\"")
+        NSLog("   Reading behavior: \(lingered.count) lingered, \(skimmed.count) skimmed, \(reread.count) reread")
     }
 
     private func fetchUserName(userId: String) async -> String? {
