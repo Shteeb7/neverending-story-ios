@@ -24,14 +24,16 @@ struct BookReaderView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
-    // MARK: - Feedback State
-    @State private var showFeedbackDialog = false
-    @State private var showMehFollowUp = false
+    // MARK: - Feedback State (Adaptive Reading Engine)
+    @State private var showProsperoCheckIn = false
     @State private var currentCheckpoint: String = ""
     @State private var checkedCheckpoints: Set<String> = []
+    @State private var protagonistName: String = ""
     @State private var showCompletionInterview = false
     @State private var showSequelGeneration = false
-    @State private var interviewPreferences: [String: Any] = [:]
+    @State private var interviewPreferences: [String: Any] = []
+    @State private var showGeneratingChapters = false
+    @State private var generatingChapterNumber: Int = 0
 
     // MARK: - First Line Ceremony State
     @State private var showFirstLineCeremony = false
@@ -293,19 +295,24 @@ struct BookReaderView: View {
                 }
             )
         }
-        .overlay {
-            if showFeedbackDialog {
-                StoryFeedbackDialog(checkpoint: currentCheckpoint) { response in
-                    handleFeedbackResponse(response)
+        .fullScreenCover(isPresented: $showProsperoCheckIn) {
+            ProsperoCheckInView(
+                checkpoint: currentCheckpoint,
+                protagonistName: protagonistName,
+                onComplete: { pacing, tone, character in
+                    handleProsperoCheckInComplete(pacing: pacing, tone: tone, character: character)
                 }
-            }
+            )
         }
-        .overlay {
-            if showMehFollowUp {
-                MehFollowUpDialog { action in
-                    handleMehFollowUpAction(action)
+        .fullScreenCover(isPresented: $showGeneratingChapters) {
+            GeneratingChaptersView(
+                storyId: story.id,
+                storyTitle: story.title,
+                nextChapterNumber: generatingChapterNumber,
+                onChapterReady: {
+                    showGeneratingChapters = false
                 }
-            }
+            )
         }
         .fullScreenCover(isPresented: $showCompletionInterview) {
             BookCompletionInterviewView(
@@ -400,8 +407,10 @@ struct BookReaderView: View {
             // Next chapter exists - navigate to it
             readingState.goToNextChapter()
         } else {
-            // Next chapter doesn't exist yet - show alert
-            showNextChapterUnavailableAlert = true
+            // Adaptive Reading Engine: Show GeneratingChaptersView fallback
+            let nextChapterNum = (readingState.currentChapter?.chapterNumber ?? 0) + 1
+            generatingChapterNumber = nextChapterNum
+            showGeneratingChapters = true
         }
     }
 
@@ -425,14 +434,14 @@ struct BookReaderView: View {
             }
         }
 
-        // Determine checkpoint based on chapter number (chapters 4, 7, 10)
+        // Adaptive Reading Engine: checkpoint triggers at chapters 3, 6, 9 (after reading ch 2, 5, 8)
         var checkpoint: String?
-        if chapterNum == 4 {
-            checkpoint = "chapter_3"
-        } else if chapterNum == 7 {
-            checkpoint = "chapter_6"
-        } else if chapterNum == 10 {
-            checkpoint = "chapter_9"
+        if chapterNum == 3 {
+            checkpoint = "chapter_2"
+        } else if chapterNum == 6 {
+            checkpoint = "chapter_5"
+        } else if chapterNum == 9 {
+            checkpoint = "chapter_8"
         }
 
         guard let checkpoint = checkpoint else { return }
@@ -451,9 +460,12 @@ struct BookReaderView: View {
 
                 // Only show dialog if no feedback submitted yet
                 if !status.hasFeedback {
+                    // Fetch protagonist name for check-in
+                    await fetchProtagonistName()
+
                     await MainActor.run {
                         currentCheckpoint = checkpoint
-                        showFeedbackDialog = true
+                        showProsperoCheckIn = true
                     }
                 }
             } catch {
@@ -462,21 +474,52 @@ struct BookReaderView: View {
         }
     }
 
-    private func handleFeedbackResponse(_ response: String) {
-        showFeedbackDialog = false
-
-        if response == "Meh" {
-            // Show follow-up dialog
-            showMehFollowUp = true
-        } else {
-            // Submit positive feedback (Great or Fantastic)
-            submitFeedback(response: response, followUpAction: nil)
+    // Adaptive Reading Engine: Handle dimension-based check-in completion
+    private func handleProsperoCheckInComplete(pacing: String, tone: String, character: String) {
+        Task {
+            do {
+                let _ = try await APIManager.shared.submitCheckpointFeedbackWithDimensions(
+                    storyId: story.id,
+                    checkpoint: currentCheckpoint,
+                    pacing: pacing,
+                    tone: tone,
+                    character: character,
+                    protagonistName: protagonistName
+                )
+                NSLog("✅ Submitted dimension feedback: pacing=\(pacing), tone=\(tone), character=\(character)")
+            } catch {
+                NSLog("❌ Failed to submit dimension feedback: \(error)")
+            }
         }
     }
 
-    private func handleMehFollowUpAction(_ action: String) {
-        showMehFollowUp = false
+    // Fetch protagonist name from story bible for check-in
+    private func fetchProtagonistName() async {
+        do {
+            // Get story bible to fetch protagonist name
+            let bible = try await APIManager.shared.getStoryBible(storyId: story.id)
+            if let characters = bible["characters"] as? [String: Any],
+               let protagonist = characters["protagonist"] as? [String: Any],
+               let name = protagonist["name"] as? String {
+                await MainActor.run {
+                    self.protagonistName = name
+                }
+            } else {
+                await MainActor.run {
+                    self.protagonistName = "the protagonist"
+                }
+            }
+        } catch {
+            NSLog("❌ Failed to fetch protagonist name: \(error)")
+            await MainActor.run {
+                self.protagonistName = "the protagonist"
+            }
+        }
+    }
 
+    // DEPRECATED: Old feedback handling (kept for reference)
+    private func handleMehFollowUpAction(_ action: String) {
+        // This function is deprecated and should not be called
         switch action {
         case "different_story":
             // Submit feedback with follow-up action, then navigate to library

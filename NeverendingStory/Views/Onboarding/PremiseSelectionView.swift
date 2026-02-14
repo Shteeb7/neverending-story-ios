@@ -82,13 +82,7 @@ struct PremiseSelectionView: View {
                             .padding(.horizontal, 24)
                         }
 
-                        // "Talk to Prospero" card (if user needs new interview)
-                        if needsNewInterview {
-                            TalkToProsperoCard {
-                                navigateToNewInterview = true
-                            }
-                            .padding(.horizontal, 24)
-                        }
+                        // Adaptive Reading Engine: TalkToProsperoCard removed (users navigate to library naturally)
                     }
                     .padding(.bottom, 32)
                 }
@@ -225,73 +219,8 @@ struct PremiseSelectionView: View {
     }
 }
 
-// MARK: - Talk to Prospero Card
-
-struct TalkToProsperoCard: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 16) {
-                // Icon
-                HStack {
-                    Spacer()
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 40))
-                        .foregroundColor(.accentColor)
-                    Spacer()
-                }
-                .padding(.top, 8)
-
-                // Title
-                Text("Talk to Prospero")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-
-                // Description
-                Text("Ready for something new? Tell me what you'd like to read next, and I'll conjure three fresh story ideas just for you.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                // CTA
-                HStack {
-                    Image(systemName: "mic.fill")
-                    Text("Start New Interview")
-                        .fontWeight(.semibold)
-                }
-                .font(.subheadline)
-                .foregroundColor(.accentColor)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.accentColor.opacity(0.1))
-                .cornerRadius(8)
-            }
-            .padding(24)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color.accentColor.opacity(0.05),
-                        Color.accentColor.opacity(0.02)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.accentColor.opacity(0.2), lineWidth: 2)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
+// MARK: - Adaptive Reading Engine
+// TalkToProsperoCard has been removed - users navigate to library naturally
 
 #Preview {
     NavigationStack {

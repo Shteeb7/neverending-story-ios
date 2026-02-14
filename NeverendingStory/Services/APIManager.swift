@@ -649,6 +649,51 @@ class APIManager: ObservableObject {
         )
     }
 
+    // Adaptive Reading Engine: Submit dimension-based checkpoint feedback
+    func submitCheckpointFeedbackWithDimensions(
+        storyId: String,
+        checkpoint: String,
+        pacing: String,
+        tone: String,
+        character: String,
+        protagonistName: String
+    ) async throws -> CheckpointFeedbackResponse {
+        struct DimensionFeedbackRequest: Encodable {
+            let storyId: String
+            let checkpoint: String
+            let pacing: String
+            let tone: String
+            let character: String
+            let protagonistName: String
+        }
+
+        let body = try encoder.encode(DimensionFeedbackRequest(
+            storyId: storyId,
+            checkpoint: checkpoint,
+            pacing: pacing,
+            tone: tone,
+            character: character,
+            protagonistName: protagonistName
+        ))
+
+        return try await makeRequest(
+            endpoint: "/feedback/checkpoint",
+            method: "POST",
+            body: body
+        )
+    }
+
+    // Check if a specific chapter is available for reading
+    func checkChapterAvailability(storyId: String, chapterNumber: Int) async throws -> Bool {
+        do {
+            let chapters = try await getChapters(storyId: storyId)
+            return chapters.contains(where: { $0.chapterNumber == chapterNumber })
+        } catch {
+            // If we can't fetch chapters, assume not available
+            return false
+        }
+    }
+
     // MARK: - Completion Interview
 
     func submitCompletionInterview(

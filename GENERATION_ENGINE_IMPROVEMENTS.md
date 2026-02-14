@@ -3,7 +3,7 @@
 
 **Date Created:** February 12, 2026
 **Last Updated:** February 12, 2026
-**Status:** Phases 1-2 COMPLETE, Phase 3 partially complete, Phases 4-5 deferred
+**Status:** Phases 1-2 COMPLETE. Note: The feedback/checkpoint system referenced in later phases has been replaced by the Adaptive Reading Engine — see ADAPTIVE_READING_ENGINE.md for the current architecture.
 **Goal:** Transform our generation engine from "decent" to "legitimately good" fiction
 
 ---

@@ -1,7 +1,7 @@
 # Feedback & Sequel System - Implementation Progress
 
 **Last Updated:** 2025-02-11
-**Status:** 🚧 In Progress (Backend Complete, iOS Partial)
+**Status:** ⚠️ SUPERSEDED by ADAPTIVE_READING_ENGINE.md (Feb 14, 2026). The checkpoint system (Fantastic/Great/Meh at chapters 3/6/9) has been replaced by the Adaptive Reading Engine (3-dimension feedback at chapters 2/5/8 with course corrections). Sequel system portions still apply.
 
 ---
 
