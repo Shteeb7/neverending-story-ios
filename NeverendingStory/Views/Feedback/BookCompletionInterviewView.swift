@@ -383,7 +383,10 @@ struct BookCompletionInterviewView: View {
             createdAt: Date(),
             chaptersGenerated: 12,
             seriesId: nil,
-            bookNumber: 1
+            bookNumber: 1,
+            coverImageUrl: nil,
+            genre: "Fantasy",
+            description: "An epic dragon adventure"
         ),
         bookNumber: 1,
         onComplete: { preferences in

@@ -660,6 +660,9 @@ enum ReaderColorScheme: Int {
         createdAt: Date(),
         chaptersGenerated: 6,
         seriesId: nil,
-        bookNumber: 1
+        bookNumber: 1,
+        coverImageUrl: nil,
+        genre: "Sci-Fi",
+        description: "A mysterious space station adventure"
     ))
 }
