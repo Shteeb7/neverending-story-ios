@@ -10,6 +10,8 @@ import SwiftUI
 struct LaunchView: View {
     @StateObject private var authManager = AuthManager.shared
     @State private var showContent = false
+    @State private var showDedication = false
+    @AppStorage("hasSeenDedication") private var hasSeenDedication = false
 
     var body: some View {
         Group {
@@ -99,7 +101,15 @@ struct LaunchView: View {
                     if authManager.user?.hasCompletedOnboarding == true {
                         LibraryView()
                     } else {
-                        OnboardingView()
+                        // Show dedication page once before onboarding
+                        if !hasSeenDedication && !showDedication {
+                            DedicationView {
+                                hasSeenDedication = true
+                                showDedication = true
+                            }
+                        } else {
+                            OnboardingView()
+                        }
                     }
                 } else {
                     LoginView()
