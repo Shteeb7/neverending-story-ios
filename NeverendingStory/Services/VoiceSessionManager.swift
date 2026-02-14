@@ -246,7 +246,7 @@ class VoiceSessionManager: ObservableObject {
         try audioSession.setActive(true)
 
         // Observe audio route changes (e.g., AirPods connect/disconnect)
-        NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] notification in
+        NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { notification in
             guard let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
                   let routeChangeReason = AVAudioSession.RouteChangeReason(rawValue: reason) else { return }
 
