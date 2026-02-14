@@ -473,6 +473,36 @@ class APIManager: ObservableObject {
         return response.chapters
     }
 
+    func getCurrentState(storyId: String) async throws -> CurrentStateResponse {
+        struct ReadingProgress: Decodable {
+            let chapterNumber: Int
+            let scrollPosition: Double
+            let updatedAt: String
+
+            enum CodingKeys: String, CodingKey {
+                case chapterNumber = "chapter_number"
+                case scrollPosition = "scroll_position"
+                case updatedAt = "updated_at"
+            }
+        }
+
+        struct StateResponse: Decodable {
+            let success: Bool
+            let story: Story
+            let progress: ReadingProgress?
+            let chaptersAvailable: Int
+        }
+
+        let response: StateResponse = try await makeRequest(endpoint: "/story/\(storyId)/current-state")
+
+        return CurrentStateResponse(
+            story: response.story,
+            chapterNumber: response.progress?.chapterNumber,
+            scrollPosition: response.progress?.scrollPosition,
+            chaptersAvailable: response.chaptersAvailable
+        )
+    }
+
     func updateProgress(storyId: String, chapterNumber: Int, scrollPosition: Double) async throws {
         struct ProgressUpdate: Encodable {
             let chapterNumber: Int
@@ -740,6 +770,15 @@ struct GenerationStatus {
 
 // Empty response for endpoints that don't return data
 struct EmptyResponse: Decodable {}
+
+// MARK: - Current State Response
+
+struct CurrentStateResponse {
+    let story: Story
+    let chapterNumber: Int?
+    let scrollPosition: Double?
+    let chaptersAvailable: Int
+}
 
 // MARK: - Feedback Response Types
 

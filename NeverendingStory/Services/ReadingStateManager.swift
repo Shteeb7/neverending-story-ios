@@ -40,19 +40,40 @@ class ReadingStateManager: ObservableObject {
 
         self.currentStory = story
 
-        // Restore previous reading position if this is the same story
-        let savedStoryId = UserDefaults.standard.string(forKey: "currentStoryId")
-        if savedStoryId == story.id {
-            let savedChapterIndex = UserDefaults.standard.integer(forKey: "currentChapterIndex")
-            let savedScrollPosition = UserDefaults.standard.double(forKey: "scrollPosition")
-            self.currentChapterIndex = savedChapterIndex
-            self.scrollPosition = savedScrollPosition
-            NSLog("📖 Restored reading position: chapter %d, scroll %.2f", savedChapterIndex, savedScrollPosition)
-        } else {
-            // Different story - start at beginning
-            self.currentChapterIndex = 0
-            self.scrollPosition = 0
-            NSLog("📖 Starting new story from beginning")
+        // Fetch reading progress from backend (better than UserDefaults)
+        NSLog("📡 ReadingStateManager: Fetching current state from backend...")
+        do {
+            let currentState = try await APIManager.shared.getCurrentState(storyId: story.id)
+
+            if let chapterNumber = currentState.chapterNumber,
+               let scrollPosition = currentState.scrollPosition {
+                // Backend has progress - restore it (chapter_number is 1-based, convert to 0-based)
+                self.currentChapterIndex = chapterNumber - 1
+                self.scrollPosition = scrollPosition
+                NSLog("✅ Restored reading position from backend: chapter %d, scroll %.2f", chapterNumber, scrollPosition)
+            } else {
+                // No progress saved yet - start from beginning
+                self.currentChapterIndex = 0
+                self.scrollPosition = 0
+                NSLog("📖 No saved progress found - starting from beginning")
+            }
+        } catch {
+            // Backend fetch failed - fall back to UserDefaults
+            NSLog("⚠️ Failed to fetch progress from backend: %@", error.localizedDescription)
+            NSLog("   Falling back to UserDefaults...")
+
+            let savedStoryId = UserDefaults.standard.string(forKey: "currentStoryId")
+            if savedStoryId == story.id {
+                let savedChapterIndex = UserDefaults.standard.integer(forKey: "currentChapterIndex")
+                let savedScrollPosition = UserDefaults.standard.double(forKey: "scrollPosition")
+                self.currentChapterIndex = savedChapterIndex
+                self.scrollPosition = savedScrollPosition
+                NSLog("📖 Restored from UserDefaults: chapter %d, scroll %.2f", savedChapterIndex, savedScrollPosition)
+            } else {
+                self.currentChapterIndex = 0
+                self.scrollPosition = 0
+                NSLog("📖 No UserDefaults fallback available - starting from beginning")
+            }
         }
 
         // Fetch chapters (may be empty if still generating)
@@ -232,6 +253,11 @@ class ReadingStateManager: ObservableObject {
                 chapterNumber: currentChapterIndex + 1, // Convert back to 1-based
                 scrollPosition: scrollPosition
             )
+
+            // Also save to UserDefaults as backup
+            await MainActor.run {
+                persistState()
+            }
 
             // Also send heartbeat if session is active
             if let sessionId = currentSessionId {
