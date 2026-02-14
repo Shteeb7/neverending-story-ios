@@ -31,7 +31,7 @@ struct BookReaderView: View {
     @State private var protagonistName: String = ""
     @State private var showCompletionInterview = false
     @State private var showSequelGeneration = false
-    @State private var interviewPreferences: [String: Any] = []
+    @State private var interviewPreferences: [String: Any] = [:]
     @State private var showGeneratingChapters = false
     @State private var generatingChapterNumber: Int = 0
 
