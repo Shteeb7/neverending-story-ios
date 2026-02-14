@@ -28,32 +28,43 @@ struct OnboardingView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemBackground)
-                    .ignoresSafeArea()
+                // Dark magical background matching Mythweaver theme
+                RadialGradient(
+                    colors: [
+                        Color(red: 0.1, green: 0.05, blue: 0.2), // Deep navy center
+                        Color.black.opacity(0.95) // Near-black edges
+                    ],
+                    center: .center,
+                    startRadius: 50,
+                    endRadius: 600
+                )
+                .ignoresSafeArea()
 
                 if isCheckingForPremises {
                     // Show loading while checking for existing premises
                     VStack(spacing: 20) {
                         ProgressView()
                             .scaleEffect(1.5)
+                            .tint(.white)
                         Text("Checking your library...")
                             .font(.headline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white.opacity(0.7))
                     }
                 } else {
                     VStack(spacing: 40) {
                         Spacer()
 
                         // Title
-                        VStack(spacing: 16) {
-                            Text("Let's create your story")
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
+                        VStack(spacing: 12) {
+                            Text("Prospero awaits")
+                                .font(.system(.title, design: .serif))
+                                .foregroundColor(.white)
                                 .multilineTextAlignment(.center)
 
-                            Text("Tell me what kind of story you'd love to read")
-                                .font(.title3)
-                                .foregroundColor(.secondary)
+                            Text("Tell me what story stirs in your soul")
+                                .font(.system(.title3, design: .serif))
+                                .italic()
+                                .foregroundColor(.white.opacity(0.7))
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 32)
                         }
@@ -67,16 +78,23 @@ struct OnboardingView: View {
                             switch voiceManager.state {
                         case .idle:
                             Button(action: startVoiceSession) {
-                                HStack {
-                                    Image(systemName: "mic.fill")
-                                    Text("Start Voice Session")
+                                HStack(spacing: 8) {
+                                    Image(systemName: "sparkle")
+                                    Text("Begin")
                                         .font(.headline)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(Color.accentColor)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.purple, Color.blue],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
+                                .shadow(color: .purple.opacity(0.3), radius: 8, y: 4)
                             }
 
                         case .requestingPermission:
@@ -458,52 +476,65 @@ struct VoiceVisualizationView: View {
 
     var body: some View {
         ZStack {
-            // Outer pulsing circle
+            // Outer glow effect (soft pulsing)
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color.accentColor.opacity(0.3),
-                            Color.accentColor.opacity(0.1)
+                            Color.purple.opacity(0.4),
+                            Color.blue.opacity(0.3),
+                            Color.clear
                         ],
                         center: .center,
-                        startRadius: 50,
-                        endRadius: 100
+                        startRadius: 60,
+                        endRadius: 120
                     )
                 )
-                .frame(width: 200, height: 200)
-                .scaleEffect(isPulsing ? 1.2 : 1.0)
-                .opacity(isPulsing ? 0.5 : 0.8)
+                .frame(width: 240, height: 240)
+                .blur(radius: 20)
+                .scaleEffect(isPulsing ? 1.1 : 1.0)
+                .opacity(isPulsing ? 0.6 : 0.8)
                 .animation(
-                    .easeInOut(duration: 1.5)
+                    .easeInOut(duration: 2.0)
                     .repeatForever(autoreverses: true),
                     value: isPulsing
                 )
 
             // Middle circle (reacts to audio)
             Circle()
-                .fill(Color.accentColor.opacity(0.4))
-                .frame(width: 150, height: 150)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.purple.opacity(0.5),
+                            Color.blue.opacity(0.4)
+                        ],
+                        center: .center,
+                        startRadius: 40,
+                        endRadius: 80
+                    )
+                )
+                .frame(width: 160, height: 160)
                 .scaleEffect(1.0 + CGFloat(audioLevel) * 0.3)
                 .animation(.easeInOut(duration: 0.1), value: audioLevel)
 
-            // Inner circle
+            // Inner orb (main circle)
             Circle()
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.accentColor,
-                            Color.accentColor.opacity(0.7)
+                            Color.purple,
+                            Color.blue
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 100, height: 100)
+                .frame(width: 120, height: 120)
+                .shadow(color: .purple.opacity(0.5), radius: 20)
 
             // Microphone icon
             Image(systemName: "mic.fill")
-                .font(.system(size: 40))
+                .font(.system(size: 50))
                 .foregroundColor(.white)
         }
         .onAppear {

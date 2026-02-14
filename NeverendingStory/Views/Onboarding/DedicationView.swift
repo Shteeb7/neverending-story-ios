@@ -10,14 +10,14 @@ import SwiftUI
 struct DedicationView: View {
     let onComplete: () -> Void
 
-    @State private var firstLineText = ""
+    @State private var firstLineOpacity = 0.0
     @State private var secondLineText = ""
     @State private var showTapPrompt = false
     @State private var canTap = false
-    @State private var isPageTurning = false
+    @State private var isFadingOut = false
 
     private let firstLine = "For Rob, Faith and Brady"
-    private let secondLine = "I'll meet you in the wasteland"
+    private let secondLine = "See you in the wasteland"
 
     var body: some View {
         ZStack {
@@ -26,19 +26,19 @@ struct DedicationView: View {
                 .ignoresSafeArea()
 
             // Dedication text
-            VStack(spacing: 36) {
-                // First line - the dedication
-                Text(firstLineText)
-                    .font(.title2)
-                    .fontWeight(.light)
+            VStack(spacing: 24) {
+                // First line - the dedication (displayed immediately, fades in)
+                Text(firstLine)
+                    .font(.system(.title2, design: .serif))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
+                    .opacity(firstLineOpacity)
 
-                // Second line - the poetic message
+                // Second line - the poetic message (types out)
                 Text(secondLineText)
-                    .font(.title3)
+                    .font(.system(.body, design: .serif))
                     .italic()
-                    .foregroundColor(.white)
+                    .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 40)
@@ -57,37 +57,37 @@ struct DedicationView: View {
         }
         .contentShape(Rectangle()) // Make entire view tappable
         .onTapGesture {
-            if canTap && !isPageTurning {
-                turnPage()
+            if canTap && !isFadingOut {
+                fadeOut()
             }
         }
-        .rotation3DEffect(
-            .degrees(isPageTurning ? -90 : 0),
-            axis: (x: 0, y: 1, z: 0),
-            anchor: .leading,
-            perspective: 0.5
-        )
-        .opacity(isPageTurning ? 0 : 1)
+        .opacity(isFadingOut ? 0 : 1)
         .onAppear {
-            startTypewriterAnimation()
+            startAnimation()
         }
     }
 
     // MARK: - Animation
 
-    private func startTypewriterAnimation() {
+    private func startAnimation() {
         Task {
-            // 1 second of pure black silence
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            // Fade in first line over 1 second
+            await MainActor.run {
+                withAnimation(.easeIn(duration: 1.0)) {
+                    firstLineOpacity = 1.0
+                }
+            }
 
-            // Type first line (60ms per character)
-            await typeText(firstLine, into: \.firstLineText)
+            // Wait for fade-in to complete, plus 1.5 second pause
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
 
-            // 1.5 second pause between lines
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-
-            // Type second line (60ms per character)
-            await typeText(secondLine, into: \.secondLineText)
+            // Type second line (70ms per character)
+            for character in secondLine {
+                await MainActor.run {
+                    secondLineText.append(character)
+                }
+                try? await Task.sleep(nanoseconds: 70_000_000) // 70ms per character
+            }
 
             // 2 seconds of stillness
             try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -102,32 +102,13 @@ struct DedicationView: View {
         }
     }
 
-    private func typeText(_ text: String, into keyPath: WritableKeyPath<DedicationView, String>) async {
-        for character in text {
-            await MainActor.run {
-                var view = self
-                view[keyPath: keyPath].append(character)
-
-                // Update the actual state
-                if keyPath == \DedicationView.firstLineText {
-                    firstLineText.append(character)
-                } else if keyPath == \DedicationView.secondLineText {
-                    secondLineText.append(character)
-                }
-            }
-            try? await Task.sleep(nanoseconds: 60_000_000) // 60ms per character
-        }
-    }
-
-    private func turnPage() {
-        isPageTurning = true
-
-        withAnimation(.easeInOut(duration: 0.8)) {
-            // Page turn animation handled by rotation3DEffect
+    private func fadeOut() {
+        withAnimation(.easeOut(duration: 0.5)) {
+            isFadingOut = true
         }
 
         // Complete after animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             onComplete()
         }
     }
