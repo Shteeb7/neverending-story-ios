@@ -301,6 +301,15 @@ struct OnboardingView: View {
             let hasPermission = await voiceManager.requestMicrophonePermission()
 
             if hasPermission {
+                // Configure interview type based on whether this is a returning user
+                if forceNewInterview {
+                    // This is a returning user who wants a new story
+                    await configureReturningUserSession()
+                } else {
+                    // This is a first-time user (genuine onboarding)
+                    voiceManager.interviewType = .onboarding
+                }
+
                 // Set up callback for when preferences are gathered
                 voiceManager.onPreferencesGathered = { preferences in
                     DispatchQueue.main.async {
@@ -330,6 +339,68 @@ struct OnboardingView: View {
                 showPermissionDenied = true
             }
         }
+    }
+
+    private func configureReturningUserSession() async {
+        // Fetch user context for returning user
+        guard let userId = AuthManager.shared.user?.id else {
+            NSLog("⚠️ No user ID for returning user session")
+            voiceManager.interviewType = .onboarding // fallback
+            return
+        }
+
+        // Get user's name from stored preferences
+        let userName = await fetchUserName(userId: userId) ?? "friend"
+
+        // Get their story titles from library
+        let previousTitles = await fetchPreviousStoryTitles(userId: userId)
+
+        // Get their preferred genres from preferences
+        let preferredGenres = await fetchPreferredGenres(userId: userId)
+
+        let context = ReturningUserContext(
+            userName: userName,
+            previousStoryTitles: previousTitles,
+            preferredGenres: preferredGenres
+        )
+
+        voiceManager.interviewType = .returningUser(context: context)
+        NSLog("✅ Configured returning user session for \(userName)")
+    }
+
+    private func fetchUserName(userId: String) async -> String? {
+        do {
+            // Try to get name from user_preferences table
+            let result = try await APIManager.shared.getUserPreferences(userId: userId)
+            if let name = result?["name"] as? String {
+                return name
+            }
+        } catch {
+            NSLog("⚠️ Could not fetch user name: \(error)")
+        }
+        return nil
+    }
+
+    private func fetchPreviousStoryTitles(userId: String) async -> [String] {
+        do {
+            let stories = try await APIManager.shared.getLibrary(userId: userId)
+            return stories.map { $0.title }
+        } catch {
+            NSLog("⚠️ Could not fetch story titles: \(error)")
+            return []
+        }
+    }
+
+    private func fetchPreferredGenres(userId: String) async -> [String] {
+        do {
+            let result = try await APIManager.shared.getUserPreferences(userId: userId)
+            if let genres = result?["genres"] as? [String] {
+                return genres
+            }
+        } catch {
+            NSLog("⚠️ Could not fetch preferred genres: \(error)")
+        }
+        return []
     }
 
     private func endVoiceSession() {

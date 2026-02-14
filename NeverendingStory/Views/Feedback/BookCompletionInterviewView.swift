@@ -315,6 +315,9 @@ struct BookCompletionInterviewView: View {
                 return
             }
 
+            // Configure book completion interview type
+            await configureBookCompletionSession()
+
             hasStarted = true
 
             do {
@@ -325,6 +328,39 @@ struct BookCompletionInterviewView: View {
                 hasStarted = false
             }
         }
+    }
+
+    private func configureBookCompletionSession() async {
+        // Get user's name from stored preferences
+        guard let userId = AuthManager.shared.user?.id else {
+            NSLog("⚠️ No user ID for book completion session")
+            return
+        }
+
+        let userName = await fetchUserName(userId: userId) ?? "friend"
+
+        let context = BookCompletionContext(
+            userName: userName,
+            storyTitle: story.title,
+            storyGenre: story.genre ?? "fiction",
+            bookNumber: bookNumber
+        )
+
+        voiceSession.interviewType = .bookCompletion(context: context)
+        NSLog("✅ Configured book completion session for \(userName) - \"\(story.title)\"")
+    }
+
+    private func fetchUserName(userId: String) async -> String? {
+        do {
+            // Try to get name from user_preferences table
+            let result = try await APIManager.shared.getUserPreferences(userId: userId)
+            if let name = result?["name"] as? String {
+                return name
+            }
+        } catch {
+            NSLog("⚠️ Could not fetch user name: \(error)")
+        }
+        return nil
     }
 
     private func endInterview() {

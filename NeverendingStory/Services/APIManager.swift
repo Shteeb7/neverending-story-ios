@@ -251,6 +251,55 @@ class APIManager: ObservableObject {
         )
     }
 
+    func getUserPreferences(userId: String) async throws -> [String: Any]? {
+        struct PreferencesResponse: Decodable {
+            let success: Bool
+            let preferences: [String: AnyCodableValue]?
+
+            struct AnyCodableValue: Decodable {
+                let value: Any
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.singleValueContainer()
+                    if let string = try? container.decode(String.self) {
+                        value = string
+                    } else if let int = try? container.decode(Int.self) {
+                        value = int
+                    } else if let double = try? container.decode(Double.self) {
+                        value = double
+                    } else if let bool = try? container.decode(Bool.self) {
+                        value = bool
+                    } else if let array = try? container.decode([AnyCodableValue].self) {
+                        value = array.map { $0.value }
+                    } else {
+                        value = ""
+                    }
+                }
+            }
+        }
+
+        do {
+            let response: PreferencesResponse = try await makeRequest(
+                endpoint: "/onboarding/user-preferences/\(userId)",
+                method: "GET",
+                requiresAuth: true
+            )
+
+            // Convert AnyCodableValue back to [String: Any]
+            if let prefs = response.preferences {
+                var result: [String: Any] = [:]
+                for (key, wrapper) in prefs {
+                    result[key] = wrapper.value
+                }
+                return result
+            }
+            return nil
+        } catch {
+            NSLog("⚠️ Failed to fetch user preferences: \(error)")
+            return nil
+        }
+    }
+
     func generatePremises() async throws {
         NSLog("🔄 generatePremises() called - starting request")
 
