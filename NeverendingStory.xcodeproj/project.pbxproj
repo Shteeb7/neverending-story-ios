@@ -42,6 +42,8 @@
 		EC125E2C1DA74F4E986920BF /* BookCoverCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */; };
 		F8E7D6C5B4A39281E0D9C8B7 /* DNATransferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */; };
 		FE273B336776849CF06BA453 /* PremiseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */; };
+		A2B3C4D5E6F7890123456789 /* ProsperoCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F789012345678 /* ProsperoCheckInView.swift */; };
+		B3C4D5E6F78901234567890A /* GeneratingChaptersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F78901234567890 /* GeneratingChaptersView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -78,6 +80,8 @@
 		E8F7A2B9C3D4E5F601234567 /* BookCompletionInterviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCompletionInterviewView.swift; sourceTree = "<group>"; };
 		F2F95DABAFB4DEFE47A9F2CD /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		F9A8B7C6D5E4F3A2B1C0D9E8 /* BookCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCompleteView.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F789012345678 /* ProsperoCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProsperoCheckInView.swift; sourceTree = "<group>"; };
+		2B3C4D5E6F78901234567890 /* GeneratingChaptersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratingChaptersView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -183,6 +187,8 @@
 				E8F7A2B9C3D4E5F601234567 /* BookCompletionInterviewView.swift */,
 				F9A8B7C6D5E4F3A2B1C0D9E8 /* BookCompleteView.swift */,
 				B0C1D2E3F4A5B6C7D8E9F0A1 /* SequelGenerationView.swift */,
+				1A2B3C4D5E6F789012345678 /* ProsperoCheckInView.swift */,
+				2B3C4D5E6F78901234567890 /* GeneratingChaptersView.swift */,
 			);
 			path = Feedback;
 			sourceTree = "<group>";
@@ -331,6 +337,8 @@
 				A1B2C3D4E5F67890ABCDEF01 /* BookCompletionInterviewView.swift in Sources */,
 				A9B8C7D6E5F4A3B2C1D0E9F8 /* BookCompleteView.swift in Sources */,
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* SequelGenerationView.swift in Sources */,
+				A2B3C4D5E6F7890123456789 /* ProsperoCheckInView.swift in Sources */,
+				B3C4D5E6F78901234567890A /* GeneratingChaptersView.swift in Sources */,
 				9CE559EE551954215BF26615 /* Story.swift in Sources */,
 				60FE83E01B4959709B91D422 /* User.swift in Sources */,
 				A63DA7A865E40FDCAA672CEE /* VoiceSessionManager.swift in Sources */,
