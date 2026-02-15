@@ -22,6 +22,10 @@ struct PremiseSelectionView: View {
     @State private var navigateToNewInterview = false
     @State private var premisesId: String?
     @State private var showDiscardWarning = false
+    @State private var showNameConfirmation = false
+    @State private var userName = ""
+    @State private var isConfirmingName = false
+    @State private var selectedPremiseForCreation: Premise?
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -113,8 +117,17 @@ struct PremiseSelectionView: View {
         }
         .sheet(item: $expandedPremise) { premise in
             PremiseDetailSheet(premise: premise) {
-                createStoryFromPremise(premise)
+                prepareNameConfirmation(for: premise)
             }
+        }
+        .sheet(isPresented: $showNameConfirmation) {
+            NameConfirmationModal(
+                userName: $userName,
+                isConfirming: $isConfirmingName,
+                onConfirm: {
+                    confirmNameAndCreateStory()
+                }
+            )
         }
         .onAppear {
             loadPremises()
@@ -196,6 +209,68 @@ struct PremiseSelectionView: View {
                 print("❌ Failed to load premises: \(error)")
                 self.error = error.localizedDescription
                 isLoading = false
+            }
+        }
+    }
+
+    private func prepareNameConfirmation(for premise: Premise) {
+        guard let userId = authManager.user?.id else { return }
+
+        selectedPremiseForCreation = premise
+
+        // Fetch user's name from preferences
+        Task {
+            do {
+                let prefs = try await APIManager.shared.getUserPreferences(userId: userId)
+                await MainActor.run {
+                    userName = prefs?["name"] as? String ?? ""
+                    showNameConfirmation = true
+                }
+            } catch {
+                NSLog("⚠️ Could not fetch user name: \(error)")
+                // Show modal anyway with empty name
+                await MainActor.run {
+                    userName = ""
+                    showNameConfirmation = true
+                }
+            }
+        }
+    }
+
+    private func confirmNameAndCreateStory() {
+        guard let premise = selectedPremiseForCreation else { return }
+        guard let userId = authManager.user?.id else { return }
+
+        isConfirmingName = true
+
+        Task {
+            do {
+                // Confirm name in preferences
+                let trimmedName = userName.trimmingCharacters(in: .whitespaces)
+                if !trimmedName.isEmpty {
+                    let success = try await APIManager.shared.confirmName(trimmedName)
+                    if success {
+                        NSLog("✅ User name confirmed: \(trimmedName)")
+                    }
+                }
+
+                // Mark name as confirmed locally
+                UserDefaults.standard.set(true, forKey: "nameConfirmed")
+
+                await MainActor.run {
+                    isConfirmingName = false
+                    showNameConfirmation = false
+                    // Now create the story
+                    createStoryFromPremise(premise)
+                }
+            } catch {
+                NSLog("❌ Failed to update name: \(error)")
+                await MainActor.run {
+                    isConfirmingName = false
+                    // Continue anyway - name update is not critical
+                    showNameConfirmation = false
+                    createStoryFromPremise(premise)
+                }
             }
         }
     }
