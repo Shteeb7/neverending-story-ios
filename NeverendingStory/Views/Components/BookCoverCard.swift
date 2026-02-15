@@ -56,6 +56,8 @@ struct BookCoverCard: View {
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: coverWidth, height: coverHeight)
                                 .clipped()
+                                .saturation(1.2)   // Boost saturation by 20%
+                                .contrast(1.1)     // Boost contrast by 10%
                         case .failure:
                             gradientFallback
                         case .empty:
