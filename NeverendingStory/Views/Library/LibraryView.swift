@@ -418,10 +418,10 @@ struct LibraryView: View {
                 }
 
                 // Call API to get user preferences
-                let url = URL(string: "\(APIManager.shared.baseURL)/onboarding/user-preferences/\(userId)")!
+                let url = URL(string: "\(AppConfig.apiBaseURL)/onboarding/user-preferences/\(userId)")!
                 var request = URLRequest(url: url)
                 request.httpMethod = "GET"
-                if let token = try? await authManager.getAccessToken() {
+                if let token = authManager.accessToken {
                     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 }
 
@@ -473,10 +473,10 @@ struct LibraryView: View {
                 }
             }
 
-            let url = URL(string: "\(APIManager.shared.baseURL)/onboarding/user-preferences/\(userId)")!
+            let url = URL(string: "\(AppConfig.apiBaseURL)/onboarding/user-preferences/\(userId)")!
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            if let token = try? await authManager.getAccessToken() {
+            if let token = authManager.accessToken {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
 
