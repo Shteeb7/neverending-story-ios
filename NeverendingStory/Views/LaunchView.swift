@@ -93,6 +93,17 @@ struct LaunchView: View {
                             .scaleEffect(1.2)
                             .tint(.white)
                     }
+
+                    // Version indicator in top left corner
+                    VStack {
+                        HStack {
+                            VersionIndicator()
+                                .padding(.leading, 16)
+                                .padding(.top, 16)
+                            Spacer()
+                        }
+                        Spacer()
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

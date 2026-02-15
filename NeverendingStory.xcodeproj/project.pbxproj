@@ -44,6 +44,7 @@
 		FE273B336776849CF06BA453 /* PremiseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */; };
 		A2B3C4D5E6F7890123456789 /* ProsperoCheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F789012345678 /* ProsperoCheckInView.swift */; };
 		B3C4D5E6F78901234567890A /* GeneratingChaptersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C4D5E6F78901234567890 /* GeneratingChaptersView.swift */; };
+		C4D5E6F7890123456789ABCD /* VersionIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4D5E6F789012345678ABCD /* VersionIndicator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,6 +83,7 @@
 		F9A8B7C6D5E4F3A2B1C0D9E8 /* BookCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCompleteView.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F789012345678 /* ProsperoCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProsperoCheckInView.swift; sourceTree = "<group>"; };
 		2B3C4D5E6F78901234567890 /* GeneratingChaptersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratingChaptersView.swift; sourceTree = "<group>"; };
+		3C4D5E6F789012345678ABCD /* VersionIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionIndicator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -232,6 +234,7 @@
 				BE889A414CE445BBEE5172B5 /* PremiseCard.swift */,
 				DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */,
 				BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */,
+				3C4D5E6F789012345678ABCD /* VersionIndicator.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -339,6 +342,7 @@
 				C1D2E3F4A5B6C7D8E9F0A1B2 /* SequelGenerationView.swift in Sources */,
 				A2B3C4D5E6F7890123456789 /* ProsperoCheckInView.swift in Sources */,
 				B3C4D5E6F78901234567890A /* GeneratingChaptersView.swift in Sources */,
+				C4D5E6F7890123456789ABCD /* VersionIndicator.swift in Sources */,
 				9CE559EE551954215BF26615 /* Story.swift in Sources */,
 				60FE83E01B4959709B91D422 /* User.swift in Sources */,
 				A63DA7A865E40FDCAA672CEE /* VoiceSessionManager.swift in Sources */,

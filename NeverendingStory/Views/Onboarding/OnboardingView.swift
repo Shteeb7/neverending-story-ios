@@ -67,6 +67,24 @@ struct OnboardingView: View {
                                 .foregroundColor(.white.opacity(0.7))
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 32)
+
+                            if !forceNewInterview {
+                                Text("Just speak naturally — you can interrupt, disagree, or ask questions anytime")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.4))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 40)
+                                    .padding(.top, 4)
+                            }
+
+                            if forceNewInterview {
+                                Text("Tell Prospero what you didn't like — he'll find something better")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.4))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 40)
+                                    .padding(.top, 4)
+                            }
                         }
 
                         // Voice visualization
@@ -298,13 +316,23 @@ struct OnboardingView: View {
 
     private func startVoiceSession() {
         Task {
+            // Defensive cleanup: ensure no previous session is lingering
+            if case .idle = voiceManager.state {
+                // Already idle, good to proceed
+            } else {
+                NSLog("⚠️ VoiceManager not idle (state: \(voiceManager.state)) - cleaning up before starting")
+                voiceManager.endSession()
+                // Brief delay to let cleanup complete
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            }
+
             let hasPermission = await voiceManager.requestMicrophonePermission()
 
             if hasPermission {
                 // Configure interview type based on whether this is a returning user
                 if forceNewInterview {
-                    // This is a returning user who wants a new story
-                    await configureReturningUserSession()
+                    // User rejected premises and wants to talk to Prospero again
+                    await configurePremiseRejectionSession()
                 } else {
                     // This is a first-time user (genuine onboarding)
                     voiceManager.interviewType = .onboarding
@@ -341,35 +369,50 @@ struct OnboardingView: View {
         }
     }
 
-    private func configureReturningUserSession() async {
-        // Fetch user context for returning user
+    private func configurePremiseRejectionSession() async {
         guard let userId = AuthManager.shared.user?.id else {
-            NSLog("⚠️ No user ID for returning user session")
-            voiceManager.interviewType = .onboarding // fallback
+            NSLog("⚠️ No user ID for premise rejection session - falling back to onboarding")
+            voiceManager.interviewType = .onboarding
             return
         }
 
-        // Get user's name from stored preferences
+        // Get user's name
         let userName = await fetchUserName(userId: userId) ?? "friend"
 
-        // Get their story titles from library
-        let previousTitles = await fetchPreviousStoryTitles(userId: userId)
-
-        // Get their preferred genres from preferences
-        let preferredGenres = await fetchPreferredGenres(userId: userId)
-
-        // Get recently discarded premises
+        // Get discarded premises
         let discardedPremises = await fetchDiscardedPremises(userId: userId)
 
-        let context = ReturningUserContext(
-            userName: userName,
-            previousStoryTitles: previousTitles,
-            preferredGenres: preferredGenres,
-            discardedPremises: discardedPremises
-        )
+        // Get existing preferences from first interview
+        let existingPreferences = await fetchExistingPreferences(userId: userId)
 
-        voiceManager.interviewType = .returningUser(context: context)
-        NSLog("✅ Configured returning user session for \(userName)")
+        // Check if they've read any books (distinguishes first-timer from returning user)
+        let previousTitles = await fetchPreviousStoryTitles(userId: userId)
+        let hasReadBooks = !previousTitles.isEmpty
+
+        // If they HAVE read books before, use the returning user interview instead
+        // (They're an experienced user who just didn't like today's options)
+        if hasReadBooks {
+            let preferredGenres = await fetchPreferredGenres(userId: userId)
+            let context = ReturningUserContext(
+                userName: userName,
+                previousStoryTitles: previousTitles,
+                preferredGenres: preferredGenres,
+                discardedPremises: discardedPremises
+            )
+            voiceManager.interviewType = .returningUser(context: context)
+            NSLog("✅ Configured RETURNING USER session for \(userName) (has \(previousTitles.count) books)")
+            return
+        }
+
+        // First-time user who rejected premises — use the deep diagnostic interview
+        let context = PremiseRejectionContext(
+            userName: userName,
+            discardedPremises: discardedPremises,
+            existingPreferences: existingPreferences,
+            hasReadBooks: false
+        )
+        voiceManager.interviewType = .premiseRejection(context: context)
+        NSLog("✅ Configured PREMISE REJECTION session for \(userName) (first-time user, \(discardedPremises.count) premises rejected)")
     }
 
     private func fetchUserName(userId: String) async -> String? {
@@ -383,6 +426,15 @@ struct OnboardingView: View {
             NSLog("⚠️ Could not fetch user name: \(error)")
         }
         return nil
+    }
+
+    private func fetchExistingPreferences(userId: String) async -> [String: Any]? {
+        do {
+            return try await APIManager.shared.getUserPreferences(userId: userId)
+        } catch {
+            NSLog("⚠️ Could not fetch existing preferences: \(error)")
+            return nil
+        }
     }
 
     private func fetchPreviousStoryTitles(userId: String) async -> [String] {

@@ -252,6 +252,17 @@ struct LibraryView: View {
                         .padding(.bottom, 32)
                     }
                 }
+
+                // Version indicator in top left corner
+                VStack {
+                    HStack {
+                        VersionIndicator()
+                            .padding(.leading, 16)
+                            .padding(.top, 8)
+                        Spacer()
+                    }
+                    Spacer()
+                }
             }
             .navigationTitle("Your Library")
             .navigationBarTitleDisplayMode(.large)
