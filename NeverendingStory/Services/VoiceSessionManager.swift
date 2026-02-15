@@ -68,6 +68,8 @@ class VoiceSessionManager: ObservableObject {
     @Published var transcription: String = ""
     @Published var conversationText: String = "" // Full conversation for display
     @Published var isConversationComplete = false // Signals conversation end
+    @Published var currentAudioRoute: String = "Speaker" // Current audio output device
+    @Published var isUsingBluetooth: Bool = false // Whether Bluetooth audio is active
 
     var interviewType: InterviewType = .onboarding
 
@@ -253,6 +255,53 @@ class VoiceSessionManager: ObservableObject {
         NSLog("✅ Voice session ended - all audio stopped, WebSocket closed")
     }
 
+    // MARK: - Audio Route Management
+
+    func updateAudioRouteInfo() {
+        let session = AVAudioSession.sharedInstance()
+        let outputs = session.currentRoute.outputs
+
+        if let output = outputs.first {
+            currentAudioRoute = output.portName
+            isUsingBluetooth = output.portType == .bluetoothHFP ||
+                              output.portType == .bluetoothA2DP ||
+                              output.portType == .bluetoothLE
+        } else {
+            currentAudioRoute = "Unknown"
+            isUsingBluetooth = false
+        }
+
+        NSLog("📱 Audio route: \(currentAudioRoute) (Bluetooth: \(isUsingBluetooth))")
+    }
+
+    func toggleAudioRoute() {
+        let session = AVAudioSession.sharedInstance()
+
+        do {
+            if isUsingBluetooth {
+                // Switch to speaker
+                try session.overrideOutputAudioPort(.speaker)
+                NSLog("🔊 Manually switched to speaker")
+            } else {
+                // Switch to Bluetooth if available
+                if let btInput = session.availableInputs?.first(where: {
+                    $0.portType == .bluetoothHFP || $0.portType == .bluetoothA2DP
+                }) {
+                    try session.overrideOutputAudioPort(.none) // Clear override
+                    try session.setPreferredInput(btInput)
+                    NSLog("🎧 Manually switched to Bluetooth: \(btInput.portName)")
+                } else {
+                    NSLog("⚠️ No Bluetooth devices available")
+                }
+            }
+
+            // Update the published properties
+            updateAudioRouteInfo()
+        } catch {
+            NSLog("❌ Failed to toggle audio route: \(error)")
+        }
+    }
+
     // MARK: - Backend Integration
 
     private func submitConversationToBackend() async {
@@ -302,21 +351,40 @@ class VoiceSessionManager: ObservableObject {
 
             NSLog("🔊 Audio route changed: \(routeChangeReason.rawValue)")
 
+            let session = AVAudioSession.sharedInstance()
+            let outputs = session.currentRoute.outputs
+
+            // Log current route for debugging
+            NSLog("   Current outputs: \(outputs.map { "\($0.portName) (\($0.portType.rawValue))" })")
+
+            // Only auto-switch to Bluetooth if it was just inserted (user put AirPods IN their ears)
+            // Don't switch if it's just connected but potentially sitting in a case
             if routeChangeReason == .newDeviceAvailable {
-                // New device (e.g., AirPods connected) — prefer Bluetooth input
-                let session = AVAudioSession.sharedInstance()
-                if let btInput = session.availableInputs?.first(where: { $0.portType == .bluetoothHFP || $0.portType == .bluetoothA2DP }) {
-                    try? session.setPreferredInput(btInput)
-                    NSLog("✅ Switched to Bluetooth: \(btInput.portName)")
-                }
+                NSLog("   New device available - iOS will route automatically based on user preference")
+            } else if routeChangeReason == .oldDeviceUnavailable {
+                // Bluetooth disconnected - fall back to speaker
+                NSLog("   Device removed - falling back to speaker")
             }
         }
 
-        // Prefer Bluetooth audio route if available (AirPods, etc.)
-        let availableInputs = audioSession.availableInputs ?? []
-        if let bluetoothInput = availableInputs.first(where: { $0.portType == .bluetoothHFP || $0.portType == .bluetoothA2DP }) {
-            try audioSession.setPreferredInput(bluetoothInput)
-            NSLog("✅ Using Bluetooth audio input: \(bluetoothInput.portName)")
+        // Smart audio routing: Default to speaker/mic unless Bluetooth is actively being used
+        // Don't force Bluetooth just because it's connected - it might be in a case
+        let currentOutputs = audioSession.currentRoute.outputs
+        let isUsingBluetooth = currentOutputs.contains {
+            $0.portType == .bluetoothHFP || $0.portType == .bluetoothA2DP || $0.portType == .bluetoothLE
+        }
+
+        if isUsingBluetooth {
+            // Bluetooth is already the active route - respect that
+            if let btInput = audioSession.availableInputs?.first(where: {
+                $0.portType == .bluetoothHFP || $0.portType == .bluetoothA2DP
+            }) {
+                try? audioSession.setPreferredInput(btInput)
+                NSLog("✅ Using Bluetooth (already active): \(btInput.portName)")
+            }
+        } else {
+            // Use device speaker/mic (Bluetooth is connected but not actively being used)
+            NSLog("✅ Using device speaker/mic (Bluetooth available but not active)")
         }
 
         // Debug: Log current audio route for verification
@@ -359,6 +427,11 @@ class VoiceSessionManager: ObservableObject {
         // DON'T install tap yet - must start engine first!
         // Tap will be installed in startListening() after engine is running
         NSLog("✅ Audio engine setup complete (tap will be installed after engine starts)")
+
+        // Update audio route info for UI (we're already on MainActor)
+        DispatchQueue.main.async {
+            self.updateAudioRouteInfo()
+        }
     }
 
     private func setupAudioPlayback() {
