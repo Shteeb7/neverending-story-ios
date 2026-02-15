@@ -194,15 +194,19 @@ struct SequelGenerationView: View {
 
             let status = try await APIManager.shared.checkGenerationStatus(storyId: storyId)
 
-            if status.status == "active" && status.chaptersAvailable >= 6 {
-                isComplete = true
+            // Check if generation is complete by looking at current_step
+            // Complete when step is awaiting_ or doesn't start with generating_
+            if let currentStep = status.currentStep {
+                if !currentStep.hasPrefix("generating_") {
+                    isComplete = true
+                }
             } else if status.status == "error" {
                 throw NSError(domain: "SequelGeneration", code: -1, userInfo: [NSLocalizedDescriptionKey: "Generation failed"])
             }
 
-            // Update progress based on chapters available
-            let chapterProgress = Double(status.chaptersAvailable) / 6.0
-            await animateProgress(to: 0.6 + (chapterProgress * 0.3), duration: 0.5)
+            // Update progress based on chapters available (initial batch is 3 chapters)
+            let chapterProgress = Double(status.chaptersAvailable) / 3.0
+            await animateProgress(to: 0.6 + (min(chapterProgress, 1.0) * 0.3), duration: 0.5)
 
             attempts += 1
         }

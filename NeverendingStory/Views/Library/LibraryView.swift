@@ -26,13 +26,15 @@ struct LibraryView: View {
         stories.filter { $0.status != "active" }
     }
 
-    // Check if any stories are currently generating
+    // Check if any stories are currently generating (0 chapters, actively generating)
+    // This controls whether we poll for updates
     var hasGeneratingStories: Bool {
         stories.contains { story in
             if let progress = story.generationProgress {
-                return story.status == "active" && progress.chaptersGenerated < 6
+                let step = progress.currentStep
+                return story.status == "active" && step.hasPrefix("generating_")
             }
-            return story.status == "active"
+            return false
         }
     }
 

@@ -39,9 +39,9 @@ struct ProsperoCheckInView: View {
 
     private var farewell: String {
         switch checkpointNumber {
-        case 1: return "You've given me much to consider. Go enjoy Chapter 3 — I'll be weaving the next part while you read."
-        case 2: return "Wonderful. Chapter 6 awaits — I'll have the next act ready when you emerge."
-        case 3: return "The conclusion awaits in Chapter 9 — I'm crafting the finale as we speak."
+        case 1: return "You've given me much to consider. Continue reading — I'll be weaving the next chapters while you do."
+        case 2: return "Wonderful insights. Keep reading — the next act is being crafted as we speak."
+        case 3: return "The finale is being written. Enjoy what remains while I craft the conclusion."
         default: return "Thank you for your insights."
         }
     }

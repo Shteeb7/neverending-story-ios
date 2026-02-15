@@ -234,7 +234,10 @@ struct BookReaderView: View {
                                 Text("Ch \(chapter.chapterNumber) of \(readingState.chapters.count)")
                                     .font(.caption)
                                     .foregroundColor(readerSettings.textColor.opacity(0.6))
-                                if readingState.chapters.count < 6 {
+                                // Show "more chapters on the way" only if actively generating
+                                if let story = readingState.currentStory,
+                                   let progress = story.generationProgress,
+                                   progress.currentStep.hasPrefix("generating_") {
                                     Text("More chapters on the way...")
                                         .font(.caption2)
                                         .foregroundColor(readerSettings.textColor.opacity(0.4))

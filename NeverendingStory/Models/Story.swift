@@ -40,19 +40,47 @@ struct Story: Codable, Identifiable, Hashable {
         case description
     }
 
+    /// A book is only "generating" (not yet readable) if it has ZERO chapters.
+    /// Once chapter 1 exists, the book is readable even if more chapters are being written.
     var isGenerating: Bool {
         if let progress = generationProgress {
-            return status == "active" && progress.chaptersGenerated < 6
+            return status == "active" && progress.chaptersGenerated == 0
         }
-        return status == "active"
+        return false
+    }
+
+    /// True when the book has chapters but more are still being generated.
+    /// Use this for showing a subtle "more chapters coming" indicator.
+    var isGeneratingMoreChapters: Bool {
+        if let progress = generationProgress {
+            let step = progress.currentStep
+            return status == "active" && progress.chaptersGenerated > 0 && step.hasPrefix("generating_")
+        }
+        return false
     }
 
     var progressText: String {
         if let progress = generationProgress {
-            if progress.chaptersGenerated >= 6 {
-                return "\(progress.chaptersGenerated) chapters ready"
-            } else if progress.chaptersGenerated > 0 {
-                return "Conjuring chapter \(progress.chaptersGenerated + 1) of 6..."
+            let step = progress.currentStep
+
+            if progress.chaptersGenerated == 0 {
+                // No chapters yet - show what's being worked on
+                if step == "generating_arc" {
+                    return "Plotting your story..."
+                } else if step == "generating_bible" {
+                    return "Building your world..."
+                } else if step.hasPrefix("generating_chapter_") {
+                    let chapterNum = step.replacingOccurrences(of: "generating_chapter_", with: "")
+                    return "Conjuring chapter \(chapterNum)..."
+                }
+                return "Prospero is preparing your tale..."
+            } else {
+                // Has chapters — book is readable
+                if step.hasPrefix("generating_") {
+                    return "\(progress.chaptersGenerated) chapters ready, more on the way..."
+                } else {
+                    return "\(progress.chaptersGenerated) chapters ready"
+                }
             }
         }
         return "Prospero is preparing your tale..."

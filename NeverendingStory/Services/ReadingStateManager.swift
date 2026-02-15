@@ -26,7 +26,6 @@ class ReadingStateManager: ObservableObject {
 
     // Chapter polling (for books still generating)
     private var chapterPollTimer: Timer?
-    private let maxExpectedChapters = 6  // First batch generates 6
 
     private init() {
         loadPersistedState()
@@ -119,15 +118,22 @@ class ReadingStateManager: ObservableObject {
     // MARK: - Chapter Polling
 
     func startChapterPolling() {
-        // Only poll if we don't have all chapters yet
-        guard chapters.count < maxExpectedChapters else {
-            NSLog("📚 All %d chapters loaded - no polling needed", chapters.count)
+        guard let story = currentStory else { return }
+        guard let storyId = story.id else { return }
+
+        // Only poll if the story's current_step indicates active generation
+        if let progress = story.generationProgress {
+            let step = progress.currentStep
+            guard step.hasPrefix("generating_") else {
+                NSLog("📚 Story not actively generating (step: %@) - no polling needed", step)
+                return
+            }
+        } else {
+            // No progress info - don't poll
             return
         }
 
-        guard let storyId = currentStory?.id else { return }
-
-        NSLog("🔄 Starting chapter polling (have %d of %d chapters)", chapters.count, maxExpectedChapters)
+        NSLog("🔄 Starting chapter polling (current step: %@)", story.generationProgress?.currentStep ?? "unknown")
         stopChapterPolling()
 
         chapterPollTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
@@ -150,11 +156,17 @@ class ReadingStateManager: ObservableObject {
             if updatedChapters.count > chapters.count {
                 NSLog("📖 New chapters available! %d → %d", chapters.count, updatedChapters.count)
                 self.chapters = updatedChapters
+            }
 
-                // Stop polling once we have all expected chapters
-                if updatedChapters.count >= maxExpectedChapters {
-                    NSLog("✅ All %d chapters now available - stopping poll", maxExpectedChapters)
+            // Also fetch story to check if generation is still active
+            let updatedStory = try await APIManager.shared.getStory(storyId: storyId)
+            if let progress = updatedStory.generationProgress {
+                let step = progress.currentStep
+                // Stop polling if generation is complete (not actively generating)
+                if !step.hasPrefix("generating_") {
+                    NSLog("✅ Story generation complete (step: %@) - stopping poll", step)
                     stopChapterPolling()
+                    self.currentStory = updatedStory
                 }
             }
         } catch {

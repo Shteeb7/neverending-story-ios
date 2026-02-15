@@ -131,7 +131,8 @@ struct PremiseSelectionView: View {
                 if let stories = library {
                     let hasActiveGeneration = stories.contains { story in
                         if let progress = story.generationProgress {
-                            return story.status == "active" && progress.chaptersGenerated < 6
+                            let step = progress.currentStep
+                            return story.status == "active" && step.hasPrefix("generating_")
                         }
                         return false
                     }
