@@ -142,6 +142,8 @@ struct BookReaderView: View {
                         withAnimation {
                             proxy.scrollTo("chapter-top", anchor: .top)
                         }
+                        // Reset scroll progress to prevent stale value from triggering premature checkpoint
+                        scrollProgress = 0
                         // Check for feedback checkpoint
                         checkForFeedbackCheckpoint()
                     }

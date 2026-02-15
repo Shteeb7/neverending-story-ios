@@ -212,6 +212,39 @@ struct BookCompletionInterviewView: View {
                 }
             }
 
+            // Fallback buttons for completed state (prevents dead end)
+            if case .conversationComplete = voiceSession.state, !isProcessing {
+                VStack(spacing: 12) {
+                    Button(action: {
+                        // Show book complete even if submission failed
+                        showBookComplete = true
+                    }) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                            Text("Continue")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: [.purple, .blue],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
+
+                    Button(action: { dismiss() }) {
+                        Text("Return to Library")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
             // Processing indicator
             if isProcessing {
                 HStack {
@@ -456,9 +489,13 @@ struct BookCompletionInterviewView: View {
 
             } catch {
                 NSLog("❌ Failed to submit completion interview: \(error)")
-                errorMessage = "Failed to save interview: \(error.localizedDescription)"
-                showError = true
-                isProcessing = false
+                // Still allow the user to proceed even if backend submission failed
+                // The interview data is in the transcript and can be recovered
+                await MainActor.run {
+                    interviewPreferences = preferences
+                    isProcessing = false
+                    showBookComplete = true  // Show completion screen anyway
+                }
             }
         }
     }

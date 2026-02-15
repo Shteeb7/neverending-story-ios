@@ -78,8 +78,18 @@ class ReadingStateManager: ObservableObject {
         // Fetch chapters (may be empty if still generating)
         NSLog("📡 ReadingStateManager: Fetching chapters from API...")
         do {
-            self.chapters = try await APIManager.shared.getChapters(storyId: story.id)
-            NSLog("✅ ReadingStateManager: Fetched %d chapters", self.chapters.count)
+            let fetchedChapters = try await APIManager.shared.getChapters(storyId: story.id)
+            // Deduplicate by chapter_number (defense in depth)
+            var seen = Set<Int>()
+            let uniqueChapters = fetchedChapters.filter { chapter in
+                if seen.contains(chapter.chapterNumber) {
+                    return false
+                }
+                seen.insert(chapter.chapterNumber)
+                return true
+            }
+            self.chapters = uniqueChapters
+            NSLog("✅ ReadingStateManager: Fetched %d chapters (%d after dedup)", fetchedChapters.count, self.chapters.count)
             if self.chapters.isEmpty {
                 NSLog("⚠️ ReadingStateManager: Chapters array is EMPTY - story still generating or no chapters exist")
             } else {
@@ -151,7 +161,16 @@ class ReadingStateManager: ObservableObject {
 
     private func checkForNewChapters(storyId: String) async {
         do {
-            let updatedChapters = try await APIManager.shared.getChapters(storyId: storyId)
+            let fetchedChapters = try await APIManager.shared.getChapters(storyId: storyId)
+            // Deduplicate by chapter_number (defense in depth)
+            var seen = Set<Int>()
+            let updatedChapters = fetchedChapters.filter { chapter in
+                if seen.contains(chapter.chapterNumber) {
+                    return false
+                }
+                seen.insert(chapter.chapterNumber)
+                return true
+            }
 
             if updatedChapters.count > chapters.count {
                 NSLog("📖 New chapters available! %d → %d", chapters.count, updatedChapters.count)
