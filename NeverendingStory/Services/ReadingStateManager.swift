@@ -119,7 +119,7 @@ class ReadingStateManager: ObservableObject {
 
     func startChapterPolling() {
         guard let story = currentStory else { return }
-        guard let storyId = story.id else { return }
+        let storyId = story.id  // story.id is String, not Optional
 
         // Only poll if the story's current_step indicates active generation
         if let progress = story.generationProgress {
@@ -158,17 +158,10 @@ class ReadingStateManager: ObservableObject {
                 self.chapters = updatedChapters
             }
 
-            // Also fetch story to check if generation is still active
-            let updatedStory = try await APIManager.shared.getStory(storyId: storyId)
-            if let progress = updatedStory.generationProgress {
-                let step = progress.currentStep
-                // Stop polling if generation is complete (not actively generating)
-                if !step.hasPrefix("generating_") {
-                    NSLog("✅ Story generation complete (step: %@) - stopping poll", step)
-                    stopChapterPolling()
-                    self.currentStory = updatedStory
-                }
-            }
+            // Note: We keep polling until the view/manager explicitly stops us.
+            // The LibraryView will stop showing the book as "generating" based on
+            // the story's current_step, which gets updated when the user navigates
+            // back to the library.
         } catch {
             NSLog("⚠️ Chapter poll failed: %@", error.localizedDescription)
         }
