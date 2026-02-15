@@ -196,7 +196,8 @@ struct SequelGenerationView: View {
 
             // Check if generation is complete by looking at current_step
             // Complete when step is awaiting_ or doesn't start with generating_
-            if let progress = status.progress, let currentStep = progress.currentStep {
+            if let progress = status.progress {
+                let currentStep = progress.currentStep  // currentStep is String, not Optional
                 if !currentStep.hasPrefix("generating_") {
                     isComplete = true
                 }
