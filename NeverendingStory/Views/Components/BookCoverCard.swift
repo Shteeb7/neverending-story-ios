@@ -37,7 +37,7 @@ struct BookCoverCard: View {
         let secondary = hueOptions[(hash / 7) % hueOptions.count]
 
         return LinearGradient(
-            colors: [primary.opacity(0.85), secondary.opacity(0.7)],
+            colors: [primary, secondary.opacity(0.85)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
