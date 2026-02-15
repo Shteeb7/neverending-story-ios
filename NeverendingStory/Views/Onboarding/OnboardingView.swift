@@ -26,8 +26,18 @@ struct OnboardingView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        if forceNewInterview {
+            mainContent
+        } else {
+            NavigationStack {
+                mainContent
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var mainContent: some View {
+        ZStack {
                 // Dark magical background matching Mythweaver theme
                 RadialGradient(
                     colors: [
@@ -250,13 +260,15 @@ struct OnboardingView: View {
                     userId: AuthManager.shared.user?.id ?? ""
                 ) {
                     showDNATransfer = false
-                    navigateToPremises = true
+                    // Delay navigation to avoid simultaneous presentation changes
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        navigateToPremises = true
+                    }
                 }
             }
             .onAppear {
                 checkForExistingPremises()
             }
-        }
     }
 
     // MARK: - Actions
@@ -475,6 +487,26 @@ struct OnboardingView: View {
         }
 
         voiceManager.endSession()
+
+        // Submit conversation and generate premises in background
+        Task {
+            guard let userId = AuthManager.shared.user?.id else { return }
+            let conversation = conversationData ?? voiceManager.conversationText
+            guard !conversation.isEmpty else { return }
+
+            do {
+                try await APIManager.shared.submitVoiceConversation(
+                    userId: userId,
+                    conversation: conversation,
+                    preferences: storyPreferences
+                )
+                NSLog("✅ Conversation submitted from endVoiceSession")
+                try await APIManager.shared.generatePremises()
+                NSLog("✅ Premises generation triggered from endVoiceSession")
+            } catch {
+                NSLog("❌ Backend submission failed from endVoiceSession: \(error)")
+            }
+        }
 
         // Navigate to premise selection
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
