@@ -444,7 +444,7 @@ struct LibraryView: View {
 
         isConfirmingName = true
 
-        Task {
+        Task { @MainActor in
             do {
                 let success = try await APIManager.shared.confirmName(userName)
                 if success {
