@@ -44,8 +44,7 @@ struct BookCoverCard: View {
     }
 
     var body: some View {
-        Button(action: { if isReadable { action() } }) {
-            ZStack(alignment: .bottom) {
+        ZStack(alignment: .bottom) {
                 // Cover image or gradient fallback
                 if let urlString = story.coverImageUrl, let url = URL(string: urlString) {
                     AsyncImage(url: url) { phase in
@@ -53,11 +52,11 @@ struct BookCoverCard: View {
                         case .success(let image):
                             image
                                 .resizable()
+                                .renderingMode(.original)
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: coverWidth, height: coverHeight)
                                 .clipped()
-                                .saturation(1.2)   // Boost saturation by 20%
-                                .contrast(1.1)     // Boost contrast by 10%
+                                .drawingGroup()
                         case .failure:
                             gradientFallback
                         case .empty:
@@ -78,9 +77,9 @@ struct BookCoverCard: View {
 
                 // Reading progress bar (non-small cards only, non-generating)
                 if !isSmall && !story.isGenerating && readingProgress > 0 {
-                    VStack {
-                        Spacer()
-                        GeometryReader { geo in
+                    GeometryReader { geo in
+                        VStack {
+                            Spacer()
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 1.5)
                                     .fill(Color.white.opacity(0.2))
@@ -89,24 +88,22 @@ struct BookCoverCard: View {
                                     .fill(Color.white.opacity(0.8))
                                     .frame(width: geo.size.width * readingProgress, height: 3)
                             }
+                            .padding(.horizontal, 8)
+                            .padding(.bottom, 8)
                         }
-                        .frame(height: 3)
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 8)
                     }
+                    .allowsHitTesting(false)
                 }
-            }
-            .frame(width: coverWidth, height: coverHeight)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
-            .opacity(isReadable ? 1.0 : 0.6)
         }
-        .buttonStyle(PlainButtonStyle())
-        .disabled(!isReadable)
+        .frame(width: coverWidth, height: coverHeight)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+        .opacity(isReadable ? 1.0 : 0.6)
+        .onTapGesture {
+            if isReadable {
+                action()
+            }
+        }
     }
 
     // MARK: - Subviews
