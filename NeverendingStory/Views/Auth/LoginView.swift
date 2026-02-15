@@ -78,7 +78,7 @@ struct LoginView: View {
                 // Email/Password Form
                 VStack(spacing: 16) {
                     // Email field
-                    TextField("Email", text: $email)
+                    TextField("", text: $email, prompt: Text("Email or username").foregroundColor(.white.opacity(0.5)))
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
@@ -92,7 +92,7 @@ struct LoginView: View {
                         )
 
                     // Password field
-                    SecureField("Password", text: $password)
+                    SecureField("", text: $password, prompt: Text("Password").foregroundColor(.white.opacity(0.5)))
                         .textContentType(isSignUpMode ? .newPassword : .password)
                         .padding()
                         .background(Color.white.opacity(0.1))
