@@ -118,11 +118,12 @@ class VoiceSessionManager: ObservableObject {
     // MARK: - Session Management
 
     func startSession() async throws {
-        // Safety: If a previous session is still active, clean it up first
+        // Safety: If a previous WebSocket exists, clean it up
         if webSocketTask != nil {
-            NSLog("⚠️ VoiceSession: Previous WebSocket still exists - cleaning up")
-            endSession()
-            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds for cleanup
+            NSLog("⚠️ VoiceSession: Previous WebSocket still exists - closing it")
+            webSocketTask?.cancel(with: .goingAway, reason: nil)
+            webSocketTask = nil
+            isReceivingMessages = false
         }
 
         state = .connecting

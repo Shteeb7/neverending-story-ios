@@ -316,16 +316,6 @@ struct OnboardingView: View {
 
     private func startVoiceSession() {
         Task {
-            // Defensive cleanup: ensure no previous session is lingering
-            if case .idle = voiceManager.state {
-                // Already idle, good to proceed
-            } else {
-                NSLog("⚠️ VoiceManager not idle (state: \(voiceManager.state)) - cleaning up before starting")
-                voiceManager.endSession()
-                // Brief delay to let cleanup complete
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-            }
-
             let hasPermission = await voiceManager.requestMicrophonePermission()
 
             if hasPermission {
