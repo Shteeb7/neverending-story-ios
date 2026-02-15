@@ -314,6 +314,25 @@ struct BookReaderView: View {
                 nextChapterNumber: generatingChapterNumber,
                 onChapterReady: {
                     showGeneratingChapters = false
+                },
+                // FIX 4: Wire up onNeedsFeedback callback
+                onNeedsFeedback: {
+                    // Dismiss generating view, show checkpoint instead
+                    showGeneratingChapters = false
+                    // Determine which checkpoint based on the chapter we were waiting for
+                    let checkpointMap: [Int: String] = [4: "chapter_2", 7: "chapter_5", 10: "chapter_8"]
+                    if let checkpoint = checkpointMap[generatingChapterNumber] {
+                        Task {
+                            await fetchProtagonistName()
+                            await MainActor.run {
+                                currentCheckpoint = checkpoint
+                                // Small delay to let the generating view dismiss first
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    showProsperoCheckIn = true
+                                }
+                            }
+                        }
+                    }
                 }
             )
         }
@@ -358,6 +377,12 @@ struct BookReaderView: View {
                 // Only for Chapter 1 of stories that haven't had their ceremony yet
                 if readingState.currentChapterIndex == 0 && !hasShownCeremony(for: story.id) {
                     showFirstLineCeremony = true
+                }
+
+                // FIX 2: Check for pending checkpoint on view load
+                // This catches cases where user restarts app while on a checkpoint chapter
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    checkForFeedbackCheckpoint()
                 }
             } catch {
                 print("Failed to load story: \(error)")
@@ -410,10 +435,45 @@ struct BookReaderView: View {
             // Next chapter exists - navigate to it
             readingState.goToNextChapter()
         } else {
-            // Adaptive Reading Engine: Show GeneratingChaptersView fallback
-            let nextChapterNum = (readingState.currentChapter?.chapterNumber ?? 0) + 1
-            generatingChapterNumber = nextChapterNum
-            showGeneratingChapters = true
+            // FIX 1: Check if we're on a checkpoint chapter and feedback is needed
+            let currentNum = readingState.currentChapter?.chapterNumber ?? 0
+
+            // If we're on a checkpoint chapter (3, 6, 9), check if feedback is needed
+            let checkpointMap: [Int: String] = [3: "chapter_2", 6: "chapter_5", 9: "chapter_8"]
+
+            if let checkpoint = checkpointMap[currentNum] {
+                // Always re-check feedback status when user hits end-of-chapter
+                Task {
+                    do {
+                        let status = try await APIManager.shared.getFeedbackStatus(
+                            storyId: story.id,
+                            checkpoint: checkpoint
+                        )
+                        if !status.hasFeedback {
+                            await fetchProtagonistName()
+                            await MainActor.run {
+                                currentCheckpoint = checkpoint
+                                showProsperoCheckIn = true
+                            }
+                            return  // Don't show GeneratingChaptersView
+                        }
+                    } catch {
+                        NSLog("❌ Checkpoint fallback check failed: \(error)")
+                    }
+
+                    // If feedback already submitted or check failed, show generating view
+                    await MainActor.run {
+                        let nextChapterNum = currentNum + 1
+                        generatingChapterNumber = nextChapterNum
+                        showGeneratingChapters = true
+                    }
+                }
+            } else {
+                // Not a checkpoint chapter — show generating view directly
+                let nextChapterNum = currentNum + 1
+                generatingChapterNumber = nextChapterNum
+                showGeneratingChapters = true
+            }
         }
     }
 

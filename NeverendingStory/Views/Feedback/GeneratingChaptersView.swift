@@ -13,9 +13,13 @@ struct GeneratingChaptersView: View {
     let storyTitle: String
     let nextChapterNumber: Int
     let onChapterReady: () -> Void
+    let onNeedsFeedback: (() -> Void)?  // FIX 3: Called when server is waiting for checkpoint feedback
 
     @State private var isPolling = false
     @State private var animationAmount: CGFloat = 1.0
+    @State private var pollAttempts = 0  // FIX 3: Track retry count
+    @State private var isWaitingForFeedback = false  // FIX 3: Deadlock detection
+    let maxPollAttempts = 60  // FIX 3: 5 minutes at 5-second intervals
 
     var body: some View {
         ZStack {
@@ -72,17 +76,29 @@ struct GeneratingChaptersView: View {
                     }
                 }
 
-                // Message
+                // Message (FIX 3: Different message when waiting for feedback)
                 VStack(spacing: 16) {
-                    Text("Prospero is still weaving...")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                    if isWaitingForFeedback {
+                        Text("Prospero is waiting for you!")
+                            .font(.title2)
+                            .fontWeight(.semibold)
 
-                    Text("The next chapter of \(storyTitle) is being crafted")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
+                        Text("Share your thoughts about the story so far, and new chapters will be on their way.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    } else {
+                        Text("Prospero is still weaving...")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+
+                        Text("The next chapter of \(storyTitle) is being crafted")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
                 }
 
                 Spacer()
@@ -106,6 +122,15 @@ struct GeneratingChaptersView: View {
     private func checkChapterAvailability() {
         guard isPolling else { return }
 
+        // FIX 3: Circuit breaker
+        pollAttempts += 1
+
+        if pollAttempts > maxPollAttempts {
+            NSLog("🛑 GeneratingChaptersView: Max poll attempts reached (\(maxPollAttempts))")
+            isPolling = false
+            return
+        }
+
         Task {
             do {
                 let isAvailable = try await APIManager.shared.checkChapterAvailability(
@@ -120,16 +145,40 @@ struct GeneratingChaptersView: View {
                         onChapterReady()
                     }
                 } else {
+                    // FIX 3: Every 6th poll (30 seconds), check if server is waiting for feedback
+                    if pollAttempts % 6 == 0 {
+                        await checkIfWaitingForFeedback()
+                    }
+
                     // Check again in 5 seconds
                     try? await Task.sleep(nanoseconds: 5_000_000_000)
                     checkChapterAvailability()
                 }
             } catch {
                 // On error, retry after 5 seconds
-                print("❌ Error checking chapter availability: \(error)")
+                NSLog("❌ Error checking chapter (attempt \(pollAttempts)/\(maxPollAttempts)): \(error)")
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
                 checkChapterAvailability()
             }
+        }
+    }
+
+    // FIX 3: Check if server is waiting for feedback
+    private func checkIfWaitingForFeedback() async {
+        do {
+            // Fetch story to check generation_progress
+            let currentState = try await APIManager.shared.getCurrentState(storyId: storyId)
+            if let step = currentState.story.generationProgress?.currentStep,
+               step.hasPrefix("awaiting_") {
+                // Server is waiting for feedback, not generating!
+                await MainActor.run {
+                    isPolling = false
+                    isWaitingForFeedback = true
+                    onNeedsFeedback?()
+                }
+            }
+        } catch {
+            NSLog("❌ Failed to check story progress: \(error)")
         }
     }
 }
@@ -143,6 +192,9 @@ struct GeneratingChaptersView: View {
         nextChapterNumber: 4,
         onChapterReady: {
             print("Chapter ready!")
+        },
+        onNeedsFeedback: {
+            print("Needs feedback!")
         }
     )
 }
