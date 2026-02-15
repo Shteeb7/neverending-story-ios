@@ -17,6 +17,9 @@ struct LibraryView: View {
     @State private var showFeedback = false
     @State private var pollTimer: Timer?
     @State private var showLogoutConfirmation = false
+    @State private var showNameConfirmation = false
+    @State private var userName = ""
+    @State private var isConfirmingName = false
 
     var activeStories: [Story] {
         stories.filter { $0.status == "active" }
@@ -253,9 +256,29 @@ struct LibraryView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        showLogoutConfirmation = true
-                    }) {
+                    Menu {
+                        // User name with edit button
+                        Button(action: {
+                            // Pre-populate userName if empty
+                            if userName.isEmpty {
+                                Task {
+                                    await loadUserName()
+                                }
+                            }
+                            showNameConfirmation = true
+                        }) {
+                            Label("Edit Name", systemImage: "pencil")
+                        }
+
+                        Divider()
+
+                        // Logout button
+                        Button(role: .destructive, action: {
+                            showLogoutConfirmation = true
+                        }) {
+                            Label("Log Out", systemImage: "arrow.right.square")
+                        }
+                    } label: {
                         Image(systemName: "person.circle")
                             .font(.title3)
                     }
@@ -281,6 +304,16 @@ struct LibraryView: View {
                 FeedbackModalView(onSubmit: { feedback in
                     submitFeedback(feedback)
                 })
+            }
+            .sheet(isPresented: $showNameConfirmation) {
+                NameConfirmationModal(
+                    userName: $userName,
+                    isConfirming: $isConfirmingName,
+                    onConfirm: {
+                        confirmUserName()
+                    }
+                )
+                .interactiveDismissDisabled(true)
             }
             .onAppear {
                 NSLog("📚 LibraryView appeared - loading library")
@@ -321,6 +354,9 @@ struct LibraryView: View {
 
                 // Start polling AFTER stories are loaded (not in .onAppear where array is empty)
                 startPollingIfNeeded()
+
+                // Check if name confirmation is needed (only if user has stories and hasn't confirmed)
+                checkNameConfirmationStatus()
             } catch let apiError as APIError {
                 NSLog("❌ LibraryView: APIError type: %@", String(describing: apiError))
                 self.error = apiError.localizedDescription
@@ -354,6 +390,104 @@ struct LibraryView: View {
             NSLog("❌ Logout failed: \(error.localizedDescription)")
             // Even if logout fails, clear local state
             authManager.user = nil
+        }
+    }
+
+    private func checkNameConfirmationStatus() {
+        // Only check if user has stories and hasn't confirmed locally
+        guard !stories.isEmpty else { return }
+        guard !UserDefaults.standard.bool(forKey: "nameConfirmed") else { return }
+
+        guard let userId = authManager.user?.id else { return }
+
+        Task {
+            do {
+                // Fetch user preferences to check name_confirmed status
+                struct UserPrefsResponse: Decodable {
+                    let preferences: UserPreferences
+                    let nameConfirmed: Bool?
+
+                    enum CodingKeys: String, CodingKey {
+                        case preferences
+                        case nameConfirmed = "name_confirmed"
+                    }
+                }
+
+                struct UserPreferences: Decodable {
+                    let name: String?
+                }
+
+                // Call API to get user preferences
+                let url = URL(string: "\(APIManager.shared.baseURL)/onboarding/user-preferences/\(userId)")!
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                if let token = try? await authManager.getAccessToken() {
+                    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                }
+
+                let (data, _) = try await URLSession.shared.data(for: request)
+                let response = try JSONDecoder().decode(UserPrefsResponse.self, from: data)
+
+                // Show modal if name not confirmed and we have a name
+                if response.nameConfirmed != true, let name = response.preferences.name {
+                    userName = name
+                    showNameConfirmation = true
+                }
+            } catch {
+                NSLog("⚠️ Failed to check name confirmation status: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func confirmUserName() {
+        guard !userName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+
+        isConfirmingName = true
+
+        Task {
+            do {
+                let success = try await APIManager.shared.confirmName(userName)
+                if success {
+                    // Cache confirmation locally
+                    UserDefaults.standard.set(true, forKey: "nameConfirmed")
+                    showNameConfirmation = false
+                    NSLog("✅ Name confirmed: \(userName)")
+                }
+                isConfirmingName = false
+            } catch {
+                NSLog("❌ Failed to confirm name: \(error.localizedDescription)")
+                isConfirmingName = false
+            }
+        }
+    }
+
+    private func loadUserName() async {
+        guard let userId = authManager.user?.id else { return }
+
+        do {
+            struct UserPrefsResponse: Decodable {
+                let preferences: UserPreferences
+
+                struct UserPreferences: Decodable {
+                    let name: String?
+                }
+            }
+
+            let url = URL(string: "\(APIManager.shared.baseURL)/onboarding/user-preferences/\(userId)")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            if let token = try? await authManager.getAccessToken() {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let response = try JSONDecoder().decode(UserPrefsResponse.self, from: data)
+
+            if let name = response.preferences.name {
+                userName = name
+            }
+        } catch {
+            NSLog("⚠️ Failed to load user name: \(error.localizedDescription)")
         }
     }
 
@@ -499,6 +633,94 @@ struct ErrorView: View {
             .background(Color.accentColor)
             .foregroundColor(.white)
             .cornerRadius(12)
+        }
+    }
+}
+
+// MARK: - Name Confirmation Modal
+
+struct NameConfirmationModal: View {
+    @Binding var userName: String
+    @Binding var isConfirming: Bool
+    let onConfirm: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(.systemBackground)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 32) {
+                    Spacer()
+
+                    VStack(spacing: 20) {
+                        // Icon
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 60))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.purple.opacity(0.7), .indigo.opacity(0.5)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+
+                        // Header
+                        VStack(spacing: 10) {
+                            Text("One last enchantment...")
+                                .font(.title2)
+                                .fontWeight(.bold)
+
+                            Text("Did Prospero get your name right?")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+
+                    // Name text field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Your name will appear on your book covers")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        TextField("Your name", text: $userName)
+                            .textFieldStyle(.plain)
+                            .font(.title3)
+                            .padding(16)
+                            .background(Color(.secondarySystemBackground))
+                            .cornerRadius(12)
+                            .disabled(isConfirming)
+                    }
+                    .padding(.horizontal, 32)
+
+                    // Confirm button
+                    Button(action: onConfirm) {
+                        HStack(spacing: 10) {
+                            if isConfirming {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "checkmark")
+                                Text("Looks good!")
+                                    .font(.headline)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(userName.trimmingCharacters(in: .whitespaces).isEmpty ? Color.gray : Color.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
+                    .disabled(userName.trimmingCharacters(in: .whitespaces).isEmpty || isConfirming)
+                    .padding(.horizontal, 32)
+
+                    Spacer()
+                    Spacer()
+                }
+            }
+            .navigationTitle("Welcome")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

@@ -442,6 +442,27 @@ class APIManager: ObservableObject {
         )
     }
 
+    func confirmName(_ name: String) async throws -> Bool {
+        struct ConfirmNameRequest: Encodable {
+            let name: String
+        }
+
+        struct ConfirmNameResponse: Decodable {
+            let success: Bool
+            let name: String
+        }
+
+        let body = try encoder.encode(ConfirmNameRequest(name: name))
+        let response: ConfirmNameResponse = try await makeRequest(
+            endpoint: "/onboarding/confirm-name",
+            method: "POST",
+            body: body,
+            requiresAuth: true
+        )
+
+        return response.success
+    }
+
     // MARK: - Story Endpoints
 
     func checkGenerationStatus(storyId: String) async throws -> GenerationStatus {
