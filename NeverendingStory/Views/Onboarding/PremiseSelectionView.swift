@@ -20,6 +20,8 @@ struct PremiseSelectionView: View {
     @State private var createdStory: Story?
     @State private var needsNewInterview = false
     @State private var navigateToNewInterview = false
+    @State private var premisesId: String?
+    @State private var showDiscardWarning = false
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -82,13 +84,25 @@ struct PremiseSelectionView: View {
                             .padding(.horizontal, 24)
                         }
 
-                        // Adaptive Reading Engine: TalkToProsperoCard removed (users navigate to library naturally)
+                        // Talk to Prospero button
+                        TalkToProsperoButton {
+                            handleTalkToProspero()
+                        }
+                        .padding(.horizontal, 24)
                     }
                     .padding(.bottom, 32)
                 }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Return to the Ether", isPresented: $showDiscardWarning) {
+            Button("Never mind", role: .cancel) {}
+            Button("Summon Prospero", role: .destructive) {
+                discardPremisesAndNavigate()
+            }
+        } message: {
+            Text("Prospero will conjure fresh story ideas for you, but these unused tales will fade back into the ether. Are you sure?")
+        }
         .navigationDestination(isPresented: $navigateToReader) {
             if let story = createdStory {
                 BookReaderView(story: story)
@@ -155,6 +169,7 @@ struct PremiseSelectionView: View {
                     print("✅ Found \(premisesResult.premises.count) unused premises")
                     premises = premisesResult.premises
                     needsNewInterview = premisesResult.needsNewInterview
+                    premisesId = premisesResult.premisesId
                 } else if let premisesResult = result, premisesResult.needsNewInterview {
                     // All premises used, need new interview
                     print("📝 All premises used - showing new interview option")
@@ -172,6 +187,7 @@ struct PremiseSelectionView: View {
                     let newResult = try await APIManager.shared.getPremises(userId: userId)
                     premises = newResult.premises
                     needsNewInterview = newResult.needsNewInterview
+                    premisesId = newResult.premisesId
                     print("✅ Loaded \(premises.count) premises")
                 }
 
@@ -218,10 +234,82 @@ struct PremiseSelectionView: View {
             }
         }
     }
+
+    private func handleTalkToProspero() {
+        // Show warning if there are unused premises
+        if !premises.isEmpty {
+            showDiscardWarning = true
+        } else {
+            // No premises to discard, go straight to interview
+            navigateToNewInterview = true
+        }
+    }
+
+    private func discardPremisesAndNavigate() {
+        guard let premisesId = premisesId else {
+            // No premises ID, just navigate
+            navigateToNewInterview = true
+            return
+        }
+
+        Task {
+            do {
+                // Call discard endpoint to log the discarded premises
+                try await APIManager.shared.discardPremises(premisesId: premisesId)
+                print("✅ Premises discarded successfully")
+            } catch {
+                print("❌ Failed to discard premises: \(error)")
+                // Continue anyway - this is just a learning signal
+            }
+
+            // Navigate to new interview
+            await MainActor.run {
+                navigateToNewInterview = true
+            }
+        }
+    }
 }
 
-// MARK: - Adaptive Reading Engine
-// TalkToProsperoCard has been removed - users navigate to library naturally
+// MARK: - Talk to Prospero Button
+
+struct TalkToProsperoButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.title3)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Talk to Prospero")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text("Summon fresh story ideas")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+            }
+            .padding(16)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.3)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
 
 #Preview {
     NavigationStack {

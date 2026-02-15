@@ -408,11 +408,6 @@ class APIManager: ObservableObject {
         }
     }
 
-    struct PremisesResult {
-        let premises: [Premise]
-        let needsNewInterview: Bool
-    }
-
     func getPremises(userId: String) async throws -> PremisesResult {
         let response: PremisesResponse = try await makeRequest(
             endpoint: "/onboarding/premises/\(userId)",
@@ -420,7 +415,22 @@ class APIManager: ObservableObject {
         )
         return PremisesResult(
             premises: response.premises,
-            needsNewInterview: response.needsNewInterview ?? false
+            needsNewInterview: response.needsNewInterview ?? false,
+            premisesId: response.premisesId
+        )
+    }
+
+    func discardPremises(premisesId: String) async throws {
+        struct DiscardPremisesRequest: Encodable {
+            let premisesId: String
+        }
+
+        let body = try encoder.encode(DiscardPremisesRequest(premisesId: premisesId))
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/onboarding/discard-premises",
+            method: "POST",
+            body: body,
+            requiresAuth: true
         )
     }
 

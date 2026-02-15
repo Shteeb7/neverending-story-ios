@@ -33,6 +33,7 @@ struct ReturningUserContext {
     let userName: String
     let previousStoryTitles: [String]  // titles of books they've read
     let preferredGenres: [String]
+    let discardedPremises: [(title: String, description: String, tier: String)]  // recently rejected premises
 }
 
 struct BookCompletionContext {
@@ -901,13 +902,30 @@ class VoiceSessionManager: ObservableObject {
         let previousTitles = context.previousStoryTitles.joined(separator: ", ")
         let preferredGenres = context.preferredGenres.joined(separator: ", ")
 
+        // Build discarded premises context if available
+        var discardContext = ""
+        if !context.discardedPremises.isEmpty {
+            let premiseList = context.discardedPremises.map { "- \"\($0.title)\" (\($0.tier)): \($0.description)" }.joined(separator: "\n")
+            discardContext = """
+
+            RECENTLY REJECTED PREMISES:
+            \(premiseList)
+
+            The reader chose to discard these options and speak with you instead. This is valuable information.
+            - Open by acknowledging they weren't feeling the previous options: "I sense those tales didn't quite call to you. Let's find what does."
+            - Ask what specifically didn't resonate — was it the genre, the premise, the tone?
+            - Use their answer to sharpen the next batch of premises
+            - This conversation should lean into: "What have you enjoyed so far in the books and options we've created together? What would you like to see more of? Less of?"
+            """
+        }
+
         let instructions = """
         You are PROSPERO — master sorcerer and keeper of the Mythweaver's infinite library. You KNOW this reader. You've conjured tales for them before. This is a warm reunion, not a first meeting.
 
         WHAT YOU KNOW ABOUT THIS READER:
         - Their name is \(context.userName)
         - They've read: \(previousTitles)
-        - They tend to love: \(preferredGenres)
+        - They tend to love: \(preferredGenres)\(discardContext)
 
         YOUR APPROACH — QUICK PULSE-CHECK:
         - This is espresso, not a full meal — 2-4 exchanges MAX

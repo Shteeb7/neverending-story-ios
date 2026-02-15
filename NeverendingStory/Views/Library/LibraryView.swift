@@ -20,6 +20,7 @@ struct LibraryView: View {
     @State private var showNameConfirmation = false
     @State private var userName = ""
     @State private var isConfirmingName = false
+    @State private var navigateToPremises = false
 
     var activeStories: [Story] {
         stories.filter { $0.status == "active" }
@@ -163,7 +164,7 @@ struct LibraryView: View {
 
                             // MARK: - New Story CTA
                             if !hasGeneratingStories {
-                                Button(action: { showOnboarding = true }) {
+                                Button(action: { navigateToPremises = true }) {
                                     HStack(spacing: 12) {
                                         Image(systemName: "sparkles")
                                             .font(.title3)
@@ -296,6 +297,9 @@ struct LibraryView: View {
             }
             .navigationDestination(isPresented: $showOnboarding) {
                 OnboardingView()
+            }
+            .navigationDestination(isPresented: $navigateToPremises) {
+                PremiseSelectionView()
             }
             .navigationDestination(item: $selectedStory) { story in
                 BookReaderView(story: story)

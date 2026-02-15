@@ -358,10 +358,14 @@ struct OnboardingView: View {
         // Get their preferred genres from preferences
         let preferredGenres = await fetchPreferredGenres(userId: userId)
 
+        // Get recently discarded premises
+        let discardedPremises = await fetchDiscardedPremises(userId: userId)
+
         let context = ReturningUserContext(
             userName: userName,
             previousStoryTitles: previousTitles,
-            preferredGenres: preferredGenres
+            preferredGenres: preferredGenres,
+            discardedPremises: discardedPremises
         )
 
         voiceManager.interviewType = .returningUser(context: context)
@@ -399,6 +403,25 @@ struct OnboardingView: View {
             }
         } catch {
             NSLog("⚠️ Could not fetch preferred genres: \(error)")
+        }
+        return []
+    }
+
+    private func fetchDiscardedPremises(userId: String) async -> [(title: String, description: String, tier: String)] {
+        do {
+            let result = try await APIManager.shared.getUserPreferences(userId: userId)
+            if let recentlyDiscarded = result?["recentlyDiscarded"] as? [[String: Any]] {
+                return recentlyDiscarded.compactMap { premise in
+                    guard let title = premise["title"] as? String,
+                          let description = premise["description"] as? String,
+                          let tier = premise["tier"] as? String else {
+                        return nil
+                    }
+                    return (title: title, description: description, tier: tier)
+                }
+            }
+        } catch {
+            NSLog("⚠️ Could not fetch discarded premises: \(error)")
         }
         return []
     }
