@@ -444,7 +444,15 @@ struct BookReaderView: View {
             let checkpointMap: [Int: String] = [3: "chapter_2", 6: "chapter_5", 9: "chapter_8"]
 
             if let checkpoint = checkpointMap[currentNum] {
-                // Always re-check feedback status when user hits end-of-chapter
+                // Skip if already completed locally
+                if isCheckpointComplete(storyId: story.id, checkpoint: checkpoint) {
+                    // Feedback already done — show generating view
+                    generatingChapterNumber = currentNum + 1
+                    showGeneratingChapters = true
+                    return
+                }
+
+                // Otherwise check server
                 Task {
                     do {
                         let status = try await APIManager.shared.getFeedbackStatus(
@@ -515,7 +523,10 @@ struct BookReaderView: View {
         guard !checkedCheckpoints.contains(checkpoint) else { return }
         checkedCheckpoints.insert(checkpoint)
 
-        // Check if feedback already submitted
+        // Don't show if already completed (persisted across sessions)
+        guard !isCheckpointComplete(storyId: story.id, checkpoint: checkpoint) else { return }
+
+        // Check if feedback already submitted (server check as backup)
         Task {
             do {
                 let status = try await APIManager.shared.getFeedbackStatus(
@@ -552,10 +563,37 @@ struct BookReaderView: View {
                     protagonistName: protagonistName
                 )
                 NSLog("✅ Submitted dimension feedback: pacing=\(pacing), tone=\(tone), character=\(character)")
+
+                // Persist that this checkpoint is complete so it never re-triggers
+                markCheckpointComplete(storyId: story.id, checkpoint: currentCheckpoint)
+
+                // Smart routing: go to library if no next chapter available
+                await MainActor.run {
+                    if !readingState.canGoToNextChapter {
+                        // No next chapter yet — return to library where they'll see generation status
+                        dismiss()
+                    }
+                    // If next chapter exists, stay in reader (default behavior)
+                }
             } catch {
                 NSLog("❌ Failed to submit dimension feedback: \(error)")
             }
         }
+    }
+
+    private func markCheckpointComplete(storyId: String, checkpoint: String) {
+        let key = "completedCheckpoints_\(storyId)"
+        var completed = UserDefaults.standard.stringArray(forKey: key) ?? []
+        if !completed.contains(checkpoint) {
+            completed.append(checkpoint)
+            UserDefaults.standard.set(completed, forKey: key)
+        }
+    }
+
+    private func isCheckpointComplete(storyId: String, checkpoint: String) -> Bool {
+        let key = "completedCheckpoints_\(storyId)"
+        let completed = UserDefaults.standard.stringArray(forKey: key) ?? []
+        return completed.contains(checkpoint)
     }
 
     // Set protagonist name for check-in
