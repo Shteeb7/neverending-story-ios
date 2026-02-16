@@ -433,12 +433,6 @@ struct OnboardingView: View {
     }
 
     private func startVoiceSessionAfterConsent() {
-        // In UI testing mode, don't actually start voice session (microphone not available)
-        if CommandLine.arguments.contains("--uitesting") {
-            NSLog("🧪 UI Testing mode - skipping actual voice session startup")
-            return
-        }
-
         Task {
             let hasPermission = await voiceManager.requestMicrophonePermission()
 
