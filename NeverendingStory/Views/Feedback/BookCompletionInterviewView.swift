@@ -13,6 +13,7 @@ struct BookCompletionInterviewView: View {
     let onComplete: ([String: Any]) -> Void
 
     @StateObject private var voiceSession = VoiceSessionManager()
+    @StateObject private var textChatManager = TextChatSessionManager()
     @Environment(\.dismiss) private var dismiss
 
     @State private var hasStarted = false
@@ -22,6 +23,7 @@ struct BookCompletionInterviewView: View {
     @State private var isProcessing = false
     @State private var showBookComplete = false
     @State private var interviewPreferences: [String: Any] = [:]
+    @State private var showTextChat = false
 
     var body: some View {
         ZStack {
@@ -51,6 +53,17 @@ struct BookCompletionInterviewView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage)
+        }
+        .fullScreenCover(isPresented: $showTextChat) {
+            // Build book completion context for text chat
+            TextChatView(
+                interviewType: .bookCompletion(context: buildBookCompletionContext()),
+                context: nil,
+                onComplete: {
+                    showTextChat = false
+                    // Text chat callback already handled preferences
+                }
+            )
         }
         .fullScreenCover(isPresented: $showBookComplete) {
             BookCompleteView(
@@ -116,7 +129,7 @@ struct BookCompletionInterviewView: View {
             }
 
             // Description
-            Text("Prospero wants to hear what you thought about the story! This quick voice chat lets him sense what stirred your soul so he can conjure the perfect Book 2.")
+            Text("Prospero wants to hear what you thought about the story! Share your experience through voice or text to help conjure the perfect Book 2.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
@@ -124,27 +137,59 @@ struct BookCompletionInterviewView: View {
 
             Spacer()
 
-            // Start button
-            Button(action: { startInterview() }) {
-                HStack {
-                    Image(systemName: "mic.fill")
-                        .font(.title3)
-                    Text("Start Voice Interview")
-                        .font(.headline)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
-                .background(
-                    LinearGradient(
-                        colors: [.purple, .blue],
-                        startPoint: .leading,
-                        endPoint: .trailing
+            // Side-by-side Speak / Write buttons
+            HStack(spacing: 12) {
+                // Speak with Prospero button
+                Button(action: { startInterview() }) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 28))
+                        Text("Speak with\nProspero")
+                            .font(.system(size: 14, weight: .semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .background(
+                        LinearGradient(
+                            colors: [.purple, .blue],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
-                )
-                .foregroundColor(.white)
-                .cornerRadius(16)
-                .shadow(color: .purple.opacity(0.3), radius: 10, y: 5)
+                    .foregroundColor(.white)
+                    .cornerRadius(16)
+                    .shadow(color: .purple.opacity(0.3), radius: 10, y: 5)
+                }
+
+                // Write to Prospero button
+                Button(action: { startTextChat() }) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "pencil.line")
+                            .font(.system(size: 28))
+                        Text("Write to\nProspero")
+                            .font(.system(size: 14, weight: .semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .background(
+                        LinearGradient(
+                            colors: [.purple, .blue],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .foregroundColor(.white)
+                    .cornerRadius(16)
+                    .shadow(color: .purple.opacity(0.3), radius: 10, y: 5)
+                }
             }
+            .padding(.horizontal, 8)
 
             // Skip button
             Button(action: { dismiss() }) {
@@ -337,6 +382,20 @@ struct BookCompletionInterviewView: View {
         }
     }
 
+    private func startTextChat() {
+        NSLog("📝 Starting text chat for book completion")
+
+        // Set up callback for text chat
+        textChatManager.onPreferencesGathered = { preferences in
+            DispatchQueue.main.async {
+                NSLog("✅ Text chat preferences received: \(preferences)")
+                self.handleInterviewComplete(preferences)
+            }
+        }
+
+        showTextChat = true
+    }
+
     private func startInterview() {
         Task {
             // Request microphone permission
@@ -439,6 +498,26 @@ struct BookCompletionInterviewView: View {
         voiceSession.interviewType = .bookCompletion(context: context)
         NSLog("✅ Configured book completion session for \(userName) - \"\(story.title)\"")
         NSLog("   Reading behavior: \(lingered.count) lingered, \(skimmed.count) skimmed, \(reread.count) reread")
+    }
+
+    private func buildBookCompletionContext() -> BookCompletionContext {
+        // Build a minimal context synchronously for text chat
+        // We can't use async fetching in the view builder, so use placeholder values
+        // Text chat backend will fetch full context from API
+        BookCompletionContext(
+            userName: "friend",  // Placeholder - backend will get real name
+            storyTitle: story.title,
+            storyGenre: story.genre,
+            premiseTier: nil,
+            protagonistName: nil,
+            centralConflict: nil,
+            themes: [],
+            lingeredChapters: [],
+            skimmedChapters: [],
+            rereadChapters: [],
+            checkpointFeedback: [],
+            bookNumber: bookNumber
+        )
     }
 
     private func fetchUserName(userId: String) async -> String? {

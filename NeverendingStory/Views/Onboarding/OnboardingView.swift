@@ -11,6 +11,7 @@ struct OnboardingView: View {
     let forceNewInterview: Bool
 
     @StateObject private var voiceManager = VoiceSessionManager()
+    @StateObject private var textChatManager = TextChatSessionManager()
     @State private var navigateToPremises = false
     @State private var showPermissionDenied = false
     @State private var conversationData: String? = nil
@@ -20,6 +21,7 @@ struct OnboardingView: View {
     @State private var isCheckingForPremises = true
     @State private var existingPremisesFound = false
     @State private var showDNATransfer = false
+    @State private var showTextChat = false
 
     init(forceNewInterview: Bool = false) {
         self.forceNewInterview = forceNewInterview
@@ -105,24 +107,57 @@ struct OnboardingView: View {
                         VStack(spacing: 16) {
                             switch voiceManager.state {
                         case .idle:
-                            Button(action: startVoiceSession) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "sparkle")
-                                    Text("Begin")
-                                        .font(.headline)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color.purple, Color.blue],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
+                            // Side-by-side Speak / Write buttons
+                            HStack(spacing: 12) {
+                                // Speak with Prospero button
+                                Button(action: startVoiceSession) {
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "mic.fill")
+                                            .font(.system(size: 24))
+                                        Text("Speak with\nProspero")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .multilineTextAlignment(.center)
+                                            .lineLimit(2)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 20)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.purple, Color.blue],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
                                     )
-                                )
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                                .shadow(color: .purple.opacity(0.3), radius: 8, y: 4)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                    .shadow(color: .purple.opacity(0.3), radius: 8, y: 4)
+                                }
+
+                                // Write to Prospero button
+                                Button(action: startTextChat) {
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "pencil.line")
+                                            .font(.system(size: 24))
+                                        Text("Write to\nProspero")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .multilineTextAlignment(.center)
+                                            .lineLimit(2)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 20)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [Color.purple, Color.blue],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                    .shadow(color: .purple.opacity(0.3), radius: 8, y: 4)
+                                }
                             }
 
                         case .requestingPermission:
@@ -255,6 +290,13 @@ struct OnboardingView: View {
             } message: {
                 Text("Please enable microphone access in Settings to use voice onboarding.")
             }
+            .fullScreenCover(isPresented: $showTextChat) {
+                TextChatView(
+                    interviewType: .onboarding,  // For now, always use onboarding for text chat
+                    context: nil,
+                    onComplete: handleTextChatComplete
+                )
+            }
             .fullScreenCover(isPresented: $showDNATransfer) {
                 DNATransferView(
                     userId: AuthManager.shared.user?.id ?? ""
@@ -323,6 +365,32 @@ struct OnboardingView: View {
                     isCheckingForPremises = false
                 }
             }
+        }
+    }
+
+    private func startTextChat() {
+        NSLog("📝 Starting text chat with Prospero")
+
+        // Set up callback for when preferences are gathered (same as voice)
+        textChatManager.onPreferencesGathered = { preferences in
+            DispatchQueue.main.async {
+                NSLog("✅ Text chat preferences received: \(preferences)")
+                self.storyPreferences = preferences
+                // No conversationData for text chat - preferences are already structured
+                self.premisesReady = true
+            }
+        }
+
+        showTextChat = true
+    }
+
+    private func handleTextChatComplete() {
+        NSLog("✅ Text chat complete - showing DNA Transfer")
+        // Text chat already triggered preferences callback
+        // Same flow as voice: show DNA Transfer → generate premises
+        showTextChat = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            showDNATransfer = true
         }
     }
 

@@ -833,6 +833,159 @@ class APIManager: ObservableObject {
             body: body
         )
     }
+
+    // MARK: - Text Chat with Prospero
+
+    /// Start a new text chat session with Prospero
+    /// - Parameters:
+    ///   - interviewType: Type of interview ('onboarding', 'returning_user', 'book_completion')
+    ///   - context: Optional context for returning_user or book_completion
+    /// - Returns: Session ID and Prospero's opening message
+    func startChatSession(interviewType: String, context: [String: Any]?) async throws -> (sessionId: String, openingMessage: String) {
+        NSLog("📝 APIManager: Starting text chat session (\(interviewType))")
+
+        struct StartChatRequest: Encodable {
+            let interviewType: String
+            let context: [String: Any]?
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(interviewType, forKey: .interviewType)
+                if let ctx = context {
+                    try container.encode(AnyCodable(ctx), forKey: .context)
+                }
+            }
+
+            enum CodingKeys: String, CodingKey {
+                case interviewType, context
+            }
+        }
+
+        struct AnyCodable: Encodable {
+            let value: Any
+            init(_ value: Any) { self.value = value }
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                if let dict = value as? [String: Any] {
+                    try container.encode(dict.mapValues { AnyCodable($0) })
+                } else if let array = value as? [Any] {
+                    try container.encode(array.map { AnyCodable($0) })
+                } else if let string = value as? String {
+                    try container.encode(string)
+                } else if let int = value as? Int {
+                    try container.encode(int)
+                } else if let bool = value as? Bool {
+                    try container.encode(bool)
+                } else {
+                    try container.encode("\(value)")
+                }
+            }
+        }
+
+        struct StartChatResponse: Decodable {
+            let success: Bool
+            let sessionId: String
+            let openingMessage: String
+        }
+
+        let body = try encoder.encode(StartChatRequest(interviewType: interviewType, context: context))
+
+        let response: StartChatResponse = try await makeRequest(
+            endpoint: "/chat/start",
+            method: "POST",
+            body: body
+        )
+
+        NSLog("✅ APIManager: Text chat session started (\(response.sessionId))")
+        return (sessionId: response.sessionId, openingMessage: response.openingMessage)
+    }
+
+    /// Send a message in an existing text chat session
+    /// - Parameters:
+    ///   - sessionId: The session ID
+    ///   - message: The user's message
+    /// - Returns: Prospero's response, tool call (if any), and completion status
+    func sendChatMessage(sessionId: String, message: String) async throws -> (message: String, toolCall: ChatToolCall?, sessionComplete: Bool) {
+        NSLog("💬 APIManager: Sending chat message to session \(sessionId)")
+
+        struct SendMessageRequest: Encodable {
+            let sessionId: String
+            let message: String
+        }
+
+        struct SendMessageResponse: Decodable {
+            let success: Bool
+            let message: String
+            let toolCall: ChatToolCall?
+            let sessionComplete: Bool
+        }
+
+        let body = try encoder.encode(SendMessageRequest(sessionId: sessionId, message: message))
+
+        let response: SendMessageResponse = try await makeRequest(
+            endpoint: "/chat/send",
+            method: "POST",
+            body: body
+        )
+
+        NSLog("✅ APIManager: Received response (complete: \(response.sessionComplete))")
+        return (message: response.message, toolCall: response.toolCall, sessionComplete: response.sessionComplete)
+    }
+
+    /// Get an existing chat session (for resuming)
+    /// - Parameter sessionId: The session ID
+    /// - Returns: Full session data
+    func getChatSession(sessionId: String) async throws -> [String: Any] {
+        NSLog("📖 APIManager: Fetching chat session \(sessionId)")
+
+        struct GetSessionResponse: Decodable {
+            let success: Bool
+            let session: [String: AnyCodableValue]
+        }
+
+        let response: GetSessionResponse = try await makeRequest(
+            endpoint: "/chat/session/\(sessionId)",
+            method: "GET"
+        )
+
+        let session = response.session.mapValues { $0.toAny() }
+        NSLog("✅ APIManager: Session fetched")
+        return session
+    }
+}
+
+// Chat tool call response type
+struct ChatToolCall: Decodable {
+    let name: String
+    let arguments: [String: Any]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+
+        // Decode arguments as [String: Any]
+        let argsContainer = try container.decode([String: AnyCodableValue].self, forKey: .arguments)
+        arguments = argsContainer.mapValues { $0.toAny() }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name, arguments
+    }
+}
+
+// Extension to convert AnyCodableValue to Any
+extension AnyCodableValue {
+    func toAny() -> Any {
+        switch self {
+        case .string(let str): return str
+        case .int(let int): return int
+        case .double(let double): return double
+        case .bool(let bool): return bool
+        case .array(let array): return array.map { $0.toAny() }
+        case .dictionary(let dict): return dict.mapValues { $0.toAny() }
+        case .null: return NSNull()
+        }
+    }
 }
 
 // Generation status response

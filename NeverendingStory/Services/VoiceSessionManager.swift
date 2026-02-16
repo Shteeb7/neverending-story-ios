@@ -23,28 +23,40 @@ enum VoiceSessionState {
 
 // MARK: - Interview Types
 
-enum InterviewType {
+enum InterviewType: Equatable {
     case onboarding                                         // First-time user
     case returningUser(context: ReturningUserContext)     // Wants new story
     case premiseRejection(context: PremiseRejectionContext) // Rejected all premises
     case bookCompletion(context: BookCompletionContext)   // Finished a book
 }
 
-struct ReturningUserContext {
+struct ReturningUserContext: Equatable {
     let userName: String
     let previousStoryTitles: [String]  // titles of books they've read
     let preferredGenres: [String]
     let discardedPremises: [(title: String, description: String, tier: String)]  // recently rejected premises
+
+    static func == (lhs: ReturningUserContext, rhs: ReturningUserContext) -> Bool {
+        return lhs.userName == rhs.userName &&
+               lhs.previousStoryTitles == rhs.previousStoryTitles &&
+               lhs.preferredGenres == rhs.preferredGenres
+    }
 }
 
-struct PremiseRejectionContext {
+struct PremiseRejectionContext: Equatable {
     let userName: String
     let discardedPremises: [(title: String, description: String, tier: String)]
     let existingPreferences: [String: Any]?  // What the first interview gathered (genres, themes, etc.)
     let hasReadBooks: Bool                    // true if they've completed any books before
+
+    static func == (lhs: PremiseRejectionContext, rhs: PremiseRejectionContext) -> Bool {
+        // Simple equality check ignoring existingPreferences since [String: Any] isn't Equatable
+        return lhs.userName == rhs.userName &&
+               lhs.hasReadBooks == rhs.hasReadBooks
+    }
 }
 
-struct BookCompletionContext {
+struct BookCompletionContext: Equatable {
     let userName: String
     let storyTitle: String
     let storyGenre: String?
@@ -57,6 +69,18 @@ struct BookCompletionContext {
     let rereadChapters: [(chapter: Int, sessions: Int)]
     let checkpointFeedback: [(checkpoint: String, response: String)]
     let bookNumber: Int
+
+    static func == (lhs: BookCompletionContext, rhs: BookCompletionContext) -> Bool {
+        return lhs.userName == rhs.userName &&
+               lhs.storyTitle == rhs.storyTitle &&
+               lhs.storyGenre == rhs.storyGenre &&
+               lhs.premiseTier == rhs.premiseTier &&
+               lhs.protagonistName == rhs.protagonistName &&
+               lhs.centralConflict == rhs.centralConflict &&
+               lhs.themes == rhs.themes &&
+               lhs.skimmedChapters == rhs.skimmedChapters &&
+               lhs.bookNumber == rhs.bookNumber
+    }
 }
 
 // MARK: - Voice Session Manager
