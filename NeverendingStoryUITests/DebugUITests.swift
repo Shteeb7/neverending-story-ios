@@ -9,28 +9,34 @@ import XCTest
 
 final class DebugUITests: XCTestCase {
 
-    func testPrintAllUIElements() {
+    func testPrintViewHierarchy() {
         let app = XCUIApplication()
         app.launch()
 
         // Wait for launch
-        sleep(3)
+        sleep(5)
 
-        // Collect button info
-        var buttonInfo = "BUTTONS (\(app.buttons.count) total):\n"
+        // Print full view hierarchy
+        print("\n" + String(repeating: "=", count: 80))
+        print("VIEW HIERARCHY:")
+        print(String(repeating: "=", count: 80))
+        print(app.debugDescription)
+        print(String(repeating: "=", count: 80) + "\n")
+
+        // Also collect specific elements
+        print("\nBUTTONS (\(app.buttons.count) total):")
         for i in 0..<min(20, app.buttons.count) {
             let button = app.buttons.element(boundBy: i)
-            buttonInfo += "  [\(i)] '\(button.label)'\n"
+            print("  [\(i)] label='\(button.label)' exists=\(button.exists)")
         }
 
-        // Collect text field info
-        var textFieldInfo = "TEXT FIELDS (\(app.textFields.count) total):\n"
+        print("\nTEXT FIELDS (\(app.textFields.count) total):")
         for i in 0..<app.textFields.count {
             let field = app.textFields.element(boundBy: i)
-            textFieldInfo += "  [\(i)] placeholder='\(field.placeholderValue ?? "")'\n"
+            print("  [\(i)] placeholder='\(field.placeholderValue ?? "N/A")' exists=\(field.exists)")
         }
 
-        // Report findings as failure so we can see them
-        XCTFail("\n\n=== UI ELEMENTS ON SCREEN ===\n\(buttonInfo)\n\(textFieldInfo)\n")
+        // This test should always pass - just for debugging
+        XCTAssertTrue(app.exists)
     }
 }

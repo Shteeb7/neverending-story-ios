@@ -15,8 +15,46 @@ struct NeverendingStoryApp: App {
         NSLog("🚀🚀🚀 APP STARTED - NeverendingStory launching! 🚀🚀🚀")
         print("🚀🚀🚀 APP STARTED (print) - NeverendingStory launching! 🚀🚀🚀")
 
+        // Detect UI testing mode and reset app state
+        if CommandLine.arguments.contains("--uitesting") {
+            NSLog("🧪 UI Testing mode detected - clearing app state")
+            resetAppStateForTesting()
+        }
+
         configureAppearance()
         configureGoogleSignIn()
+    }
+
+    private func resetAppStateForTesting() {
+        // Clear UserDefaults
+        if let bundleID = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: bundleID)
+            UserDefaults.standard.synchronize()
+            NSLog("🧪 Cleared UserDefaults for bundle: \(bundleID)")
+        }
+
+        // Clear all cookies
+        if let cookies = HTTPCookieStorage.shared.cookies {
+            for cookie in cookies {
+                HTTPCookieStorage.shared.deleteCookie(cookie)
+            }
+            NSLog("🧪 Cleared \(cookies.count) cookies")
+        }
+
+        // Clear Keychain (Supabase stores sessions here)
+        let secItemClasses = [
+            kSecClassGenericPassword,
+            kSecClassInternetPassword,
+            kSecClassCertificate,
+            kSecClassKey,
+            kSecClassIdentity
+        ]
+
+        for itemClass in secItemClasses {
+            let spec: NSDictionary = [kSecClass: itemClass]
+            SecItemDelete(spec)
+        }
+        NSLog("🧪 Cleared Keychain items")
     }
 
     var body: some Scene {

@@ -22,6 +22,10 @@ final class TextChatUITests: XCTestCase {
         testPassword = "TestPassword123!"
 
         app = XCUIApplication()
+
+        // Reset app state between tests
+        app.launchArguments = ["--uitesting"]
+
         app.launch()
 
         // Create account through real signup flow
@@ -29,10 +33,16 @@ final class TextChatUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        // Clean up test user and all their data
+        // Clean up test user and all their data synchronously
+        let expectation = XCTestExpectation(description: "Cleanup complete")
         Task {
             await cleanupTestUser(email: testEmail)
+            expectation.fulfill()
         }
+        wait(for: [expectation], timeout: 10.0)
+
+        // Terminate app to ensure clean state for next test
+        app.terminate()
         app = nil
     }
 
@@ -40,17 +50,32 @@ final class TextChatUITests: XCTestCase {
 
     /// Creates a new account through the real signup UI
     private func createTestAccount() throws {
+        // Debug: Print what's actually on screen
+        sleep(3) // Give app time to load
+        print("\n🔍 DEBUG: View hierarchy after launch:")
+        print(app.debugDescription)
+        print("\n🔍 Buttons found: \(app.buttons.count)")
+        print("🔍 TextFields found: \(app.textFields.count)")
+        print("🔍 StaticTexts found: \(app.staticTexts.count)\n")
+
         // Wait for LoginView to load
         let emailField = app.textFields.element(matching: .textField, identifier: "Email or username")
-        if !emailField.waitForExistence(timeout: 10) {
-            // Try finding by placeholder
+        if !emailField.waitForExistence(timeout: 30) {
+            // Try finding by placeholder - get first text field
             let allTextFields = app.textFields
+            print("\n❌ Login screen never appeared. Debug info:")
+            print("  - Buttons: \(app.buttons.allElementsBoundByIndex.map { $0.label })")
+            print("  - TextFields: \(app.textFields.allElementsBoundByIndex.map { $0.placeholderValue ?? "no placeholder" })")
+            print("  - StaticTexts: \(app.staticTexts.allElementsBoundByIndex.prefix(10).map { $0.label })")
             XCTAssertGreaterThan(allTextFields.count, 0, "No text fields found on login screen")
         }
 
-        // Toggle to signup mode
-        let createAccountToggle = app.buttons["New here? Create Account"]
-        XCTAssertTrue(createAccountToggle.waitForExistence(timeout: 5), "Create Account toggle should exist")
+        // Toggle to signup mode - try multiple possible labels
+        var createAccountToggle = app.buttons["New here? Create Account"]
+        if !createAccountToggle.exists {
+            createAccountToggle = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Create Account'")).firstMatch
+        }
+        XCTAssertTrue(createAccountToggle.waitForExistence(timeout: 10), "Create Account toggle should exist")
         createAccountToggle.tap()
 
         // Fill in email
@@ -63,14 +88,43 @@ final class TextChatUITests: XCTestCase {
         passwordInput.tap()
         passwordInput.typeText(testPassword)
 
-        // Tap Create Account button
-        let createAccountButton = app.buttons["Create Account"]
+        // Tap Create Account button - try multiple possible labels
+        var createAccountButton = app.buttons["Create Account"]
+        if !createAccountButton.exists {
+            createAccountButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Create'")).firstMatch
+        }
         XCTAssertTrue(createAccountButton.exists, "Create Account button should exist")
         createAccountButton.tap()
 
-        // Wait for account creation and navigation (may take a few seconds)
-        // After signup, new users should land on onboarding
-        sleep(3)
+        // Wait for account creation and navigation (Supabase network call + splash screen)
+        sleep(5)
+
+        // Handle DedicationView if it appears
+        // DedicationView shows "For Rob, Faith and Brady" and "tap to continue" after ~7 seconds
+        let dedicationText = app.staticTexts["For Rob, Faith and Brady"]
+        if dedicationText.waitForExistence(timeout: 2) {
+            NSLog("🎭 DedicationView appeared, waiting for tap prompt...")
+            let tapToContinue = app.staticTexts["tap to continue"]
+            if tapToContinue.waitForExistence(timeout: 15) {
+                // Tap anywhere to dismiss dedication view
+                app.tap()
+                NSLog("🎭 Dismissed DedicationView, waiting for OnboardingView...")
+                // Wait for fade out and OnboardingView to load
+                sleep(3)
+
+                // Debug: What's on screen now?
+                print("\n🔍 After DedicationView dismissal:")
+                print("  - Buttons: \(app.buttons.count)")
+                print("  - Button labels: \(app.buttons.allElementsBoundByIndex.prefix(5).map { $0.label })")
+                print("  - StaticTexts: \(app.staticTexts.allElementsBoundByIndex.prefix(5).map { $0.label })\n")
+            }
+        } else {
+            // No dedication view, likely went straight to onboarding after splash
+            NSLog("📱 No DedicationView detected, waiting for OnboardingView...")
+            sleep(2)
+        }
+
+        // Now we should be on OnboardingView
     }
 
     /// Cleans up test user and all their data via direct database access
@@ -108,11 +162,12 @@ final class TextChatUITests: XCTestCase {
         // After signup, we should be on onboarding screen
         // Verify both Speak and Write buttons exist
 
-        let speakButton = app.buttons["Speak with Prospero"]
-        let writeButton = app.buttons["Write to Prospero"]
+        // Use fuzzy matching to handle button labels with or without newlines
+        let speakButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Speak'")).firstMatch
+        let writeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Write'")).firstMatch
 
-        // Give onboarding screen time to appear after signup
-        XCTAssertTrue(speakButton.waitForExistence(timeout: 10), "Speak button should exist on onboarding")
+        // Give onboarding screen time to appear after signup (30s for network + navigation)
+        XCTAssertTrue(speakButton.waitForExistence(timeout: 30), "Speak button should exist on onboarding")
         XCTAssertTrue(writeButton.exists, "Write button should exist on onboarding")
 
         // Verify both are tappable
@@ -122,13 +177,13 @@ final class TextChatUITests: XCTestCase {
 
     func testTextChatViewLoadsWithProsperoOpeningMessage() throws {
         // Wait for and tap "Write to Prospero" button
-        let writeButton = app.buttons["Write to Prospero"]
+        let writeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Write'")).firstMatch
         XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear on onboarding")
         writeButton.tap()
 
         // Verify TextChatView loaded by checking for input field
         let inputField = app.textFields.element(matching: .textField, identifier: "Write to Prospero...")
-        if !inputField.waitForExistence(timeout: 5) {
+        if !inputField.waitForExistence(timeout: 10) {
             // Try finding by matching all text fields (input field should be present)
             let allTextFields = app.textFields
             XCTAssertGreaterThan(allTextFields.count, 0, "Text chat input field should appear")
@@ -148,7 +203,7 @@ final class TextChatUITests: XCTestCase {
 
     func testSendMessageAndVerifyUserMessageAppearsOnRight() throws {
         // Navigate to text chat
-        let writeButton = app.buttons["Write to Prospero"]
+        let writeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Write'")).firstMatch
         XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear")
         writeButton.tap()
 
@@ -181,7 +236,7 @@ final class TextChatUITests: XCTestCase {
 
     func testLoadingIndicatorAppearsDuringResponse() throws {
         // Navigate to text chat
-        let writeButton = app.buttons["Write to Prospero"]
+        let writeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Write'")).firstMatch
         XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear")
         writeButton.tap()
 
@@ -219,7 +274,7 @@ final class TextChatUITests: XCTestCase {
 
     func testProsperoResponseAppearsOnLeftSide() throws {
         // Navigate to text chat
-        let writeButton = app.buttons["Write to Prospero"]
+        let writeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Write'")).firstMatch
         XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear")
         writeButton.tap()
 
@@ -259,8 +314,8 @@ final class TextChatUITests: XCTestCase {
         // This test runs through the complete happy path from signup to conversation
 
         // 1. Verify we're on onboarding (already navigated via signup in setUp)
-        let speakButton = app.buttons["Speak with Prospero"]
-        let writeButton = app.buttons["Write to Prospero"]
+        let speakButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Speak'")).firstMatch
+        let writeButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Write'")).firstMatch
         XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear after signup")
         XCTAssertTrue(speakButton.exists, "Speak button should also exist")
 
@@ -268,9 +323,8 @@ final class TextChatUITests: XCTestCase {
         writeButton.tap()
 
         // 3. Verify TextChatView loaded
-        sleep(3)
         let inputField = app.textFields.firstMatch
-        XCTAssertTrue(inputField.exists, "Input field should appear in TextChatView")
+        XCTAssertTrue(inputField.waitForExistence(timeout: 10), "Input field should appear in TextChatView")
 
         // 4. Wait for Prospero's opening message
         sleep(6)
@@ -286,8 +340,8 @@ final class TextChatUITests: XCTestCase {
             inputField.typeText("\n")
         }
 
-        // 6. Wait for response
-        sleep(10)
+        // 6. Wait for response (Claude API can take up to 60 seconds)
+        sleep(60)
 
         // 7. Send second message to continue conversation
         inputField.tap()
@@ -298,8 +352,8 @@ final class TextChatUITests: XCTestCase {
             inputField.typeText("\n")
         }
 
-        // 8. Wait for second response
-        sleep(10)
+        // 8. Wait for second response (Claude API can take up to 60 seconds)
+        sleep(60)
 
         // 9. Verify conversation is progressing
         let scrollView = app.scrollViews.firstMatch
