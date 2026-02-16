@@ -22,6 +22,8 @@ struct OnboardingView: View {
     @State private var existingPremisesFound = false
     @State private var showDNATransfer = false
     @State private var showTextChat = false
+    @State private var showVoiceConsent = false
+    @State private var voiceConsent: Bool? = nil
 
     init(forceNewInterview: Bool = false) {
         self.forceNewInterview = forceNewInterview
@@ -308,8 +310,20 @@ struct OnboardingView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showVoiceConsent) {
+                VoiceConsentView(
+                    onConsent: {
+                        voiceConsent = true
+                        // Proceed with voice session after consent
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            startVoiceSessionAfterConsent()
+                        }
+                    }
+                )
+            }
             .onAppear {
                 checkForExistingPremises()
+                loadVoiceConsentStatus()
             }
     }
 
@@ -394,7 +408,37 @@ struct OnboardingView: View {
         }
     }
 
+    private func loadVoiceConsentStatus() {
+        Task {
+            do {
+                let status = try await APIManager.shared.getConsentStatus()
+                await MainActor.run {
+                    voiceConsent = status.voiceConsent
+                }
+            } catch {
+                NSLog("⚠️ Failed to load voice consent status: \(error)")
+            }
+        }
+    }
+
     private func startVoiceSession() {
+        // Check voice consent first
+        if voiceConsent == true {
+            // Already have consent - proceed directly
+            startVoiceSessionAfterConsent()
+        } else {
+            // Need to request voice consent
+            showVoiceConsent = true
+        }
+    }
+
+    private func startVoiceSessionAfterConsent() {
+        // In UI testing mode, don't actually start voice session (microphone not available)
+        if CommandLine.arguments.contains("--uitesting") {
+            NSLog("🧪 UI Testing mode - skipping actual voice session startup")
+            return
+        }
+
         Task {
             let hasPermission = await voiceManager.requestMicrophonePermission()
 
