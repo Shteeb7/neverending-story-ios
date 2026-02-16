@@ -60,6 +60,9 @@ struct NeverendingStoryApp: App {
     var body: some Scene {
         WindowGroup {
             LaunchView()
+                .overlay(alignment: .bottom) {
+                    GlobalVersionOverlay()
+                }
                 .onOpenURL { url in
                     handleIncomingURL(url)
                 }

@@ -98,12 +98,12 @@ struct TextChatView: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 20)
                     }
-                    .onChange(of: chatSession.messages.count) { _ in
+                    .onChange(of: chatSession.messages.count) {
                         withAnimation {
                             proxy.scrollTo("bottom", anchor: .bottom)
                         }
                     }
-                    .onChange(of: chatSession.isLoading) { _ in
+                    .onChange(of: chatSession.isLoading) {
                         withAnimation {
                             proxy.scrollTo("bottom", anchor: .bottom)
                         }

@@ -10,9 +10,28 @@ import Foundation
 // MARK: - Chat Message Model
 
 struct ChatMessage: Identifiable, Codable {
-    let id = UUID()
+    let id: UUID
     let role: String  // "user" or "assistant"
     let content: String
+
+    init(id: UUID = UUID(), role: String, content: String) {
+        self.id = id
+        self.role = role
+        self.content = content
+    }
+
+    // Custom decoder that generates a fresh UUID on decode
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = UUID()
+        self.role = try container.decode(String.self, forKey: .role)
+        self.content = try container.decode(String.self, forKey: .content)
+    }
+
+    // Exclude id from encoding
+    enum CodingKeys: String, CodingKey {
+        case role, content
+    }
 }
 
 // MARK: - Text Chat Session Manager
