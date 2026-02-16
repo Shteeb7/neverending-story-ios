@@ -672,6 +672,50 @@ class APIManager: ObservableObject {
         )
     }
 
+    // MARK: - Consent Management
+
+    func grantAIConsent() async throws {
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/settings/ai-consent",
+            method: "POST"
+        )
+    }
+
+    func grantVoiceConsent() async throws {
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/settings/voice-consent",
+            method: "POST"
+        )
+    }
+
+    func revokeVoiceConsent() async throws {
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/settings/revoke-voice-consent",
+            method: "POST"
+        )
+    }
+
+    func getConsentStatus() async throws -> ConsentStatus {
+        struct ConsentStatusResponse: Decodable {
+            let success: Bool
+            let aiConsent: Bool
+            let voiceConsent: Bool
+
+            enum CodingKeys: String, CodingKey {
+                case success
+                case aiConsent = "ai_consent"
+                case voiceConsent = "voice_consent"
+            }
+        }
+
+        let response: ConsentStatusResponse = try await makeRequest(
+            endpoint: "/settings/consent-status",
+            method: "GET"
+        )
+
+        return ConsentStatus(aiConsent: response.aiConsent, voiceConsent: response.voiceConsent)
+    }
+
     // MARK: - Library Endpoints
 
     func getLibrary(userId: String) async throws -> [Story] {
@@ -1153,6 +1197,12 @@ struct SequelGenerationResponse: Decodable {
             case bookNumber = "book_number"
         }
     }
+}
+
+// Consent status model
+struct ConsentStatus {
+    let aiConsent: Bool
+    let voiceConsent: Bool
 }
 
 // Helper for decoding any JSON value

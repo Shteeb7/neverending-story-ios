@@ -11,6 +11,9 @@ struct LaunchView: View {
     @StateObject private var authManager = AuthManager.shared
     @State private var showContent = false
     @State private var showDedication = false
+    @State private var showAIConsent = false
+    @State private var isCheckingConsent = false
+    @State private var consentChecked = false
     @AppStorage("hasSeenDedication") private var hasSeenDedication = false
 
     var body: some View {
@@ -107,19 +110,33 @@ struct LaunchView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // Navigate based on auth state and onboarding completion
+                // Navigate based on auth state, consent, and onboarding completion
                 if authManager.isAuthenticated {
-                    if authManager.user?.hasCompletedOnboarding == true {
-                        LibraryView()
+                    // Check AI consent before proceeding
+                    if !consentChecked {
+                        // Checking consent status...
+                        ZStack {
+                            Color.black.ignoresSafeArea()
+                            ProgressView()
+                                .tint(.white)
+                        }
+                    } else if showAIConsent {
+                        // User needs to consent to AI usage
+                        AIConsentView()
                     } else {
-                        // Show dedication page once before onboarding
-                        if !hasSeenDedication && !showDedication {
-                            DedicationView {
-                                hasSeenDedication = true
-                                showDedication = true
-                            }
+                        // Consent granted, proceed normally
+                        if authManager.user?.hasCompletedOnboarding == true {
+                            LibraryView()
                         } else {
-                            OnboardingView()
+                            // Show dedication page once before onboarding
+                            if !hasSeenDedication && !showDedication {
+                                DedicationView {
+                                    hasSeenDedication = true
+                                    showDedication = true
+                                }
+                            } else {
+                                OnboardingView()
+                            }
                         }
                     }
                 } else {
@@ -136,6 +153,51 @@ struct LaunchView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 withAnimation(.easeInOut(duration: 0.5)) {
                     showContent = true
+                }
+            }
+        }
+        .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+            if isAuthenticated && !isCheckingConsent && !consentChecked {
+                // User just authenticated, check consent status
+                checkConsentStatus()
+            }
+        }
+        .onChange(of: showContent) { _, newValue in
+            if newValue && authManager.isAuthenticated && !isCheckingConsent && !consentChecked {
+                // Content shown and user is authenticated, check consent
+                checkConsentStatus()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ConsentGranted"))) { _ in
+            // Consent was granted, re-check status
+            NSLog("🔒 Consent granted notification received, re-checking status...")
+            consentChecked = false
+            checkConsentStatus()
+        }
+    }
+
+    private func checkConsentStatus() {
+        guard !isCheckingConsent else { return }
+
+        isCheckingConsent = true
+        NSLog("🔒 Checking AI consent status...")
+
+        Task {
+            do {
+                let status = try await APIManager.shared.getConsentStatus()
+                await MainActor.run {
+                    consentChecked = true
+                    showAIConsent = !status.aiConsent
+                    isCheckingConsent = false
+                    NSLog("🔒 Consent status: AI=\(status.aiConsent), Voice=\(status.voiceConsent)")
+                }
+            } catch {
+                await MainActor.run {
+                    // On error, assume consent is needed (safe default)
+                    consentChecked = true
+                    showAIConsent = true
+                    isCheckingConsent = false
+                    NSLog("❌ Failed to check consent status: \(error.localizedDescription)")
                 }
             }
         }

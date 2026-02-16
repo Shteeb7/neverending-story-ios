@@ -21,6 +21,9 @@ struct LibraryView: View {
     @State private var userName = ""
     @State private var isConfirmingName = false
     @State private var navigateToPremises = false
+    @State private var voiceConsent: Bool?
+    @State private var isLoadingConsent = false
+    @State private var showRevokeConfirmation = false
 
     var activeStories: [Story] {
         stories.filter { $0.status == "active" }
@@ -284,6 +287,25 @@ struct LibraryView: View {
 
                         Divider()
 
+                        // Voice Consent Section
+                        if let voiceConsent = voiceConsent {
+                            if voiceConsent {
+                                Button(role: .destructive, action: {
+                                    showRevokeConfirmation = true
+                                }) {
+                                    Label("Revoke Voice Consent", systemImage: "mic.slash")
+                                }
+                            } else {
+                                Label("Voice interviews: Disabled", systemImage: "mic.slash")
+                                    .foregroundColor(.secondary)
+                            }
+                        } else if isLoadingConsent {
+                            Label("Loading...", systemImage: "hourglass")
+                                .foregroundColor(.secondary)
+                        }
+
+                        Divider()
+
                         // Logout button
                         Button(role: .destructive, action: {
                             showLogoutConfirmation = true
@@ -305,6 +327,16 @@ struct LibraryView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to log out?")
+            }
+            .confirmationDialog("Revoke Voice Consent", isPresented: $showRevokeConfirmation, titleVisibility: .visible) {
+                Button("Revoke and Delete", role: .destructive) {
+                    Task {
+                        await revokeVoiceConsent()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will default you to text interviews going forward and delete your stored voice recordings within 30 days. You can re-consent to voice anytime.")
             }
             .navigationDestination(isPresented: $showOnboarding) {
                 OnboardingView()
@@ -335,6 +367,11 @@ struct LibraryView: View {
                 loadLibrary()
                 // NOTE: startPollingIfNeeded() is now called from inside loadLibrary()
                 // after stories are loaded, not here where stories array is still empty
+
+                // Load consent status
+                Task {
+                    await loadConsentStatus()
+                }
             }
             .onDisappear {
                 NSLog("📚 LibraryView disappeared - stopping polling")
@@ -503,6 +540,37 @@ struct LibraryView: View {
             }
         } catch {
             NSLog("⚠️ Failed to load user name: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Consent Management
+
+    private func loadConsentStatus() async {
+        isLoadingConsent = true
+
+        do {
+            let status = try await APIManager.shared.getConsentStatus()
+            await MainActor.run {
+                voiceConsent = status.voiceConsent
+                isLoadingConsent = false
+            }
+        } catch {
+            NSLog("⚠️ Failed to load consent status: \(error.localizedDescription)")
+            await MainActor.run {
+                isLoadingConsent = false
+            }
+        }
+    }
+
+    private func revokeVoiceConsent() async {
+        do {
+            try await APIManager.shared.revokeVoiceConsent()
+            await MainActor.run {
+                voiceConsent = false
+                NSLog("✅ Voice consent revoked successfully")
+            }
+        } catch {
+            NSLog("❌ Failed to revoke voice consent: \(error.localizedDescription)")
         }
     }
 
