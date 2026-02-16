@@ -197,6 +197,69 @@ class APIManager: ObservableObject {
         return response.clientSecret
     }
 
+    func getSystemPrompt(interviewType: String, medium: String, context: [String: Any]?) async throws -> (prompt: String, greeting: String) {
+        struct SystemPromptRequest: Encodable {
+            let interviewType: String
+            let medium: String
+            let context: [String: Any]?
+
+            enum CodingKeys: String, CodingKey {
+                case interviewType, medium, context
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(interviewType, forKey: .interviewType)
+                try container.encode(medium, forKey: .medium)
+                if let context = context {
+                    try container.encode(AnyCodable(context), forKey: .context)
+                }
+            }
+        }
+
+        // Helper to encode [String: Any]
+        struct AnyCodable: Encodable {
+            let value: Any
+            init(_ value: Any) { self.value = value }
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                if let dict = value as? [String: Any] {
+                    try container.encode(dict.mapValues { AnyCodable($0) })
+                } else if let array = value as? [Any] {
+                    try container.encode(array.map { AnyCodable($0) })
+                } else if let string = value as? String {
+                    try container.encode(string)
+                } else {
+                    try container.encode("\(value)")
+                }
+            }
+        }
+
+        struct SystemPromptResponse: Decodable {
+            let success: Bool
+            let prompt: String
+            let greeting: String
+        }
+
+        NSLog("📤 Fetching system prompt for \(interviewType) (\(medium))")
+
+        let body = try encoder.encode(SystemPromptRequest(
+            interviewType: interviewType,
+            medium: medium,
+            context: context
+        ))
+
+        let response: SystemPromptResponse = try await makeRequest(
+            endpoint: "/chat/system-prompt",
+            method: "POST",
+            body: body,
+            requiresAuth: true
+        )
+
+        NSLog("✅ System prompt fetched successfully")
+        return (prompt: response.prompt, greeting: response.greeting)
+    }
+
     func submitVoiceConversation(userId: String, conversation: String, preferences: [String: Any]? = nil) async throws {
         struct ConversationRequest: Encodable {
             let transcript: String
