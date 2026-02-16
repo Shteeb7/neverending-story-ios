@@ -239,7 +239,7 @@ struct PremiseSelectionView: View {
 
     private func confirmNameAndCreateStory() {
         guard let premise = selectedPremiseForCreation else { return }
-        guard let userId = authManager.user?.id else { return }
+        guard authManager.user?.id != nil else { return }
 
         isConfirmingName = true
 
