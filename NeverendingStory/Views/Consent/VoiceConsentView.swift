@@ -52,7 +52,7 @@ struct VoiceConsentView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             BulletPoint(text: "Your voice recordings are sent to third-party AI service providers for processing. Recordings are kept for one year after your story is generated, then automatically and permanently deleted.")
 
-                            BulletPoint(text: "You can request early deletion at any time by emailing privacy@mythweaver.com.")
+                            BulletPoint(text: "You can request early deletion at any time by emailing privacy@themythweaver.com.")
 
                             BulletPoint(text: "You can also revoke voice consent anytime in Settings, which will default you to text conversations and delete your stored recordings.")
                         }
