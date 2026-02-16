@@ -22,6 +22,7 @@
 		6B46302ECDEB2E04041FF250 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25289B9307F5D81EC25FA5DC /* LoginView.swift */; };
 		6D859A7D6A19498282B73265 /* BookFormationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28D0777A38A8455B82DA1086 /* BookFormationView.swift */; };
 		7890ABCD1234EF567890FEDC /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F1E8A9B2C4567890FEDCBA /* Secrets.swift */; };
+		7906005188231D649F1BA4A6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 758724A0F1973E37866AD9B3 /* Foundation.framework */; };
 		8250B66A88A2369D855D72B8 /* PremiseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE889A414CE445BBEE5172B5 /* PremiseCard.swift */; };
 		89F5E8EB1F3F6E9C2B296E87 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = 7F9BA64BB5D0D2B50C3B4C7A /* OpenAI */; };
 		9C335BE7FE5654CBE96AD5F6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2661108E4232961D5696DF00 /* OnboardingView.swift */; };
@@ -47,10 +48,22 @@
 		EC125E2C1DA74F4E986920BF /* BookCoverCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */; };
 		F8E7D6C5B4A39281E0D9C8B7 /* DNATransferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */; };
 		FE273B336776849CF06BA453 /* PremiseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */; };
+		FFB2D554F0C0737E23E0FCEC /* TextChatUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD3A58246F1D65B159DA28E /* TextChatUITests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		FD4A64EB7CBC583AB5F61148 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 532128039B6A326BB65D7FCE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 725A2AA3084EF5CD05D050FF;
+			remoteInfo = NeverendingStory;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		00FEF8F43CC479405800679B /* TextChatSessionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextChatSessionManager.swift; sourceTree = "<group>"; };
+		01900E004B79E9391DF5440A /* NeverendingStoryUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NeverendingStoryUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A2B3C4D5E6F789012345678 /* ProsperoCheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProsperoCheckInView.swift; sourceTree = "<group>"; };
 		25289B9307F5D81EC25FA5DC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		2661108E4232961D5696DF00 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -66,13 +79,16 @@
 		5C992418313E0D149445A242 /* VoiceSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionManager.swift; sourceTree = "<group>"; };
 		6325427DEA71DD9807039F2E /* BookReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookReaderView.swift; sourceTree = "<group>"; };
 		693810C2658C52F236C79A30 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		758724A0F1973E37866AD9B3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		791ABA3F795282196823DBCC /* ReaderSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsView.swift; sourceTree = "<group>"; };
+		7B63092B3F2BF07155861532 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7E9125212FA4DCBF3C5EC382 /* Chapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chapter.swift; sourceTree = "<group>"; };
 		868001A2E68EF491086C1847 /* NeverendingStory.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NeverendingStory.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8695003D3086D0A0333FD562 /* Story.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Story.swift; sourceTree = "<group>"; };
 		8A9C3777C78FA770863B9B9D /* APIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
 		8D3C65D53A89A44386F2D70D /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
 		9DEE559434A716CE477E3260 /* NeverendingStoryApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeverendingStoryApp.swift; sourceTree = "<group>"; };
+		ADD3A58246F1D65B159DA28E /* TextChatUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextChatUITests.swift; sourceTree = "<group>"; };
 		B07861C92F3AFE57007F78C3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B07861CF2F3BB277007F78C3 /* NeverendingStoryDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NeverendingStoryDebug.entitlements; sourceTree = "<group>"; };
 		B0C1D2E3F4A5B6C7D8E9F0A1 /* SequelGenerationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequelGenerationView.swift; sourceTree = "<group>"; };
@@ -91,6 +107,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2E1027FD656B5F1FD5E1992F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7906005188231D649F1BA4A6 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D77BB74745881C03721C1B2E /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -105,6 +129,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		003AA70BD4F1B0A569DA36A9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				811A3F214FD2137F0B78105D /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		4654E2686A25FDCCB84BACE7 /* NeverendingStory */ = {
 			isa = PBXGroup;
 			children = (
@@ -123,6 +155,7 @@
 			isa = PBXGroup;
 			children = (
 				868001A2E68EF491086C1847 /* NeverendingStory.app */,
+				01900E004B79E9391DF5440A /* NeverendingStoryUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -142,11 +175,31 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		59D66FAE74ECC9ADF93C63AE /* NeverendingStoryUITests */ = {
+			isa = PBXGroup;
+			children = (
+				ADD3A58246F1D65B159DA28E /* TextChatUITests.swift */,
+				7B63092B3F2BF07155861532 /* Info.plist */,
+			);
+			name = NeverendingStoryUITests;
+			path = NeverendingStoryUITests;
+			sourceTree = "<group>";
+		};
+		811A3F214FD2137F0B78105D /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				758724A0F1973E37866AD9B3 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		8E195EE82592F354409C32AB = {
 			isa = PBXGroup;
 			children = (
 				4654E2686A25FDCCB84BACE7 /* NeverendingStory */,
 				4877D89CE684C5CAB3394580 /* Products */,
+				003AA70BD4F1B0A569DA36A9 /* Frameworks */,
+				59D66FAE74ECC9ADF93C63AE /* NeverendingStoryUITests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -257,6 +310,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0C2CFEBF5BB7F4CB43005A37 /* NeverendingStoryUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8997541F439D31A35E3FD63B /* Build configuration list for PBXNativeTarget "NeverendingStoryUITests" */;
+			buildPhases = (
+				E44E2CDE00F132652261E76F /* Sources */,
+				2E1027FD656B5F1FD5E1992F /* Frameworks */,
+				DB36EBFECD8456FAA7460406 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				120B19066224864D6379FCF1 /* PBXTargetDependency */,
+			);
+			name = NeverendingStoryUITests;
+			productName = NeverendingStoryUITests;
+			productReference = 01900E004B79E9391DF5440A /* NeverendingStoryUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		725A2AA3084EF5CD05D050FF /* NeverendingStory */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AC56463C8260798ED54BA782 /* Build configuration list for PBXNativeTarget "NeverendingStory" */;
@@ -309,6 +380,7 @@
 			projectRoot = "";
 			targets = (
 				725A2AA3084EF5CD05D050FF /* NeverendingStory */,
+				0C2CFEBF5BB7F4CB43005A37 /* NeverendingStoryUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -319,6 +391,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				D1F3A7B9E2C4567890ABCDEF /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DB36EBFECD8456FAA7460406 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -367,7 +446,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E44E2CDE00F132652261E76F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FFB2D554F0C0737E23E0FCEC /* TextChatUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		120B19066224864D6379FCF1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = NeverendingStory;
+			target = 725A2AA3084EF5CD05D050FF /* NeverendingStory */;
+			targetProxy = FD4A64EB7CBC583AB5F61148 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		164ED286F86E2B0AF6F94014 /* Debug */ = {
@@ -530,6 +626,37 @@
 			};
 			name = Release;
 		};
+		830E48C1BA450DFDBCC7B337 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = NeverendingStoryUITests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.neverendingstory.NeverendingStoryUITests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = NeverendingStory;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F0191F196CF09D7BC48B54E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = NeverendingStoryUITests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.neverendingstory.NeverendingStoryUITests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = NeverendingStory;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -541,6 +668,15 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
+		};
+		8997541F439D31A35E3FD63B /* Build configuration list for PBXNativeTarget "NeverendingStoryUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				830E48C1BA450DFDBCC7B337 /* Release */,
+				F0191F196CF09D7BC48B54E9 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		AC56463C8260798ED54BA782 /* Build configuration list for PBXNativeTarget "NeverendingStory" */ = {
 			isa = XCConfigurationList;
