@@ -43,6 +43,7 @@
 		C4D5E6F7890123456789ABCD /* VersionIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4D5E6F789012345678ABCD /* VersionIndicator.swift */; };
 		C8ABB26DB7892FA809A882F8 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 693810C2658C52F236C79A30 /* LibraryView.swift */; };
 		CB87444C8AB3D556F1C9ED9A /* ReadingStateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A8480BEB6A8F87CAB0E06F /* ReadingStateManager.swift */; };
+		D175785E50D18FF18659E1E9 /* DebugUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE700419DBA11A17D19AF04 /* DebugUITests.swift */; };
 		D1F3A7B9E2C4567890ABCDEF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B07861C92F3AFE57007F78C3 /* Assets.xcassets */; };
 		DF644353404EDAA32ED0807D /* FirstLineCeremonyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AF767AC7287F073F7CDF2C /* FirstLineCeremonyView.swift */; };
 		EC125E2C1DA74F4E986920BF /* BookCoverCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */; };
@@ -98,6 +99,7 @@
 		C09C936859098AB469AB3C37 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		C188CAFDD9DAE8521F761700 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		C3AF767AC7287F073F7CDF2C /* FirstLineCeremonyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstLineCeremonyView.swift; sourceTree = "<group>"; };
+		CBE700419DBA11A17D19AF04 /* DebugUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DebugUITests.swift; sourceTree = "<group>"; };
 		D3F1E8A9B2C4567890FEDCBA /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseDetailSheet.swift; sourceTree = "<group>"; };
 		E5D67056CF0B7FFF5F5EFFF4 /* TextChatView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextChatView.swift; sourceTree = "<group>"; };
@@ -180,6 +182,7 @@
 			children = (
 				ADD3A58246F1D65B159DA28E /* TextChatUITests.swift */,
 				7B63092B3F2BF07155861532 /* Info.plist */,
+				CBE700419DBA11A17D19AF04 /* DebugUITests.swift */,
 			);
 			name = NeverendingStoryUITests;
 			path = NeverendingStoryUITests;
@@ -451,6 +454,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FFB2D554F0C0737E23E0FCEC /* TextChatUITests.swift in Sources */,
+				D175785E50D18FF18659E1E9 /* DebugUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

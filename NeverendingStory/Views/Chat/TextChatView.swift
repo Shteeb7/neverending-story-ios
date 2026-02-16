@@ -286,6 +286,7 @@ struct TextChatView: View {
                     .onSubmit {
                         sendMessage()
                     }
+                    .accessibilityIdentifier("textChatInput")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -319,6 +320,7 @@ struct TextChatView: View {
                             .fill(Color.white.opacity(0.1))
                     )
             }
+            .accessibilityIdentifier("sendMessageButton")
             .disabled(currentInput.isEmpty || chatSession.isLoading)
         }
     }
@@ -378,8 +380,8 @@ extension View {
 struct TextChatView_Previews: PreviewProvider {
     static var previews: some View {
         TextChatView(
-            interviewType: .onboarding,
-            context: nil,
+            interviewType: InterviewType.onboarding,
+            context: [:],
             onComplete: {
                 print("Chat complete!")
             }

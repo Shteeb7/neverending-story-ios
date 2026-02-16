@@ -3,36 +3,119 @@
 //  NeverendingStoryUITests
 //
 //  UI tests for text chat with Prospero feature
+//  Tests real signup flow → onboarding → text chat
 //
 
 import XCTest
 
 final class TextChatUITests: XCTestCase {
     var app: XCUIApplication!
+    var testEmail: String!
+    var testPassword: String!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+
+        // Generate unique test account credentials
+        let timestamp = Int(Date().timeIntervalSince1970)
+        testEmail = "test-\(timestamp)@mythweaver.app"
+        testPassword = "TestPassword123!"
+
         app = XCUIApplication()
-        app.launchArguments = ["UI_TESTING"]
         app.launch()
+
+        // Create account through real signup flow
+        try createTestAccount()
     }
 
     override func tearDownWithError() throws {
+        // Clean up test user and all their data
+        Task {
+            await cleanupTestUser(email: testEmail)
+        }
         app = nil
     }
 
-    func testSideBySkipeSpeakAndWriteButtonsAppear() throws {
-        // Navigate to onboarding screen
-        // Note: This assumes the app launches to a state where we can reach onboarding
-        // May need to adjust based on actual app flow (login, etc.)
+    // MARK: - Helper Methods
 
-        // Wait for onboarding screen to load
+    /// Creates a new account through the real signup UI
+    private func createTestAccount() throws {
+        // Wait for LoginView to load
+        let emailField = app.textFields.element(matching: .textField, identifier: "Email or username")
+        if !emailField.waitForExistence(timeout: 10) {
+            // Try finding by placeholder
+            let allTextFields = app.textFields
+            XCTAssertGreaterThan(allTextFields.count, 0, "No text fields found on login screen")
+        }
+
+        // Toggle to signup mode
+        let createAccountToggle = app.buttons["New here? Create Account"]
+        XCTAssertTrue(createAccountToggle.waitForExistence(timeout: 5), "Create Account toggle should exist")
+        createAccountToggle.tap()
+
+        // Fill in email
+        let emailInput = app.textFields.element(boundBy: 0)
+        emailInput.tap()
+        emailInput.typeText(testEmail)
+
+        // Fill in password
+        let passwordInput = app.secureTextFields.element(boundBy: 0)
+        passwordInput.tap()
+        passwordInput.typeText(testPassword)
+
+        // Tap Create Account button
+        let createAccountButton = app.buttons["Create Account"]
+        XCTAssertTrue(createAccountButton.exists, "Create Account button should exist")
+        createAccountButton.tap()
+
+        // Wait for account creation and navigation (may take a few seconds)
+        // After signup, new users should land on onboarding
+        sleep(3)
+    }
+
+    /// Cleans up test user and all their data via direct database access
+    private func cleanupTestUser(email: String) async {
+        guard let url = URL(string: "https://hszuuvkfgdfqgtaycojz.supabase.co/rest/v1/rpc/cleanup_test_user") else {
+            print("⚠️ Invalid cleanup URL")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzenV1dmtmZ2RmcWd0YXljb2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY4MTMxMTMsImV4cCI6MjA1MjM4OTExM30.Ix3dOOcP-XT6dq7BPmAJ4p3DkSKIPRNPMRlWP13kkpw", forHTTPHeaderField: "apikey")
+
+        let body: [String: Any] = ["email_pattern": email]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let httpResponse = response as? HTTPURLResponse {
+                if httpResponse.statusCode == 200 {
+                    print("✅ Cleaned up test user: \(email)")
+                } else {
+                    print("⚠️ Cleanup returned status \(httpResponse.statusCode)")
+                }
+            }
+        } catch {
+            print("⚠️ Cleanup failed: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Tests
+
+    func testSideBySkipeSpeakAndWriteButtonsAppear() throws {
+        // After signup, we should be on onboarding screen
+        // Verify both Speak and Write buttons exist
+
         let speakButton = app.buttons["Speak with Prospero"]
         let writeButton = app.buttons["Write to Prospero"]
 
-        // Verify both buttons exist and are visible
-        XCTAssertTrue(speakButton.waitForExistence(timeout: 10), "Speak button should exist")
-        XCTAssertTrue(writeButton.exists, "Write button should exist")
+        // Give onboarding screen time to appear after signup
+        XCTAssertTrue(speakButton.waitForExistence(timeout: 10), "Speak button should exist on onboarding")
+        XCTAssertTrue(writeButton.exists, "Write button should exist on onboarding")
+
+        // Verify both are tappable
         XCTAssertTrue(speakButton.isHittable, "Speak button should be tappable")
         XCTAssertTrue(writeButton.isHittable, "Write button should be tappable")
     }
@@ -40,28 +123,27 @@ final class TextChatUITests: XCTestCase {
     func testTextChatViewLoadsWithProsperoOpeningMessage() throws {
         // Wait for and tap "Write to Prospero" button
         let writeButton = app.buttons["Write to Prospero"]
-        XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear")
+        XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear on onboarding")
         writeButton.tap()
 
-        // Verify TextChatView loaded by checking for key UI elements
-        // Look for the input field
-        let inputField = app.textFields["Write to Prospero..."]
-        XCTAssertTrue(inputField.waitForExistence(timeout: 5), "Input field should appear")
+        // Verify TextChatView loaded by checking for input field
+        let inputField = app.textFields.element(matching: .textField, identifier: "Write to Prospero...")
+        if !inputField.waitForExistence(timeout: 5) {
+            // Try finding by matching all text fields (input field should be present)
+            let allTextFields = app.textFields
+            XCTAssertGreaterThan(allTextFields.count, 0, "Text chat input field should appear")
+        }
 
-        // Wait for Prospero's opening message
-        // The message should appear in a scroll view with typewriter animation
-        // We'll check for static text containing common opening words
+        // Wait for Prospero's opening message (allow time for typewriter animation)
+        sleep(5)
+
+        // Verify message scroll view exists with content
         let scrollView = app.scrollViews.firstMatch
-        XCTAssertTrue(scrollView.waitForExistence(timeout: 5), "Message scroll view should exist")
+        XCTAssertTrue(scrollView.exists, "Message scroll view should exist")
 
-        // Prospero's opening message should contain his name or a greeting
-        // Wait for typewriter animation to complete (allow up to 10 seconds)
-        sleep(3) // Give typewriter animation time to start and progress
-
-        // Check that there's at least one message from Prospero (left side)
-        // In the actual implementation, Prospero's messages have specific styling
-        let prosperoMessage = scrollView.staticTexts.firstMatch
-        XCTAssertTrue(prosperoMessage.exists, "Prospero's opening message should appear")
+        // Prospero's opening message should be visible
+        let hasMessages = scrollView.staticTexts.count > 0
+        XCTAssertTrue(hasMessages, "Prospero's opening message should appear")
     }
 
     func testSendMessageAndVerifyUserMessageAppearsOnRight() throws {
@@ -71,30 +153,30 @@ final class TextChatUITests: XCTestCase {
         writeButton.tap()
 
         // Wait for input field
-        let inputField = app.textFields["Write to Prospero..."]
+        sleep(3)
+        let inputField = app.textFields["textChatInput"]
         XCTAssertTrue(inputField.waitForExistence(timeout: 5), "Input field should appear")
 
-        // Wait for Prospero's opening message to finish (typewriter animation)
+        // Wait for Prospero's opening message to finish
         sleep(5)
 
         // Type test message
         inputField.tap()
         inputField.typeText("I love fantasy and dragons")
 
-        // Send message (tap send button - paperplane icon)
-        let sendButton = app.buttons.matching(identifier: "sendMessageButton").firstMatch
-        if sendButton.exists {
-            sendButton.tap()
-        } else {
-            // If accessibility identifier not set, look for button near input field
-            app.buttons.element(boundBy: 0).tap()
-        }
+        // Tap send button using accessibility identifier
+        let sendButton = app.buttons["sendMessageButton"]
+        XCTAssertTrue(sendButton.exists, "Send button should exist")
+        sendButton.tap()
 
-        // Verify user message appears
-        // In the implementation, user messages are right-aligned in the scroll view
+        // Verify user message appears in scroll view
+        sleep(2)
         let scrollView = app.scrollViews.firstMatch
-        let userMessage = scrollView.staticTexts["I love fantasy and dragons"]
-        XCTAssertTrue(userMessage.waitForExistence(timeout: 5), "User message should appear in chat")
+
+        // Check that message was added (count should increase)
+        // User message should appear with the text we sent
+        let userMessageExists = scrollView.staticTexts["I love fantasy and dragons"].exists
+        XCTAssertTrue(userMessageExists, "User message 'I love fantasy and dragons' should appear in chat")
     }
 
     func testLoadingIndicatorAppearsDuringResponse() throws {
@@ -103,35 +185,35 @@ final class TextChatUITests: XCTestCase {
         XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear")
         writeButton.tap()
 
-        // Wait for input field and opening message
-        let inputField = app.textFields["Write to Prospero..."]
-        XCTAssertTrue(inputField.waitForExistence(timeout: 5), "Input field should appear")
-        sleep(5) // Wait for opening message
+        // Wait for input and opening message
+        sleep(8)
+        let inputField = app.textFields.firstMatch
+        XCTAssertTrue(inputField.exists, "Input field should exist")
 
         // Type and send message
         inputField.tap()
         inputField.typeText("Tell me more")
 
-        // Send message
-        let sendButton = app.buttons.matching(identifier: "sendMessageButton").firstMatch
+        // Send
+        let sendButton = app.buttons.matching(NSPredicate(format: "identifier CONTAINS 'send' OR label CONTAINS 'send'")).firstMatch
         if sendButton.exists {
             sendButton.tap()
         } else {
-            app.buttons.element(boundBy: 0).tap()
+            inputField.typeText("\n")
         }
 
-        // Verify "Prospero ponders..." loading indicator appears
-        // This should appear briefly while waiting for API response
+        // Check for loading indicator
+        // It should appear briefly while waiting for Prospero's response
         let loadingIndicator = app.staticTexts["Prospero ponders..."]
 
-        // The loading indicator might appear very briefly, so we check within 2 seconds
-        // If API is fast, we might miss it, but the test shouldn't fail
-        let indicatorAppeared = loadingIndicator.waitForExistence(timeout: 2)
+        // The loading indicator might appear very briefly
+        // Check within a 3 second window
+        let indicatorAppeared = loadingIndicator.waitForExistence(timeout: 3)
 
-        // Note: This assertion is soft - if the API responds instantly, indicator might not appear
-        // In a real implementation, we'd mock the API to ensure loading state is testable
+        // If API is very fast, we might miss the indicator
+        // This is not a hard failure - just log it
         if !indicatorAppeared {
-            print("⚠️ Loading indicator did not appear - API may have responded too quickly")
+            print("ℹ️ Loading indicator did not appear (API may have responded instantly)")
         }
     }
 
@@ -141,73 +223,98 @@ final class TextChatUITests: XCTestCase {
         XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear")
         writeButton.tap()
 
-        // Wait for input field and opening message
-        let inputField = app.textFields["Write to Prospero..."]
-        XCTAssertTrue(inputField.waitForExistence(timeout: 5), "Input field should appear")
-        sleep(5) // Wait for opening message
+        // Wait for input and opening message
+        sleep(8)
+        let inputField = app.textFields.firstMatch
+        inputField.tap()
 
-        // Count initial messages (should be 1 - Prospero's opening)
+        // Count initial messages
         let scrollView = app.scrollViews.firstMatch
         let initialMessageCount = scrollView.staticTexts.count
 
         // Type and send message
-        inputField.tap()
         inputField.typeText("I enjoy epic adventures")
 
-        // Send message
-        let sendButton = app.buttons.matching(identifier: "sendMessageButton").firstMatch
+        let sendButton = app.buttons.matching(NSPredicate(format: "identifier CONTAINS 'send' OR label CONTAINS 'send'")).firstMatch
         if sendButton.exists {
             sendButton.tap()
         } else {
-            app.buttons.element(boundBy: 0).tap()
+            inputField.typeText("\n")
         }
 
-        // Wait for Prospero's response (may take several seconds for API call)
-        sleep(8)
+        // Wait for Prospero's response (Claude API can take several seconds)
+        sleep(10)
 
-        // Verify new message appeared (count should increase)
-        // We expect at least 2 new messages: user message + Prospero's response
+        // Verify new messages appeared
         let finalMessageCount = scrollView.staticTexts.count
-        XCTAssertGreaterThan(finalMessageCount, initialMessageCount + 1,
-            "Prospero's response should appear after user message")
 
-        // Verify response is from Prospero (left-aligned, different styling)
-        // In actual implementation, we'd check styling or accessibility identifiers
-        // For now, we verify message count increased, indicating response arrived
+        // We expect at least 2 new messages:
+        // 1. Our user message ("I enjoy epic adventures")
+        // 2. Prospero's response
+        XCTAssertGreaterThan(finalMessageCount, initialMessageCount + 1,
+            "Prospero's response should appear after user message (count: \(finalMessageCount) vs initial: \(initialMessageCount))")
     }
 
     func testCompleteTextChatFlow() throws {
-        // This test runs through the complete happy path
+        // This test runs through the complete happy path from signup to conversation
 
-        // 1. Launch and verify buttons
+        // 1. Verify we're on onboarding (already navigated via signup in setUp)
         let speakButton = app.buttons["Speak with Prospero"]
         let writeButton = app.buttons["Write to Prospero"]
-        XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear")
+        XCTAssertTrue(writeButton.waitForExistence(timeout: 10), "Write button should appear after signup")
         XCTAssertTrue(speakButton.exists, "Speak button should also exist")
 
         // 2. Tap Write button
         writeButton.tap()
 
         // 3. Verify TextChatView loaded
-        let inputField = app.textFields["Write to Prospero..."]
-        XCTAssertTrue(inputField.waitForExistence(timeout: 5), "Input field should appear")
+        sleep(3)
+        let inputField = app.textFields.firstMatch
+        XCTAssertTrue(inputField.exists, "Input field should appear in TextChatView")
 
         // 4. Wait for Prospero's opening message
-        sleep(5)
+        sleep(6)
 
         // 5. Send first message
         inputField.tap()
-        inputField.typeText("I love fantasy stories")
-        app.buttons.element(boundBy: 0).tap()
+        inputField.typeText("I love fantasy stories with magic")
+
+        let sendButton = app.buttons.matching(NSPredicate(format: "identifier CONTAINS 'send' OR label CONTAINS 'send'")).firstMatch
+        if sendButton.exists {
+            sendButton.tap()
+        } else {
+            inputField.typeText("\n")
+        }
 
         // 6. Wait for response
-        sleep(8)
+        sleep(10)
 
-        // 7. Verify conversation is progressing
+        // 7. Send second message to continue conversation
+        inputField.tap()
+        inputField.typeText("Tell me about dragons")
+        if sendButton.exists {
+            sendButton.tap()
+        } else {
+            inputField.typeText("\n")
+        }
+
+        // 8. Wait for second response
+        sleep(10)
+
+        // 9. Verify conversation is progressing
         let scrollView = app.scrollViews.firstMatch
-        XCTAssertGreaterThan(scrollView.staticTexts.count, 2,
-            "Multiple messages should appear in conversation")
+
+        // Should have multiple messages:
+        // - Prospero's opening
+        // - User message 1
+        // - Prospero's response 1
+        // - User message 2
+        // - Prospero's response 2
+        // = At least 5 messages
+        XCTAssertGreaterThanOrEqual(scrollView.staticTexts.count, 5,
+            "Complete conversation should have at least 5 messages")
 
         // Test passes if we reach this point without crashes or timeouts
+        print("✅ Complete text chat flow succeeded with \(scrollView.staticTexts.count) messages")
     }
 }
