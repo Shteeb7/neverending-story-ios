@@ -11,11 +11,13 @@
 		054C6BF7556880C7EBCC15DC /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A9C3777C78FA770863B9B9D /* APIManager.swift */; };
 		0D085741BDF97E0490A70393 /* NeverendingStoryApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DEE559434A716CE477E3260 /* NeverendingStoryApp.swift */; };
 		0F541BC61E2D1B4A057C85C9 /* LaunchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3534A61FFD543E4AAF93946E /* LaunchView.swift */; };
+		0FCBAA4A6AB230A10E62B529 /* AgeGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE633133A5FF09EA5E3C1786 /* AgeGateView.swift */; };
 		1DBCE177DF4E586ED495BD97 /* ReaderSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 791ABA3F795282196823DBCC /* ReaderSettingsView.swift */; };
 		398600DE1B841C78B98C4099 /* VoiceConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AFC875829C7732BAB11D8E /* VoiceConsentView.swift */; };
 		39B303E18D2D435877B7BD53 /* BookReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6325427DEA71DD9807039F2E /* BookReaderView.swift */; };
 		3F6A33D93264494128BA1A92 /* TextChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5D67056CF0B7FFF5F5EFFF4 /* TextChatView.swift */; };
 		4AA2314D04169970D788F77C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = BDD92E43D4F1D00BA71A6B51 /* Supabase */; };
+		5BBF755110FB8C4D7F499E21 /* AgeGateUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC652D8CECDA5409F5D73647 /* AgeGateUITests.swift */; };
 		5FBDD2CA9BC1F60C8793FF27 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F95DABAFB4DEFE47A9F2CD /* AuthManager.swift */; };
 		60FE83E01B4959709B91D422 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = C188CAFDD9DAE8521F761700 /* User.swift */; };
 		616D669164FCBBE32D7C7EFA /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = C09C936859098AB469AB3C37 /* AppConfig.swift */; };
@@ -101,6 +103,8 @@
 		B0C1D2E3F4A5B6C7D8E9F0A1 /* SequelGenerationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequelGenerationView.swift; sourceTree = "<group>"; };
 		B299E9B89218A56A35F0B5D7 /* FeedbackModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackModalView.swift; sourceTree = "<group>"; };
 		BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCoverCard.swift; sourceTree = "<group>"; };
+		BC652D8CECDA5409F5D73647 /* AgeGateUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgeGateUITests.swift; sourceTree = "<group>"; };
+		BE633133A5FF09EA5E3C1786 /* AgeGateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgeGateView.swift; sourceTree = "<group>"; };
 		BE889A414CE445BBEE5172B5 /* PremiseCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseCard.swift; sourceTree = "<group>"; };
 		C09C936859098AB469AB3C37 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		C188CAFDD9DAE8521F761700 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
@@ -191,6 +195,7 @@
 				7B63092B3F2BF07155861532 /* Info.plist */,
 				CBE700419DBA11A17D19AF04 /* DebugUITests.swift */,
 				42C71EBED49796907D9ACC3C /* ConsentFlowUITests.swift */,
+				BC652D8CECDA5409F5D73647 /* AgeGateUITests.swift */,
 			);
 			name = NeverendingStoryUITests;
 			path = NeverendingStoryUITests;
@@ -302,6 +307,7 @@
 				39A9D66D3EE1466B4AB229D6 /* DedicationView.swift */,
 				3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */,
 				4F3AF938CA8AE4F77E0D0845 /* PremiseSelectionView.swift */,
+				BE633133A5FF09EA5E3C1786 /* AgeGateView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -466,6 +472,7 @@
 				3F6A33D93264494128BA1A92 /* TextChatView.swift in Sources */,
 				9BD77D467F39674616E27536 /* AIConsentView.swift in Sources */,
 				398600DE1B841C78B98C4099 /* VoiceConsentView.swift in Sources */,
+				0FCBAA4A6AB230A10E62B529 /* AgeGateView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -476,6 +483,7 @@
 				FFB2D554F0C0737E23E0FCEC /* TextChatUITests.swift in Sources */,
 				D175785E50D18FF18659E1E9 /* DebugUITests.swift in Sources */,
 				C022596218840ED6935C6ABC /* ConsentFlowUITests.swift in Sources */,
+				5BBF755110FB8C4D7F499E21 /* AgeGateUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

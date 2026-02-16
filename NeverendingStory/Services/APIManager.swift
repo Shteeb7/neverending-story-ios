@@ -14,6 +14,8 @@ enum APIError: LocalizedError {
     case decodingError(Error)
     case serverError(String)
     case unauthorized
+    case ageRequirementNotMet
+    case requestFailed(statusCode: Int)
 
     var errorDescription: String? {
         switch self {
@@ -27,6 +29,10 @@ enum APIError: LocalizedError {
             return "Failed to decode response: \(error.localizedDescription)"
         case .serverError(let message):
             return message
+        case .ageRequirementNotMet:
+            return "Age requirement not met"
+        case .requestFailed(let statusCode):
+            return "Request failed with status code \(statusCode)"
         case .unauthorized:
             return "Authentication required. Please log in again."
         }
@@ -361,6 +367,39 @@ class APIManager: ObservableObject {
             NSLog("⚠️ Failed to fetch user preferences: \(error)")
             return nil
         }
+    }
+
+    func saveDOB(birthMonth: Int, birthYear: Int) async throws {
+        struct SaveDOBRequest: Encodable {
+            let birthMonth: Int
+            let birthYear: Int
+        }
+
+        struct SaveDOBResponse: Decodable {
+            let success: Bool
+            let age: Int?
+            let is_minor: Bool?
+        }
+
+        let body = try encoder.encode(SaveDOBRequest(birthMonth: birthMonth, birthYear: birthYear))
+        let _: SaveDOBResponse = try await makeRequest(
+            endpoint: "/onboarding/save-dob",
+            method: "POST",
+            body: body
+        )
+    }
+
+    func updateIsMinor(userId: String, isMinor: Bool) async throws {
+        struct UpdateIsMinorRequest: Encodable {
+            let isMinor: Bool
+        }
+
+        let body = try encoder.encode(UpdateIsMinorRequest(isMinor: isMinor))
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/settings/update-is-minor",
+            method: "POST",
+            body: body
+        )
     }
 
     func getCompletionContext(storyId: String) async throws -> [String: Any]? {

@@ -191,6 +191,9 @@ struct LaunchView: View {
                     isCheckingConsent = false
                     NSLog("🔒 Consent status: AI=\(status.aiConsent), Voice=\(status.voiceConsent)")
                 }
+
+                // After consent check, recompute is_minor flag (Part C: Age Gate)
+                recomputeIsMinor()
             } catch {
                 await MainActor.run {
                     // On error, assume consent is needed (safe default)
@@ -199,6 +202,50 @@ struct LaunchView: View {
                     isCheckingConsent = false
                     NSLog("❌ Failed to check consent status: \(error.localizedDescription)")
                 }
+            }
+        }
+    }
+
+    /// Recomputes is_minor flag based on current age (Part C: Age Gate)
+    /// Runs once per app launch after authentication
+    private func recomputeIsMinor() {
+        Task {
+            guard let userId = authManager.user?.id else { return }
+
+            do {
+                // Fetch current user preferences
+                guard let prefs = try await APIManager.shared.getUserPreferences(userId: userId),
+                      let birthMonth = prefs["birth_month"] as? Int,
+                      let birthYear = prefs["birth_year"] as? Int else {
+                    // No DOB data (existing users from before age gate) - skip
+                    NSLog("📅 No birth_month/birth_year found - skipping is_minor recomputation (existing user)")
+                    return
+                }
+
+                // Calculate current age using conservative month/year approach
+                let now = Date()
+                let calendar = Calendar.current
+                let currentYear = calendar.component(.year, from: now)
+                let currentMonth = calendar.component(.month, from: now)
+
+                var age = currentYear - birthYear
+                if currentMonth < birthMonth {
+                    age -= 1
+                }
+
+                let shouldBeMinor = age < 18
+                let currentIsMinor = prefs["is_minor"] as? Bool ?? false
+
+                // Update if flag doesn't match reality (e.g., user turned 18)
+                if shouldBeMinor != currentIsMinor {
+                    NSLog("📅 Age recomputation: updating is_minor from \(currentIsMinor) to \(shouldBeMinor) (age: \(age))")
+                    try await APIManager.shared.updateIsMinor(userId: userId, isMinor: shouldBeMinor)
+                } else {
+                    NSLog("📅 is_minor flag is correct (\(currentIsMinor)), no update needed (age: \(age))")
+                }
+            } catch {
+                NSLog("⚠️ Failed to recompute is_minor: \(error.localizedDescription)")
+                // Non-blocking - don't gate app on this
             }
         }
     }

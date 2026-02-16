@@ -14,6 +14,10 @@ struct LoginView: View {
     @State private var isSignUpMode = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showAgeGate = false
+    @State private var birthMonth: Int? = nil
+    @State private var birthYear: Int? = nil
+    @State private var isMinor: Bool? = nil
 
     var body: some View {
         ZStack {
@@ -124,7 +128,18 @@ struct LoginView: View {
                     .opacity((authManager.isLoading || email.isEmpty || password.isEmpty) ? 0.5 : 1.0)
 
                     // Toggle between Sign In / Sign Up
-                    Button(action: { isSignUpMode.toggle() }) {
+                    Button(action: {
+                        if isSignUpMode {
+                            // Switching from signup to signin - clear DOB data
+                            isSignUpMode = false
+                            birthMonth = nil
+                            birthYear = nil
+                            isMinor = nil
+                        } else {
+                            // Switching from signin to signup - show age gate first
+                            showAgeGate = true
+                        }
+                    }) {
                         Text(isSignUpMode ? "Already have an account? Sign In" : "New here? Create Account")
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.8))
@@ -188,6 +203,16 @@ struct LoginView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(isPresented: $showAgeGate) {
+            AgeGateView(onAgeVerified: { month, year, minor in
+                // Age verified - save DOB and proceed to signup form
+                birthMonth = month
+                birthYear = year
+                isMinor = minor
+                showAgeGate = false
+                isSignUpMode = true
+            })
+        }
         .alert("Authentication Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -201,7 +226,17 @@ struct LoginView: View {
         Task {
             do {
                 if isSignUpMode {
+                    // Create account
                     try await authManager.signUpWithEmail(email: email, password: password)
+
+                    // After successful signup, save DOB to backend
+                    if let month = birthMonth, let year = birthYear {
+                        NSLog("📅 Saving DOB after account creation: \(month)/\(year)")
+                        try await APIManager.shared.saveDOB(birthMonth: month, birthYear: year)
+                        NSLog("✅ DOB saved successfully")
+                    } else {
+                        NSLog("⚠️ No DOB data to save (should not happen - age gate should have set this)")
+                    }
                 } else {
                     try await authManager.signInWithEmail(email: email, password: password)
                 }
