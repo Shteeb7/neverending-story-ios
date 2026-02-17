@@ -1284,18 +1284,21 @@ class VoiceSessionManager: ObservableObject {
         let instructions: String
         do {
             let result = try await APIManager.shared.getSystemPrompt(
-                interviewType: "bug_report_voice",
+                persona: "peggy",
+                reportType: "bug_report",
                 medium: "voice",
                 context: contextDict
             )
             instructions = result.prompt
             cachedGreeting = result.greeting
-            NSLog("✅ Fetched bug_report_voice system prompt from backend (\(instructions.count) chars)")
+            NSLog("✅ Fetched Peggy bug_report system prompt from backend (\(instructions.count) chars)")
         } catch {
             NSLog("⚠️ Failed to fetch Peggy prompt from backend, using fallback: \(error)")
-            let userName = context.userName ?? "friend"
-            instructions = "You are Peggy, a friendly and empathetic bug catcher. Help \(userName) report a bug. Ask what went wrong, what they expected, and how to reproduce it. Be warm and reassuring."
-            cachedGreeting = "Hey \(userName)! I'm Peggy, your friendly bug catcher. Tell me what's going wrong, and I'll make sure the team knows about it!"
+            let userName = context.userName ?? "hon"
+            instructions = """
+            You are PEGGY — a no-nonsense 1950s phone operator from Long Island. Sarcastic, warm, sharp. You say "hon", "sugar", "aw jeez". Keep every response to 1 sentence max. You're taking a complaint about a busted switchboard line (the app). Get the facts fast: what happened, what should've happened. Then say "Thanks hon! We'll reach out if we need more info" and call submit_bug_report. Do NOT give long closings.
+            """
+            cachedGreeting = "Alright \(userName), sounds like the switchboard's actin' up. Tell me what happened."
         }
 
         let config: [String: Any] = [
@@ -1317,7 +1320,7 @@ class VoiceSessionManager: ObservableObject {
                     "type": "near_field"
                 ] as [String: Any],
                 "tools": tools,
-                "max_response_output_tokens": 1000
+                "max_response_output_tokens": 200
             ]
         ]
 
@@ -1363,18 +1366,21 @@ class VoiceSessionManager: ObservableObject {
         let instructions: String
         do {
             let result = try await APIManager.shared.getSystemPrompt(
-                interviewType: "suggestion_voice",
+                persona: "peggy",
+                reportType: "suggestion",
                 medium: "voice",
                 context: contextDict
             )
             instructions = result.prompt
             cachedGreeting = result.greeting
-            NSLog("✅ Fetched suggestion_voice system prompt from backend (\(instructions.count) chars)")
+            NSLog("✅ Fetched Peggy suggestion system prompt from backend (\(instructions.count) chars)")
         } catch {
             NSLog("⚠️ Failed to fetch Peggy prompt from backend, using fallback: \(error)")
-            let userName = context.userName ?? "friend"
-            instructions = "You are Peggy, an enthusiastic feature collector. Help \(userName) share their idea. Ask what they want, why it would be useful, and how they'd use it. Be excited and encouraging."
-            cachedGreeting = "Hey \(userName)! I'm Peggy! I LOVE hearing new ideas. What would you like to see in Mythweaver?"
+            let userName = context.userName ?? "hon"
+            instructions = """
+            You are PEGGY — a no-nonsense 1950s phone operator from Long Island. Sarcastic, warm, sharp. You say "hon", "sugar", "aw jeez". Keep every response to 1 sentence max. You're collecting a feature suggestion. Get the idea, ask why it matters, then say "Love it, I'll pass it to the brass. Thanks hon!" and call submit_bug_report. Do NOT give long closings.
+            """
+            cachedGreeting = "Alright \(userName), I'm all ears. What's the big idea?"
         }
 
         let config: [String: Any] = [
@@ -1396,7 +1402,7 @@ class VoiceSessionManager: ObservableObject {
                     "type": "near_field"
                 ] as [String: Any],
                 "tools": tools,
-                "max_response_output_tokens": 1000
+                "max_response_output_tokens": 200
             ]
         ]
 

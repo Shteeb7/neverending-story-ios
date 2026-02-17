@@ -588,19 +588,29 @@ class APIManager: ObservableObject {
         return response.clientSecret
     }
 
-    func getSystemPrompt(interviewType: String, medium: String, context: [String: Any]?) async throws -> (prompt: String, greeting: String) {
+    func getSystemPrompt(
+        persona: String? = nil,
+        interviewType: String? = nil,
+        reportType: String? = nil,
+        medium: String,
+        context: [String: Any]?
+    ) async throws -> (prompt: String, greeting: String) {
         struct SystemPromptRequest: Encodable {
-            let interviewType: String
+            let persona: String?
+            let interviewType: String?
+            let reportType: String?
             let medium: String
             let context: [String: Any]?
 
             enum CodingKeys: String, CodingKey {
-                case interviewType, medium, context
+                case persona, interviewType, reportType, medium, context
             }
 
             func encode(to encoder: Encoder) throws {
                 var container = encoder.container(keyedBy: CodingKeys.self)
-                try container.encode(interviewType, forKey: .interviewType)
+                try container.encodeIfPresent(persona, forKey: .persona)
+                try container.encodeIfPresent(interviewType, forKey: .interviewType)
+                try container.encodeIfPresent(reportType, forKey: .reportType)
                 try container.encode(medium, forKey: .medium)
                 if let context = context {
                     try container.encode(AnyCodable(context), forKey: .context)
@@ -632,10 +642,12 @@ class APIManager: ObservableObject {
             let greeting: String
         }
 
-        NSLog("📤 Fetching system prompt for \(interviewType) (\(medium))")
+        NSLog("📤 Fetching system prompt for persona=\(persona ?? "prospero") type=\(interviewType ?? reportType ?? "unknown") (\(medium))")
 
         let body = try encoder.encode(SystemPromptRequest(
+            persona: persona,
             interviewType: interviewType,
+            reportType: reportType,
             medium: medium,
             context: context
         ))
