@@ -24,6 +24,7 @@ struct LibraryView: View {
     @State private var voiceConsent: Bool?
     @State private var isLoadingConsent = false
     @State private var showRevokeConfirmation = false
+    @State private var showVoiceConsentSheet = false
 
     var activeStories: [Story] {
         stories.filter { $0.status == "active" }
@@ -285,8 +286,11 @@ struct LibraryView: View {
                                     Label("Revoke Voice Consent", systemImage: "mic.slash")
                                 }
                             } else {
-                                Label("Voice interviews: Disabled", systemImage: "mic.slash")
-                                    .foregroundColor(.secondary)
+                                Button(action: {
+                                    showVoiceConsentSheet = true
+                                }) {
+                                    Label("Enable Voice Interviews", systemImage: "mic.fill")
+                                }
                             }
                         } else if isLoadingConsent {
                             Label("Loading...", systemImage: "hourglass")
@@ -350,6 +354,19 @@ struct LibraryView: View {
                     }
                 )
                 .interactiveDismissDisabled(true)
+            }
+            .sheet(isPresented: $showVoiceConsentSheet) {
+                VoiceConsentView(onConsent: {
+                    // Refresh voice consent status after granting
+                    Task {
+                        do {
+                            let status = try await APIManager.shared.getConsentStatus()
+                            voiceConsent = status.voiceConsent
+                        } catch {
+                            NSLog("⚠️ Failed to refresh consent status: \(error)")
+                        }
+                    }
+                })
             }
             .onAppear {
                 // Set current screen for bug reporting

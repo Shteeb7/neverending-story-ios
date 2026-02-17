@@ -20,6 +20,7 @@ struct BugReportView: View {
     @State private var showTextChat = false
     @State private var consentStatus: ConsentStatus?
     @State private var showConsentScreen = false
+    @State private var showVoiceConsentSheet = false
 
     // Squashed reports state
     @State private var squashedReports: [BugReportNotificationManager.BugReportUpdate] = []
@@ -110,42 +111,35 @@ struct BugReportView: View {
                                     .font(.headline)
                                     .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.8))
 
-                                HStack(spacing: 16) {
+                                HStack(alignment: .top, spacing: 16) {
                                     // Voice button
-                                    VStack(spacing: 8) {
-                                        Button(action: {
-                                            guard let consent = consentStatus else { return }
-                                            if !consent.aiConsent {
-                                                showConsentScreen = true
-                                            } else if consent.voiceConsent {
-                                                showVoiceInterview = true
-                                            }
-                                        }) {
-                                            HStack(spacing: 8) {
-                                                Image(systemName: "mic.fill")
-                                                    .font(.system(size: 18))
-                                                Text("Voice")
-                                                    .font(.headline)
-                                            }
-                                            .foregroundColor(.white)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
-                                            .background(
-                                                (consentStatus?.voiceConsent == true) ?
-                                                Color.accentColor : Color.gray
-                                            )
-                                            .cornerRadius(12)
+                                    Button(action: {
+                                        guard let consent = consentStatus else { return }
+                                        if !consent.aiConsent {
+                                            showConsentScreen = true
+                                        } else if consent.voiceConsent {
+                                            showVoiceInterview = true
+                                        } else {
+                                            // Voice not enabled — show consent view so they can opt in
+                                            showVoiceConsentSheet = true
                                         }
-                                        .accessibilityIdentifier("voiceChatButton")
-                                        .disabled(consentStatus?.voiceConsent != true)
-
-                                        if consentStatus?.voiceConsent == false {
-                                            Text("Enable voice in Settings to talk to Peggy")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                                .multilineTextAlignment(.center)
+                                    }) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "mic.fill")
+                                                .font(.system(size: 18))
+                                            Text("Voice")
+                                                .font(.headline)
                                         }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                        .background(
+                                            (consentStatus?.voiceConsent == true) ?
+                                            Color.accentColor : Color.gray
+                                        )
+                                        .cornerRadius(12)
                                     }
+                                    .accessibilityIdentifier("voiceChatButton")
 
                                     // Text button
                                     Button(action: {
@@ -215,6 +209,21 @@ struct BugReportView: View {
             // TODO: Present appropriate consent screen based on consent status
             // For now, this prevents the app from crashing if consent is needed
             EmptyView()
+        }
+        .sheet(isPresented: $showVoiceConsentSheet) {
+            VoiceConsentView(onConsent: {
+                // Refresh consent status, then proceed to voice interview
+                Task {
+                    do {
+                        consentStatus = try await APIManager.shared.getConsentStatus()
+                        if consentStatus?.voiceConsent == true {
+                            showVoiceInterview = true
+                        }
+                    } catch {
+                        NSLog("⚠️ Failed to refresh consent status: \(error)")
+                    }
+                }
+            })
         }
         .task {
             // Load consent status
