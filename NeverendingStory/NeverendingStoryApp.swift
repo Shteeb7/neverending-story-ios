@@ -59,16 +59,19 @@ struct NeverendingStoryApp: App {
 
     var body: some Scene {
         WindowGroup {
-            LaunchView()
-                .overlay(alignment: .bottom) {
-                    GlobalVersionOverlay()
-                }
-                .overlay(alignment: .center) {
-                    BugReportOverlay()
-                }
-                .onOpenURL { url in
-                    handleIncomingURL(url)
-                }
+            ZStack {
+                LaunchView()
+                    .overlay(alignment: .bottom) {
+                        GlobalVersionOverlay()
+                    }
+                    .onOpenURL { url in
+                        handleIncomingURL(url)
+                    }
+
+                // Bug reporter icon always on top
+                BugReportOverlay()
+                    .zIndex(.infinity)
+            }
         }
     }
 

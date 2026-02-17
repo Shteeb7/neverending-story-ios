@@ -26,7 +26,8 @@ struct BugReportOverlay: View {
         Group {
             // TODO: Add visibility rules for voice session (hide during active voice interviews)
             // TODO: Add visibility rules for focused reading (hide when user is deeply engaged in reading)
-            if showBugReporter {
+            // Hide when showing its own bug report view to prevent loop
+            if showBugReporter && !showBugReportView {
                 ZStack {
                     // Bug icon button
                     Button(action: {
