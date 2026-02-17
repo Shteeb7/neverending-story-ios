@@ -41,7 +41,7 @@ struct VoiceConsentView: View {
 
                     // Body text (legally required points in warm language)
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("When you speak with Prospero, your voice is recorded to personalize your story experience.")
+                        Text("When you speak with the characters in Mythweaver, your voice is recorded to personalize your story experience.")
                             .font(.system(size: 17))
                             .foregroundColor(Color.white.opacity(0.9))
 
