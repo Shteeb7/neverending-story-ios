@@ -257,6 +257,34 @@ struct BookCompletionInterviewView: View {
                 }
             }
 
+            // Error state with retry button
+            if case .error = voiceSession.state {
+                VStack(spacing: 12) {
+                    Button(action: {
+                        Task {
+                            await startInterview()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Try Again")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.purple)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
+
+                    Button(action: { dismiss() }) {
+                        Text("Return to Library")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
             // Fallback buttons for completed state (prevents dead end)
             if case .conversationComplete = voiceSession.state, !isProcessing {
                 VStack(spacing: 12) {
