@@ -23,25 +23,24 @@ struct BugReportOverlay: View {
     private let iconSize: CGFloat = 60
 
     var body: some View {
-        Group {
+        ZStack {
             // TODO: Add visibility rules for voice session (hide during active voice interviews)
             // TODO: Add visibility rules for focused reading (hide when user is deeply engaged in reading)
             // Hide when showing its own bug report view to prevent loop
             if showBugReporter && !showBugReportView {
-                ZStack {
-                    // Bug icon button
-                    Button(action: {
-                        guard !isDragging else { return }
-                        // Haptic feedback
-                        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                        // Capture screenshot + metadata immediately on icon tap (spec 3a)
-                        Task {
-                            capturedData = await BugReportCaptureManager.shared.captureCurrentState()
-                            await MainActor.run {
-                                showBugReportView = true
-                            }
+                // Bug icon button
+                Button(action: {
+                    guard !isDragging else { return }
+                    // Haptic feedback
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    // Capture screenshot + metadata immediately on icon tap (spec 3a)
+                    Task {
+                        capturedData = await BugReportCaptureManager.shared.captureCurrentState()
+                        await MainActor.run {
+                            showBugReportView = true
                         }
-                    }) {
+                    }
+                }) {
                         ZStack(alignment: .topTrailing) {
                             ZStack {
                                 // Outer glow
@@ -111,20 +110,19 @@ struct BugReportOverlay: View {
                             }
                     )
                     .accessibilityIdentifier("bugReporterIcon")
-                }
-                .sheet(isPresented: $showBugReportView) {
-                    BugReportView(
-                        capturedScreenshot: capturedData?.screenshot,
-                        capturedMetadata: capturedData?.metadata ?? [:]
-                    )
-                }
-                .onAppear {
-                    // Load saved position if available
-                    if let decoded = BugReportOverlay.decodePosition(savedPosition) {
-                        position = decoded
+                    .onAppear {
+                        // Load saved position if available
+                        if let decoded = BugReportOverlay.decodePosition(savedPosition) {
+                            position = decoded
+                        }
                     }
-                }
             }
+        }
+        .sheet(isPresented: $showBugReportView) {
+            BugReportView(
+                capturedScreenshot: capturedData?.screenshot,
+                capturedMetadata: capturedData?.metadata ?? [:]
+            )
         }
     }
 
