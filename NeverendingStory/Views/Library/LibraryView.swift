@@ -18,6 +18,7 @@ struct LibraryView: View {
     @State private var pollTimer: Timer?
     @State private var showLogoutConfirmation = false
     @State private var showNameConfirmation = false
+    @State private var isNameConfirmationFromOnboarding = true
     @State private var userName = ""
     @State private var isConfirmingName = false
     @State private var navigateToPremises = false
@@ -270,6 +271,7 @@ struct LibraryView: View {
                                     await loadUserName()
                                 }
                             }
+                            isNameConfirmationFromOnboarding = false
                             showNameConfirmation = true
                         }) {
                             Label("Edit Name", systemImage: "pencil")
@@ -351,9 +353,10 @@ struct LibraryView: View {
                     isConfirming: $isConfirmingName,
                     onConfirm: {
                         confirmUserName()
-                    }
+                    },
+                    isOnboarding: isNameConfirmationFromOnboarding
                 )
-                .interactiveDismissDisabled(true)
+                .interactiveDismissDisabled(isNameConfirmationFromOnboarding)
             }
             .sheet(isPresented: $showVoiceConsentSheet) {
                 VoiceConsentView(onConsent: {
@@ -493,6 +496,7 @@ struct LibraryView: View {
                 // Show modal if name not confirmed and we have a name
                 if response.nameConfirmed != true, let name = response.preferences.name {
                     userName = name
+                    isNameConfirmationFromOnboarding = true
                     showNameConfirmation = true
                 }
             } catch {
@@ -736,6 +740,7 @@ struct NameConfirmationModal: View {
     @Binding var userName: String
     @Binding var isConfirming: Bool
     let onConfirm: () -> Void
+    var isOnboarding: Bool = true
 
     var body: some View {
         NavigationStack {
@@ -760,11 +765,11 @@ struct NameConfirmationModal: View {
 
                         // Header
                         VStack(spacing: 10) {
-                            Text("One last enchantment...")
+                            Text(isOnboarding ? "One last enchantment..." : "Update your name")
                                 .font(.title2)
                                 .fontWeight(.bold)
 
-                            Text("Did Prospero get your name right?")
+                            Text(isOnboarding ? "Did your storyteller get your name right?" : "Would you like to change your name?")
                                 .font(.body)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)

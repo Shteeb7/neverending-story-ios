@@ -603,14 +603,24 @@ struct OnboardingView: View {
             guard !conversation.isEmpty else { return }
 
             do {
-                try await APIManager.shared.submitVoiceConversation(
-                    userId: userId,
-                    conversation: conversation,
-                    preferences: storyPreferences
-                )
-                NSLog("✅ Conversation submitted from endVoiceSession")
-                try await APIManager.shared.generatePremises()
-                NSLog("✅ Premises generation triggered from endVoiceSession")
+                // Check if this was a returning user interview
+                if case .returningUser = voiceManager.interviewType {
+                    try await APIManager.shared.submitNewStoryRequest(
+                        userId: userId,
+                        transcript: conversation,
+                        storyRequest: storyPreferences
+                    )
+                    NSLog("✅ New story request submitted from endVoiceSession (returning user)")
+                } else {
+                    try await APIManager.shared.submitVoiceConversation(
+                        userId: userId,
+                        conversation: conversation,
+                        preferences: storyPreferences
+                    )
+                    NSLog("✅ Conversation submitted from endVoiceSession")
+                    try await APIManager.shared.generatePremises()
+                    NSLog("✅ Premises generation triggered from endVoiceSession")
+                }
             } catch {
                 NSLog("❌ Backend submission failed from endVoiceSession: \(error)")
             }
@@ -633,16 +643,26 @@ struct OnboardingView: View {
             guard !conversation.isEmpty else { return }
 
             do {
-                try await APIManager.shared.submitVoiceConversation(
-                    userId: userId,
-                    conversation: conversation,
-                    preferences: storyPreferences
-                )
-                NSLog("✅ Backend submission complete during DNA Transfer")
-
-                // Now trigger premise generation (runs during finger ceremony)
-                try await APIManager.shared.generatePremises()
-                NSLog("✅ Premise generation triggered during DNA Transfer")
+                // Check if this was a returning user interview
+                if case .returningUser = voiceManager.interviewType {
+                    // Returning user: call new-story-request (preserves existing preferences)
+                    try await APIManager.shared.submitNewStoryRequest(
+                        userId: userId,
+                        transcript: conversation,
+                        storyRequest: storyPreferences
+                    )
+                    NSLog("✅ New story request submitted for returning user")
+                } else {
+                    // Onboarding/premise rejection: use existing flow
+                    try await APIManager.shared.submitVoiceConversation(
+                        userId: userId,
+                        conversation: conversation,
+                        preferences: storyPreferences
+                    )
+                    NSLog("✅ Backend submission complete during DNA Transfer")
+                    try await APIManager.shared.generatePremises()
+                    NSLog("✅ Premise generation triggered during DNA Transfer")
+                }
             } catch {
                 NSLog("❌ Backend submission/generation failed: \(error)")
                 // DNA Transfer will handle via polling timeout + retry button
@@ -686,11 +706,17 @@ struct OnboardingView: View {
                     print("✅ Found conversation text in voiceManager: \(fallbackConversation.count) chars")
                     // Use fallback and continue
                     do {
-                        try await APIManager.shared.submitVoiceConversation(userId: userId, conversation: fallbackConversation)
-                        print("✅ Conversation submitted (fallback)")
+                        // Check if this was a returning user interview
+                        if case .returningUser = voiceManager.interviewType {
+                            try await APIManager.shared.submitNewStoryRequest(userId: userId, transcript: fallbackConversation, storyRequest: storyPreferences)
+                            print("✅ New story request submitted (fallback, returning user)")
+                        } else {
+                            try await APIManager.shared.submitVoiceConversation(userId: userId, conversation: fallbackConversation)
+                            print("✅ Conversation submitted (fallback)")
 
-                        try await APIManager.shared.generatePremises()
-                        print("✅ Premises generation started")
+                            try await APIManager.shared.generatePremises()
+                            print("✅ Premises generation started")
+                        }
 
                         await MainActor.run {
                             navigateToPremises = true
@@ -714,12 +740,23 @@ struct OnboardingView: View {
                 // Submit conversation transcript AND preferences to backend
                 print("📤 Submitting voice conversation to backend...")
                 print("   Preferences: \(String(describing: storyPreferences))")
-                try await APIManager.shared.submitVoiceConversation(
-                    userId: userId,
-                    conversation: conversation,
-                    preferences: storyPreferences
-                )
-                print("✅ Conversation submitted and preferences saved")
+
+                // Check if this was a returning user interview
+                if case .returningUser = voiceManager.interviewType {
+                    try await APIManager.shared.submitNewStoryRequest(
+                        userId: userId,
+                        transcript: conversation,
+                        storyRequest: storyPreferences
+                    )
+                    print("✅ New story request submitted for returning user")
+                } else {
+                    try await APIManager.shared.submitVoiceConversation(
+                        userId: userId,
+                        conversation: conversation,
+                        preferences: storyPreferences
+                    )
+                    print("✅ Conversation submitted and preferences saved")
+                }
 
                 // Navigate immediately to PremiseSelectionView with loading animation
                 // Premise generation will happen there (takes 10-15 seconds)

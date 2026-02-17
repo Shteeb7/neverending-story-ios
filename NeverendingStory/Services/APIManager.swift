@@ -705,6 +705,60 @@ class APIManager: ObservableObject {
         )
     }
 
+    func submitNewStoryRequest(userId: String, transcript: String, storyRequest: [String: Any]?) async throws {
+        NSLog("📤 Submitting new story request for returning user")
+
+        struct NewStoryRequest: Encodable {
+            let transcript: String
+            let sessionId: String
+            let storyRequest: [String: Any]?
+
+            enum CodingKeys: String, CodingKey {
+                case transcript, sessionId, storyRequest
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(transcript, forKey: .transcript)
+                try container.encode(sessionId, forKey: .sessionId)
+                if let storyRequest = storyRequest {
+                    try container.encode(AnyCodable(storyRequest), forKey: .storyRequest)
+                }
+            }
+
+            // Use the same AnyCodable from submitVoiceConversation
+            struct AnyCodable: Encodable {
+                let value: Any
+                init(_ value: Any) { self.value = value }
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.singleValueContainer()
+                    if let dict = value as? [String: Any] {
+                        try container.encode(dict.mapValues { AnyCodable($0) })
+                    } else if let array = value as? [Any] {
+                        try container.encode(array.map { AnyCodable($0) })
+                    } else if let string = value as? String {
+                        try container.encode(string)
+                    } else {
+                        try container.encode("\(value)")
+                    }
+                }
+            }
+        }
+
+        let body = try encoder.encode(NewStoryRequest(
+            transcript: transcript,
+            sessionId: "direct_websocket",
+            storyRequest: storyRequest
+        ))
+
+        let _: EmptyResponse = try await makeRequest(
+            endpoint: "/onboarding/new-story-request",
+            method: "POST",
+            body: body,
+            requiresAuth: true
+        )
+    }
+
     func getUserPreferences(userId: String) async throws -> [String: Any]? {
         struct PreferencesResponse: Decodable {
             let success: Bool
