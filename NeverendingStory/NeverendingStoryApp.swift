@@ -63,6 +63,9 @@ struct NeverendingStoryApp: App {
                 .overlay(alignment: .bottom) {
                     GlobalVersionOverlay()
                 }
+                .overlay(alignment: .center) {
+                    BugReportOverlay()
+                }
                 .onOpenURL { url in
                     handleIncomingURL(url)
                 }

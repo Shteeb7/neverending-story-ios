@@ -352,6 +352,9 @@ struct LibraryView: View {
                 .interactiveDismissDisabled(true)
             }
             .onAppear {
+                // Set current screen for bug reporting
+                BugReportCaptureManager.currentScreen = "LibraryView"
+
                 NSLog("📚 LibraryView appeared - loading library")
                 loadLibrary()
                 // NOTE: startPollingIfNeeded() is now called from inside loadLibrary()

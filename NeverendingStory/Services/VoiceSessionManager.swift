@@ -28,6 +28,8 @@ enum InterviewType: Equatable {
     case returningUser(context: ReturningUserContext)     // Wants new story
     case premiseRejection(context: PremiseRejectionContext) // Rejected all premises
     case bookCompletion(context: BookCompletionContext)   // Finished a book
+    case bugReport(context: BugReportContext)             // Report a bug
+    case suggestion(context: SuggestionContext)           // Suggest a feature
 }
 
 struct ReturningUserContext: Equatable {
@@ -80,6 +82,27 @@ struct BookCompletionContext: Equatable {
                lhs.themes == rhs.themes &&
                lhs.skimmedChapters == rhs.skimmedChapters &&
                lhs.bookNumber == rhs.bookNumber
+    }
+}
+
+struct BugReportContext: Equatable {
+    let userName: String?
+    let currentScreen: String
+    let metadata: [String: Any]?  // App state metadata
+
+    static func == (lhs: BugReportContext, rhs: BugReportContext) -> Bool {
+        return lhs.userName == rhs.userName &&
+               lhs.currentScreen == rhs.currentScreen
+    }
+}
+
+struct SuggestionContext: Equatable {
+    let userName: String?
+    let currentScreen: String
+
+    static func == (lhs: SuggestionContext, rhs: SuggestionContext) -> Bool {
+        return lhs.userName == rhs.userName &&
+               lhs.currentScreen == rhs.currentScreen
     }
 }
 
@@ -876,6 +899,10 @@ class VoiceSessionManager: ObservableObject {
             try await configurePremiseRejectionSession(context: context)
         case .bookCompletion(let context):
             try await configureCompletionSession(context: context)
+        case .bugReport(let context):
+            try await configureBugReportSession(context: context)
+        case .suggestion(let context):
+            try await configureSuggestionSession(context: context)
         }
     }
 
@@ -1218,6 +1245,163 @@ class VoiceSessionManager: ObservableObject {
         NSLog("✅ Book completion configuration complete")
     }
 
+    // MARK: - Bug Report Session Configuration
+
+    private func configureBugReportSession(context: BugReportContext) async throws {
+        let tools: [[String: Any]] = [[
+            "type": "function",
+            "name": "submit_bug_report",
+            "description": "Submit the bug report after gathering details from the user.",
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "summary": ["type": "string", "description": "Brief summary of the bug"],
+                    "expectedBehavior": ["type": "string", "description": "What the user expected to happen"],
+                    "actualBehavior": ["type": "string", "description": "What actually happened"],
+                    "stepsToReproduce": ["type": "array", "items": ["type": "string"], "description": "Steps to reproduce the bug"],
+                    "severity": ["type": "string", "enum": ["critical", "high", "medium", "low"], "description": "Bug severity"]
+                ],
+                "required": ["summary", "expectedBehavior", "actualBehavior"]
+            ]
+        ]]
+
+        // Build context for backend prompt assembly
+        var contextDict: [String: Any] = [
+            "currentScreen": context.currentScreen
+        ]
+
+        if let userName = context.userName {
+            contextDict["userName"] = userName
+        }
+
+        if let metadata = context.metadata {
+            contextDict["metadata"] = metadata
+        }
+
+        // Fetch system prompt from backend
+        let instructions: String
+        do {
+            let result = try await APIManager.shared.getSystemPrompt(
+                interviewType: "bug_report_voice",
+                medium: "voice",
+                context: contextDict
+            )
+            instructions = result.prompt
+            cachedGreeting = result.greeting
+            NSLog("✅ Fetched bug_report_voice system prompt from backend (\(instructions.count) chars)")
+        } catch {
+            NSLog("⚠️ Failed to fetch Peggy prompt from backend, using fallback: \(error)")
+            let userName = context.userName ?? "friend"
+            instructions = "You are Peggy, a friendly and empathetic bug catcher. Help \(userName) report a bug. Ask what went wrong, what they expected, and how to reproduce it. Be warm and reassuring."
+            cachedGreeting = "Hey \(userName)! I'm Peggy, your friendly bug catcher. Tell me what's going wrong, and I'll make sure the team knows about it!"
+        }
+
+        let config: [String: Any] = [
+            "type": "session.update",
+            "session": [
+                "modalities": ["text", "audio"],
+                "instructions": instructions,
+                "voice": "ballad",
+                "input_audio_format": "pcm16",
+                "output_audio_format": "pcm16",
+                "input_audio_transcription": [
+                    "model": "whisper-1"
+                ] as [String: Any],
+                "turn_detection": [
+                    "type": "semantic_vad",
+                    "eagerness": "medium"
+                ] as [String: Any],
+                "input_audio_noise_reduction": [
+                    "type": "near_field"
+                ] as [String: Any],
+                "tools": tools,
+                "max_response_output_tokens": 1000
+            ]
+        ]
+
+        NSLog("📤 Sending bug report session configuration...")
+        sendEvent(config)
+
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        NSLog("✅ Bug report configuration complete")
+    }
+
+    // MARK: - Suggestion Session Configuration
+
+    private func configureSuggestionSession(context: SuggestionContext) async throws {
+        let tools: [[String: Any]] = [[
+            "type": "function",
+            "name": "submit_feature_suggestion",
+            "description": "Submit the feature suggestion after gathering details from the user.",
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "title": ["type": "string", "description": "Short title for the suggestion"],
+                    "description": ["type": "string", "description": "Detailed description of the feature"],
+                    "useCases": ["type": "array", "items": ["type": "string"], "description": "How the user would use this feature"],
+                    "priority": ["type": "string", "enum": ["nice_to_have", "would_love", "critical"], "description": "How important is this to the user"]
+                ],
+                "required": ["title", "description"]
+            ]
+        ]]
+
+        // Build context for backend prompt assembly
+        var contextDict: [String: Any] = [
+            "currentScreen": context.currentScreen
+        ]
+
+        if let userName = context.userName {
+            contextDict["userName"] = userName
+        }
+
+        // Fetch system prompt from backend
+        let instructions: String
+        do {
+            let result = try await APIManager.shared.getSystemPrompt(
+                interviewType: "suggestion_voice",
+                medium: "voice",
+                context: contextDict
+            )
+            instructions = result.prompt
+            cachedGreeting = result.greeting
+            NSLog("✅ Fetched suggestion_voice system prompt from backend (\(instructions.count) chars)")
+        } catch {
+            NSLog("⚠️ Failed to fetch Peggy prompt from backend, using fallback: \(error)")
+            let userName = context.userName ?? "friend"
+            instructions = "You are Peggy, an enthusiastic feature collector. Help \(userName) share their idea. Ask what they want, why it would be useful, and how they'd use it. Be excited and encouraging."
+            cachedGreeting = "Hey \(userName)! I'm Peggy! I LOVE hearing new ideas. What would you like to see in Mythweaver?"
+        }
+
+        let config: [String: Any] = [
+            "type": "session.update",
+            "session": [
+                "modalities": ["text", "audio"],
+                "instructions": instructions,
+                "voice": "ballad",
+                "input_audio_format": "pcm16",
+                "output_audio_format": "pcm16",
+                "input_audio_transcription": [
+                    "model": "whisper-1"
+                ] as [String: Any],
+                "turn_detection": [
+                    "type": "semantic_vad",
+                    "eagerness": "medium"
+                ] as [String: Any],
+                "input_audio_noise_reduction": [
+                    "type": "near_field"
+                ] as [String: Any],
+                "tools": tools,
+                "max_response_output_tokens": 1000
+            ]
+        ]
+
+        NSLog("📤 Sending suggestion session configuration...")
+        sendEvent(config)
+
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        NSLog("✅ Suggestion configuration complete")
+    }
+
     private func triggerAIGreeting() {
         NSLog("👋 Triggering AI greeting with response.create event...")
 
@@ -1238,6 +1422,12 @@ class VoiceSessionManager: ObservableObject {
                 greeting = "\(context.userName)! You're back — and I'm GLAD. Those tales I conjured clearly weren't worthy of you. Help me understand what missed the mark, and I'll summon something far better."
             case .bookCompletion(let context):
                 greeting = "\(context.userName)! You've journeyed through \"\(context.storyTitle)\"! The final page has turned, but before the ink dries — tell me, what moment seized your heart?"
+            case .bugReport(let context):
+                let userName = context.userName ?? "friend"
+                greeting = "Hey \(userName)! I'm Peggy, your friendly bug catcher. Tell me what's going wrong, and I'll make sure the team knows about it!"
+            case .suggestion(let context):
+                let userName = context.userName ?? "friend"
+                greeting = "Hey \(userName)! I'm Peggy! I LOVE hearing new ideas. What would you like to see in Mythweaver?"
             }
         }
 
@@ -1430,6 +1620,52 @@ class VoiceSessionManager: ObservableObject {
                         "type": "function_call_output",
                         "call_id": callId,
                         "output": "{\"success\": true, \"message\": \"Feedback received with gratitude.\"}"
+                    ]
+                ]
+                sendEvent(result)
+
+                // Trigger AI to respond with closing message
+                sendEvent(["type": "response.create"])
+            }
+
+        case "submit_bug_report":
+            NSLog("✅ Bug report received!")
+            NSLog("   \(args)")
+
+            // Trigger callback with bug report data
+            onPreferencesGathered?(args)
+
+            // Send function response back to OpenAI
+            Task {
+                let result: [String: Any] = [
+                    "type": "conversation.item.create",
+                    "item": [
+                        "type": "function_call_output",
+                        "call_id": callId,
+                        "output": "{\"success\": true, \"message\": \"Bug report captured! The team will investigate.\"}"
+                    ]
+                ]
+                sendEvent(result)
+
+                // Trigger AI to respond with closing message
+                sendEvent(["type": "response.create"])
+            }
+
+        case "submit_feature_suggestion":
+            NSLog("✅ Feature suggestion received!")
+            NSLog("   \(args)")
+
+            // Trigger callback with suggestion data
+            onPreferencesGathered?(args)
+
+            // Send function response back to OpenAI
+            Task {
+                let result: [String: Any] = [
+                    "type": "conversation.item.create",
+                    "item": [
+                        "type": "function_call_output",
+                        "call_id": callId,
+                        "output": "{\"success\": true, \"message\": \"Thanks for the suggestion! We'll consider it.\"}"
                     ]
                 ]
                 sendEvent(result)

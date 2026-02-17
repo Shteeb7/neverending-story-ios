@@ -95,6 +95,19 @@ class TextChatSessionManager: ObservableObject {
                 // Text chat doesn't support premise rejection yet - fall back to onboarding
                 interviewTypeString = "onboarding"
                 NSLog("⚠️ premiseRejection not supported in text chat, using onboarding")
+            case .bugReport(let ctx):
+                interviewTypeString = "bug_report"
+                requestContext = [
+                    "userName": ctx.userName as Any,
+                    "currentScreen": ctx.currentScreen,
+                    "metadata": ctx.metadata as Any
+                ]
+            case .suggestion(let ctx):
+                interviewTypeString = "suggestion"
+                requestContext = [
+                    "userName": ctx.userName as Any,
+                    "currentScreen": ctx.currentScreen
+                ]
             case .bookCompletion(let ctx):
                 interviewTypeString = "book_completion"
                 // Build context from BookCompletionContext

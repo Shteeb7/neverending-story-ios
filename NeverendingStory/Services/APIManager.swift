@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 enum APIError: LocalizedError {
     case invalidURL
@@ -16,6 +17,7 @@ enum APIError: LocalizedError {
     case unauthorized
     case ageRequirementNotMet
     case requestFailed(statusCode: Int)
+    case queueFull
 
     var errorDescription: String? {
         switch self {
@@ -35,6 +37,8 @@ enum APIError: LocalizedError {
             return "Request failed with status code \(statusCode)"
         case .unauthorized:
             return "Authentication required. Please log in again."
+        case .queueFull:
+            return "Report queue is full. Please connect to the internet to submit pending reports."
         }
     }
 }
@@ -48,6 +52,39 @@ class APIManager: ObservableObject {
     private let encoder: JSONEncoder
     private let urlSession: URLSession
 
+    // MARK: - Bug Reporting - Queue Status
+
+    @Published var isQueueFull: Bool = false
+
+    // MARK: - Bug Reporting - API Call Ring Buffer
+
+    // Ring buffer for last 3 API calls (in-memory only, for bug report context)
+    private static var apiCallHistory: [(endpoint: String, method: String, statusCode: Int, timestamp: String)] = []
+    private static let maxHistorySize = 3
+    private static let historyQueue = DispatchQueue(label: "com.neverendingstory.apihistory")
+
+    // Offline queue for failed bug report submissions
+    private static var offlineQueue: [PendingBugReport] = []
+    private static let maxQueueSize = 10
+    private static let maxRetries = 3
+
+    struct PendingBugReport: Codable {
+        let id: String
+        let reportType: String
+        let interviewMode: String
+        let transcript: String
+        let peggySummary: String
+        let category: String
+        let severityHint: String?
+        let userDescription: String?
+        let stepsToReproduce: String?
+        let expectedBehavior: String?
+        let screenshotBase64: String?
+        let metadataJSON: Data  // Store as JSON Data to preserve nested structures
+        let retryCount: Int
+        let createdAt: Date
+    }
+
     private init() {
         decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -60,6 +97,14 @@ class APIManager: ObservableObject {
         configuration.timeoutIntervalForRequest = 300 // 5 minutes
         configuration.timeoutIntervalForResource = 300
         urlSession = URLSession(configuration: configuration)
+
+        // Load offline queue from disk
+        Self.loadOfflineQueue()
+
+        // Attempt to drain queue on launch
+        Task {
+            await Self.drainOfflineQueue()
+        }
     }
 
     // MARK: - Helper Methods
@@ -124,6 +169,9 @@ class APIManager: ObservableObject {
                 throw APIError.invalidResponse
             }
 
+            // Log to ring buffer for bug reports
+            Self.logAPICall(endpoint: endpoint, method: method, statusCode: httpResponse.statusCode)
+
             if httpResponse.statusCode == 401 {
                 // If we get 401 and haven't already retried, try refreshing the session
                 if !isRetry {
@@ -158,6 +206,320 @@ class APIManager: ObservableObject {
         } catch {
             throw APIError.networkError(error)
         }
+    }
+
+    // MARK: - Bug Reporting Helpers
+
+    /// Log an API call to the ring buffer (for bug report context)
+    private static func logAPICall(endpoint: String, method: String, statusCode: Int) {
+        historyQueue.async {
+            let timestamp = ISO8601DateFormatter().string(from: Date())
+            let entry = (endpoint: endpoint, method: method, statusCode: statusCode, timestamp: timestamp)
+
+            apiCallHistory.append(entry)
+
+            // Keep only last 3 entries (circular buffer)
+            if apiCallHistory.count > maxHistorySize {
+                apiCallHistory.removeFirst()
+            }
+        }
+    }
+
+    /// Get recent API calls for bug report metadata
+    func getRecentAPICalls() -> [[String: Any]] {
+        Self.historyQueue.sync {
+            return Self.apiCallHistory.map { entry in
+                [
+                    "endpoint": entry.endpoint,
+                    "method": entry.method,
+                    "status_code": entry.statusCode,
+                    "timestamp": entry.timestamp
+                ]
+            }
+        }
+    }
+
+    /// Load offline queue from UserDefaults
+    private static func loadOfflineQueue() {
+        guard let data = UserDefaults.standard.data(forKey: "bug_report_offline_queue"),
+              let queue = try? JSONDecoder().decode([PendingBugReport].self, from: data) else {
+            return
+        }
+        offlineQueue = queue
+        NSLog("🐞 Loaded \(queue.count) pending bug reports from offline queue")
+    }
+
+    /// Save offline queue to UserDefaults
+    private static func saveOfflineQueue() {
+        guard let data = try? JSONEncoder().encode(offlineQueue) else {
+            NSLog("⚠️ Failed to encode offline queue")
+            return
+        }
+        UserDefaults.standard.set(data, forKey: "bug_report_offline_queue")
+    }
+
+    /// Attempt to drain offline queue (retry failed submissions)
+    private static func drainOfflineQueue() async {
+        guard !offlineQueue.isEmpty else { return }
+
+        NSLog("🔄 Draining bug report offline queue (\(offlineQueue.count) reports)")
+
+        var remainingReports: [PendingBugReport] = []
+
+        for report in offlineQueue {
+            // Skip reports that have exceeded max retries
+            if report.retryCount >= maxRetries {
+                NSLog("🛑 Bug report \(report.id) exceeded max retries, dropping")
+                continue
+            }
+
+            // Exponential backoff: wait 2^retryCount seconds since creation
+            let backoffSeconds = pow(2.0, Double(report.retryCount))
+            let timeSinceCreation = Date().timeIntervalSince(report.createdAt)
+            if timeSinceCreation < backoffSeconds {
+                // Not ready to retry yet
+                remainingReports.append(report)
+                continue
+            }
+
+            NSLog("🔄 Retrying bug report \(report.id) (attempt \(report.retryCount + 1)/\(maxRetries))")
+
+            do {
+                // Deserialize metadata from JSON Data
+                let metadata = try JSONSerialization.jsonObject(with: report.metadataJSON, options: []) as? [String: Any] ?? [:]
+
+                // Attempt to submit
+                _ = try await APIManager.shared.submitBugReportInternal(
+                    reportType: report.reportType,
+                    interviewMode: report.interviewMode,
+                    transcript: report.transcript,
+                    peggySummary: report.peggySummary,
+                    category: report.category,
+                    severityHint: report.severityHint,
+                    userDescription: report.userDescription,
+                    stepsToReproduce: report.stepsToReproduce,
+                    expectedBehavior: report.expectedBehavior,
+                    screenshotBase64: report.screenshotBase64,
+                    metadata: metadata
+                )
+
+                NSLog("✅ Bug report \(report.id) submitted successfully")
+                // Successfully sent, don't add back to queue
+
+            } catch {
+                NSLog("⚠️ Retry failed for bug report \(report.id): \(error.localizedDescription)")
+                // Increment retry count and keep in queue
+                var updatedReport = report
+                updatedReport = PendingBugReport(
+                    id: report.id,
+                    reportType: report.reportType,
+                    interviewMode: report.interviewMode,
+                    transcript: report.transcript,
+                    peggySummary: report.peggySummary,
+                    category: report.category,
+                    severityHint: report.severityHint,
+                    userDescription: report.userDescription,
+                    stepsToReproduce: report.stepsToReproduce,
+                    expectedBehavior: report.expectedBehavior,
+                    screenshotBase64: report.screenshotBase64,
+                    metadataJSON: report.metadataJSON,
+                    retryCount: report.retryCount + 1,
+                    createdAt: report.createdAt
+                )
+                remainingReports.append(updatedReport)
+            }
+        }
+
+        offlineQueue = remainingReports
+        saveOfflineQueue()
+        NSLog("✅ Offline queue drained (\(remainingReports.count) remaining)")
+
+        // Update isQueueFull status on main thread
+        DispatchQueue.main.async {
+            APIManager.shared.isQueueFull = remainingReports.count >= maxQueueSize
+        }
+    }
+
+    // MARK: - Bug Reporting
+
+    /// Submit a bug report to the backend
+    /// - Parameters:
+    ///   - screenshot: Optional screenshot UIImage (will be converted to base64 PNG)
+    ///   - metadata: App state metadata captured by BugReportCaptureManager
+    /// - Returns: Report ID on success
+    func submitBugReport(
+        reportType: String,
+        interviewMode: String,
+        transcript: String,
+        peggySummary: String,
+        category: String,
+        severityHint: String? = nil,
+        userDescription: String? = nil,
+        stepsToReproduce: String? = nil,
+        expectedBehavior: String? = nil,
+        screenshot: UIImage? = nil,
+        metadata: [String: Any]? = nil
+    ) async throws -> String {
+        NSLog("🐞 Submitting bug report (type: \(reportType), mode: \(interviewMode))")
+
+        // Convert screenshot to base64 PNG if provided
+        var screenshotBase64: String? = nil
+        if let screenshot = screenshot,
+           let pngData = screenshot.pngData() {
+            screenshotBase64 = "data:image/png;base64," + pngData.base64EncodedString()
+        }
+
+        do {
+            let reportId = try await submitBugReportInternal(
+                reportType: reportType,
+                interviewMode: interviewMode,
+                transcript: transcript,
+                peggySummary: peggySummary,
+                category: category,
+                severityHint: severityHint,
+                userDescription: userDescription,
+                stepsToReproduce: stepsToReproduce,
+                expectedBehavior: expectedBehavior,
+                screenshotBase64: screenshotBase64,
+                metadata: metadata ?? [:]
+            )
+            NSLog("✅ Bug report submitted successfully: \(reportId)")
+            return reportId
+
+        } catch {
+            NSLog("⚠️ Bug report submission failed, adding to offline queue: \(error.localizedDescription)")
+
+            // Serialize metadata to JSON Data for storage
+            let metadataJSON: Data
+            if let metadata = metadata {
+                metadataJSON = try JSONSerialization.data(withJSONObject: metadata, options: [])
+            } else {
+                metadataJSON = try JSONSerialization.data(withJSONObject: [:], options: [])
+            }
+
+            // Check if queue is full
+            let queueFull = Self.historyQueue.sync {
+                return Self.offlineQueue.count >= Self.maxQueueSize
+            }
+
+            if queueFull {
+                // Queue is at capacity - throw error instead of dropping old reports
+                NSLog("🛑 Offline queue is full (\(Self.maxQueueSize) reports)")
+                DispatchQueue.main.async {
+                    self.isQueueFull = true
+                }
+                throw APIError.queueFull
+            }
+
+            // Add to offline queue for retry
+            let pendingReport = PendingBugReport(
+                id: UUID().uuidString,
+                reportType: reportType,
+                interviewMode: interviewMode,
+                transcript: transcript,
+                peggySummary: peggySummary,
+                category: category,
+                severityHint: severityHint,
+                userDescription: userDescription,
+                stepsToReproduce: stepsToReproduce,
+                expectedBehavior: expectedBehavior,
+                screenshotBase64: screenshotBase64,
+                metadataJSON: metadataJSON,
+                retryCount: 0,
+                createdAt: Date()
+            )
+
+            Self.historyQueue.sync {
+                Self.offlineQueue.append(pendingReport)
+                Self.saveOfflineQueue()
+                DispatchQueue.main.async {
+                    self.isQueueFull = Self.offlineQueue.count >= Self.maxQueueSize
+                }
+            }
+
+            throw error
+        }
+    }
+
+    /// Internal method to actually submit the bug report to the API
+    private func submitBugReportInternal(
+        reportType: String,
+        interviewMode: String,
+        transcript: String,
+        peggySummary: String,
+        category: String,
+        severityHint: String?,
+        userDescription: String?,
+        stepsToReproduce: String?,
+        expectedBehavior: String?,
+        screenshotBase64: String?,
+        metadata: [String: Any]
+    ) async throws -> String {
+        struct BugReportRequest: Encodable {
+            let report_type: String
+            let interview_mode: String
+            let transcript: String
+            let peggy_summary: String
+            let category: String
+            let severity_hint: String?
+            let user_description: String?
+            let steps_to_reproduce: String?
+            let expected_behavior: String?
+            let screenshot: String?
+            let metadata: [String: AnyCodableValue]
+
+            enum CodingKeys: String, CodingKey {
+                case report_type, interview_mode, transcript, peggy_summary, category
+                case severity_hint, user_description, steps_to_reproduce, expected_behavior
+                case screenshot, metadata
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(report_type, forKey: .report_type)
+                try container.encode(interview_mode, forKey: .interview_mode)
+                try container.encode(transcript, forKey: .transcript)
+                try container.encode(peggy_summary, forKey: .peggy_summary)
+                try container.encode(category, forKey: .category)
+                try container.encodeIfPresent(severity_hint, forKey: .severity_hint)
+                try container.encodeIfPresent(user_description, forKey: .user_description)
+                try container.encodeIfPresent(steps_to_reproduce, forKey: .steps_to_reproduce)
+                try container.encodeIfPresent(expected_behavior, forKey: .expected_behavior)
+                try container.encodeIfPresent(screenshot, forKey: .screenshot)
+                try container.encode(metadata, forKey: .metadata)
+            }
+        }
+
+        struct BugReportResponse: Decodable {
+            let success: Bool
+            let reportId: String
+        }
+
+        // Convert [String: Any] to [String: AnyCodableValue] for encoding
+        let encodableMetadata = metadata.mapValues { AnyCodableValue(value: $0) }
+
+        let body = try encoder.encode(BugReportRequest(
+            report_type: reportType,
+            interview_mode: interviewMode,
+            transcript: transcript,
+            peggy_summary: peggySummary,
+            category: category,
+            severity_hint: severityHint,
+            user_description: userDescription,
+            steps_to_reproduce: stepsToReproduce,
+            expected_behavior: expectedBehavior,
+            screenshot: screenshotBase64,
+            metadata: encodableMetadata
+        ))
+
+        let response: BugReportResponse = try await makeRequest(
+            endpoint: "/bug-reports",
+            method: "POST",
+            body: body,
+            requiresAuth: true
+        )
+
+        return response.reportId
     }
 
     // MARK: - Authentication Endpoints
@@ -1244,8 +1606,8 @@ struct ConsentStatus {
     let voiceConsent: Bool
 }
 
-// Helper for decoding any JSON value
-enum AnyCodableValue: Decodable {
+// Helper for encoding and decoding any JSON value
+enum AnyCodableValue: Codable {
     case string(String)
     case int(Int)
     case double(Double)
@@ -1253,6 +1615,24 @@ enum AnyCodableValue: Decodable {
     case array([AnyCodableValue])
     case dictionary([String: AnyCodableValue])
     case null
+
+    init(value: Any) {
+        if let string = value as? String {
+            self = .string(string)
+        } else if let int = value as? Int {
+            self = .int(int)
+        } else if let double = value as? Double {
+            self = .double(double)
+        } else if let bool = value as? Bool {
+            self = .bool(bool)
+        } else if let array = value as? [Any] {
+            self = .array(array.map { AnyCodableValue(value: $0) })
+        } else if let dict = value as? [String: Any] {
+            self = .dictionary(dict.mapValues { AnyCodableValue(value: $0) })
+        } else {
+            self = .null
+        }
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -1272,6 +1652,26 @@ enum AnyCodableValue: Decodable {
             self = .null
         } else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode value")
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let string):
+            try container.encode(string)
+        case .int(let int):
+            try container.encode(int)
+        case .double(let double):
+            try container.encode(double)
+        case .bool(let bool):
+            try container.encode(bool)
+        case .array(let array):
+            try container.encode(array)
+        case .dictionary(let dict):
+            try container.encode(dict)
+        case .null:
+            try container.encodeNil()
         }
     }
 }

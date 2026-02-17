@@ -130,6 +130,8 @@ struct PremiseSelectionView: View {
             )
         }
         .onAppear {
+            // Set current screen for bug reporting
+            BugReportCaptureManager.currentScreen = "PremiseSelectionView"
             loadPremises()
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in

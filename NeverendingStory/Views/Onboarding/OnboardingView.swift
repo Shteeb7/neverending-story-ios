@@ -322,6 +322,8 @@ struct OnboardingView: View {
                 )
             }
             .onAppear {
+                // Set current screen for bug reporting
+                BugReportCaptureManager.currentScreen = "OnboardingView"
                 checkForExistingPremises()
                 loadVoiceConsentStatus()
             }
