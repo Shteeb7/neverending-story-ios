@@ -114,6 +114,52 @@ struct BugReportTextChatView: View {
                             Color.black.opacity(0.5)
                                 .blur(radius: 10)
                         )
+                } else if chatSession.error != nil {
+                    // Show error state with retry
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40))
+                            .foregroundColor(Color(red: 0.8, green: 0.6, blue: 1.0))
+
+                        Text("Peggy's line is down")
+                            .font(.system(size: 18, weight: .semibold, design: .serif))
+                            .foregroundColor(.white)
+
+                        Text("Couldn't connect to the switchboard. Give it another ring?")
+                            .font(.system(size: 15))
+                            .foregroundColor(Color.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+
+                        Button(action: {
+                            Task {
+                                let interviewType: InterviewType
+                                if reportType == .bugReport {
+                                    interviewType = .bugReport(context: BugReportContext(
+                                        userName: AuthManager.shared.user?.name,
+                                        currentScreen: BugReportCaptureManager.currentScreen,
+                                        metadata: capturedMetadata
+                                    ))
+                                } else {
+                                    interviewType = .suggestion(context: SuggestionContext(
+                                        userName: AuthManager.shared.user?.name,
+                                        currentScreen: BugReportCaptureManager.currentScreen
+                                    ))
+                                }
+                                await chatSession.startSession(type: interviewType)
+                            }
+                        }) {
+                            Text("Try Again")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(Color(red: 0.6, green: 0.4, blue: 0.9))
+                                .cornerRadius(12)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, 60)
                 }
             }
         }

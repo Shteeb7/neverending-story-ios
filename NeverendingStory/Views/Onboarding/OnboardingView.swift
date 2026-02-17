@@ -70,7 +70,7 @@ struct OnboardingView: View {
 
                         // Title
                         VStack(spacing: 12) {
-                            Text("Prospero awaits")
+                            Text("Your storyteller awaits")
                                 .font(.system(.title, design: .serif))
                                 .foregroundColor(.white)
                                 .multilineTextAlignment(.center)
