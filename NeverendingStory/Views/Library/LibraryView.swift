@@ -364,6 +364,7 @@ struct LibraryView: View {
                 Task {
                     await loadConsentStatus()
                 }
+
             }
             .onDisappear {
                 NSLog("📚 LibraryView disappeared - stopping polling")

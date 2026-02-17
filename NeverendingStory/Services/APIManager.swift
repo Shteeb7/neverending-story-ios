@@ -522,6 +522,28 @@ class APIManager: ObservableObject {
         return response.reportId
     }
 
+    /// Get recent bug report status updates for the authenticated user
+    /// - Parameter since: ISO8601 timestamp to fetch updates after
+    /// - Returns: Array of bug report updates with status changes
+    func getBugReportUpdates(since: String) async throws -> [BugReportNotificationManager.BugReportUpdate] {
+        struct UpdatesResponse: Decodable {
+            let updates: [BugReportNotificationManager.BugReportUpdate]
+        }
+
+        // URL encode the since parameter
+        guard let encodedSince = since.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw APIError.invalidURL
+        }
+
+        let response: UpdatesResponse = try await makeRequest(
+            endpoint: "/bug-reports/updates?since=\(encodedSince)",
+            method: "GET",
+            requiresAuth: true
+        )
+
+        return response.updates
+    }
+
     // MARK: - Authentication Endpoints
 
     func authenticateWithGoogle(token: String) async throws -> User {

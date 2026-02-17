@@ -28,6 +28,7 @@
 		7906005188231D649F1BA4A6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 758724A0F1973E37866AD9B3 /* Foundation.framework */; };
 		81EA1895BE6DC9107E4130F0 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A697EA0D5F861C25CBFEA105 /* SettingsView.swift */; };
 		8250B66A88A2369D855D72B8 /* PremiseCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE889A414CE445BBEE5172B5 /* PremiseCard.swift */; };
+		847ADD932AB88B4A5157EEE4 /* BugNotificationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB830F8EA971C3F1E2AB44F6 /* BugNotificationUITests.swift */; };
 		887720CE7DC30CA43D955E0E /* PeggyBugReportUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2E107D2F392CD013C0A632 /* PeggyBugReportUITests.swift */; };
 		89F5E8EB1F3F6E9C2B296E87 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = 7F9BA64BB5D0D2B50C3B4C7A /* OpenAI */; };
 		8FD47CE8929B1AB17CBAAC15 /* BugReportOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 962ADE765864AE8243978FCA /* BugReportOverlay.swift */; };
@@ -61,6 +62,7 @@
 		EC125E2C1DA74F4E986920BF /* BookCoverCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD80E4D0C7C4520A4CA2BEE /* BookCoverCard.swift */; };
 		ED516AA51F0C9E4EAF658F34 /* BugReportVoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E90F1B5F9F69BA127A98EF /* BugReportVoiceView.swift */; };
 		F8E7D6C5B4A39281E0D9C8B7 /* DNATransferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8F7B2C9D4E5F6A1B2C3D4E /* DNATransferView.swift */; };
+		FD4ECBB8529A670C2E3D331D /* BugReportNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33AA13A0048BFEBA811604A4 /* BugReportNotificationManager.swift */; };
 		FE273B336776849CF06BA453 /* PremiseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */; };
 		FFB2D554F0C0737E23E0FCEC /* TextChatUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD3A58246F1D65B159DA28E /* TextChatUITests.swift */; };
 /* End PBXBuildFile section */
@@ -87,6 +89,7 @@
 		28D0777A38A8455B82DA1086 /* BookFormationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookFormationView.swift; sourceTree = "<group>"; };
 		2A2E107D2F392CD013C0A632 /* PeggyBugReportUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PeggyBugReportUITests.swift; sourceTree = "<group>"; };
 		2B3C4D5E6F78901234567890 /* GeneratingChaptersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratingChaptersView.swift; sourceTree = "<group>"; };
+		33AA13A0048BFEBA811604A4 /* BugReportNotificationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BugReportNotificationManager.swift; sourceTree = "<group>"; };
 		3534A61FFD543E4AAF93946E /* LaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchView.swift; sourceTree = "<group>"; };
 		39A8480BEB6A8F87CAB0E06F /* ReadingStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingStateManager.swift; sourceTree = "<group>"; };
 		39A9D66D3EE1466B4AB229D6 /* DedicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DedicationView.swift; sourceTree = "<group>"; };
@@ -130,6 +133,7 @@
 		DF48B9D5DC0B3E5630EE15F8 /* PremiseDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseDetailSheet.swift; sourceTree = "<group>"; };
 		E5D67056CF0B7FFF5F5EFFF4 /* TextChatView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextChatView.swift; sourceTree = "<group>"; };
 		E8F7A2B9C3D4E5F601234567 /* BookCompletionInterviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCompletionInterviewView.swift; sourceTree = "<group>"; };
+		EB830F8EA971C3F1E2AB44F6 /* BugNotificationUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BugNotificationUITests.swift; sourceTree = "<group>"; };
 		F2F95DABAFB4DEFE47A9F2CD /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		F9A8B7C6D5E4F3A2B1C0D9E8 /* BookCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCompleteView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -215,6 +219,7 @@
 				42C71EBED49796907D9ACC3C /* ConsentFlowUITests.swift */,
 				BC652D8CECDA5409F5D73647 /* AgeGateUITests.swift */,
 				2A2E107D2F392CD013C0A632 /* PeggyBugReportUITests.swift */,
+				EB830F8EA971C3F1E2AB44F6 /* BugNotificationUITests.swift */,
 			);
 			name = NeverendingStoryUITests;
 			path = NeverendingStoryUITests;
@@ -273,6 +278,7 @@
 				5C992418313E0D149445A242 /* VoiceSessionManager.swift */,
 				00FEF8F43CC479405800679B /* TextChatSessionManager.swift */,
 				AF9CE2DF18E9E3256862AB2E /* BugReportCaptureManager.swift */,
+				33AA13A0048BFEBA811604A4 /* BugReportNotificationManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -522,6 +528,7 @@
 				81EA1895BE6DC9107E4130F0 /* SettingsView.swift in Sources */,
 				95E4D02B70F0048848C04EB7 /* BugReportCaptureManager.swift in Sources */,
 				C5D3811E74BF24C155450D3F /* ReaderSettingsView.swift in Sources */,
+				FD4ECBB8529A670C2E3D331D /* BugReportNotificationManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -534,6 +541,7 @@
 				C022596218840ED6935C6ABC /* ConsentFlowUITests.swift in Sources */,
 				5BBF755110FB8C4D7F499E21 /* AgeGateUITests.swift in Sources */,
 				887720CE7DC30CA43D955E0E /* PeggyBugReportUITests.swift in Sources */,
+				847ADD932AB88B4A5157EEE4 /* BugNotificationUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
