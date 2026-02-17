@@ -1639,6 +1639,14 @@ class VoiceSessionManager: ObservableObject {
                 sendEvent(["type": "response.create"])
             }
 
+            // Auto-end session after closing message plays
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(5))
+                guard !self.isConversationComplete else { return }
+                NSLog("🏁 Auto-ending session after completion feedback filed")
+                self.endSession()
+            }
+
         case "submit_bug_report":
             NSLog("✅ Bug report/suggestion received!")
             NSLog("   \(args)")
@@ -1660,6 +1668,15 @@ class VoiceSessionManager: ObservableObject {
 
                 // Trigger AI to respond with closing message
                 sendEvent(["type": "response.create"])
+            }
+
+            // Auto-end session after Peggy's closing message plays
+            // 5 seconds is plenty for her 1-2 sentence sign-off audio to finish
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(5))
+                guard !self.isConversationComplete else { return } // Already ended manually
+                NSLog("🏁 Auto-ending Peggy session after bug report filed")
+                self.endSession()
             }
 
         default:
