@@ -59,9 +59,9 @@ class APIManager: ObservableObject {
     // MARK: - Bug Reporting - API Call Ring Buffer
 
     // Ring buffer for last 3 API calls (in-memory only, for bug report context)
-    // Using nonisolated(unsafe) because these properties have their own DispatchQueue for thread safety
+    // Using nonisolated(unsafe) because apiCallHistory has its own DispatchQueue for thread safety
     nonisolated(unsafe) private static var apiCallHistory: [(endpoint: String, method: String, statusCode: Int, timestamp: String)] = []
-    nonisolated(unsafe) private static let maxHistorySize = 3
+    private static let maxHistorySize = 3  // Sendable constant, no isolation needed
     private static let historyQueue = DispatchQueue(label: "com.neverendingstory.apihistory")
 
     // Offline queue for failed bug report submissions
