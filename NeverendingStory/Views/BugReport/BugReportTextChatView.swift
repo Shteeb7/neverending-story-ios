@@ -19,6 +19,7 @@ struct BugReportTextChatView: View {
     @State private var collectedData: [String: Any] = [:]
     @State private var showConfirmation = false
     @State private var showEndEarlyConfirmation = false
+    @State private var showCancelConfirmation = false
 
     @FocusState private var isInputFocused: Bool
 
@@ -51,8 +52,8 @@ struct BugReportTextChatView: View {
                     Spacer()
 
                     Button(action: {
-                        // Cancel and exit (no submission)
-                        dismiss()
+                        // Show cancel confirmation
+                        showCancelConfirmation = true
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
@@ -248,6 +249,15 @@ struct BugReportTextChatView: View {
             }
         } message: {
             Text("Your report may be incomplete. Ending now may make it harder for us to help you.")
+        }
+        .alert("If you quit now, your report won't be submitted, are you sure?", isPresented: $showCancelConfirmation) {
+            Button("Keep Going", role: .cancel) {}
+            Button("Quit Report", role: .destructive) {
+                // Cancel without submission
+                dismiss()
+            }
+        } message: {
+            Text("We won't receive your bug report and won't be able to help fix the issue.")
         }
     }
 

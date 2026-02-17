@@ -22,6 +22,7 @@ struct BugReportVoiceView: View {
     @State private var collectedData: [String: Any] = [:]
     @State private var showConfirmation = false
     @State private var showEndEarlyConfirmation = false
+    @State private var showCancelConfirmation = false
 
     var body: some View {
         ZStack {
@@ -112,9 +113,8 @@ struct BugReportVoiceView: View {
                 HStack {
                     Spacer()
                     Button(action: {
-                        // End the voice session before dismissing (cleanup WebSocket, audio, etc.)
-                        voiceSession.endSession()
-                        dismiss()
+                        // Show cancel confirmation
+                        showCancelConfirmation = true
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title)
@@ -151,6 +151,16 @@ struct BugReportVoiceView: View {
             }
         } message: {
             Text("Your report may be incomplete. Ending now may make it harder for us to help you.")
+        }
+        .alert("If you quit now, your report won't be submitted, are you sure?", isPresented: $showCancelConfirmation) {
+            Button("Keep Going", role: .cancel) {}
+            Button("Quit Report", role: .destructive) {
+                // Cancel without submission - end session and dismiss
+                voiceSession.endSession()
+                dismiss()
+            }
+        } message: {
+            Text("We won't receive your bug report and won't be able to help fix the issue.")
         }
         .fullScreenCover(isPresented: $showConfirmation) {
             BugReportConfirmationView(

@@ -25,6 +25,7 @@ struct BookCompletionInterviewView: View {
     @State private var interviewPreferences: [String: Any] = [:]
     @State private var showTextChat = false
     @State private var showEndEarlyConfirmation = false
+    @State private var showCancelConfirmation = false
 
     var body: some View {
         ZStack {
@@ -53,9 +54,8 @@ struct BookCompletionInterviewView: View {
                     HStack {
                         Spacer()
                         Button(action: {
-                            // End the voice session before dismissing (cleanup WebSocket, audio, etc.)
-                            voiceSession.endSession()
-                            dismiss()
+                            // Show cancel confirmation
+                            showCancelConfirmation = true
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.title)
@@ -83,6 +83,16 @@ struct BookCompletionInterviewView: View {
         } message: {
             Text("Your feedback isn't complete yet. Ending now may limit our ability to personalize your next story.")
         }
+        .alert("If you quit now, your feedback won't be saved, are you sure?", isPresented: $showCancelConfirmation) {
+            Button("Keep Going", role: .cancel) {}
+            Button("Quit Feedback", role: .destructive) {
+                // Cancel without saving feedback - end session and dismiss
+                voiceSession.endSession()
+                dismiss()
+            }
+        } message: {
+            Text("Your feedback helps us personalize future stories for you.")
+        }
         .fullScreenCover(isPresented: $showTextChat) {
             // Build book completion context for text chat
             TextChatView(
@@ -91,6 +101,11 @@ struct BookCompletionInterviewView: View {
                 onComplete: {
                     showTextChat = false
                     // Text chat callback already handled preferences
+                },
+                onCancel: {
+                    // Cancel - just dismiss the text chat
+                    NSLog("❌ Book completion text chat canceled")
+                    showTextChat = false
                 }
             )
         }

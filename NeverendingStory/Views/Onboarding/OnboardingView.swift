@@ -361,9 +361,15 @@ struct OnboardingView: View {
             }
             .fullScreenCover(isPresented: $showTextChat) {
                 TextChatView(
-                    interviewType: .onboarding,  // For now, always use onboarding for text chat
+                    interviewType: .onboarding,
                     context: nil,
-                    onComplete: handleTextChatComplete
+                    onComplete: handleTextChatComplete,
+                    onCancel: {
+                        // Cancel - just dismiss the text chat, return to voice/text selection
+                        NSLog("❌ Text chat canceled - returning to selection screen")
+                        showTextChat = false
+                        // Don't advance to DNA transfer - user stays at onboarding
+                    }
                 )
             }
             .fullScreenCover(isPresented: $showDNATransfer) {

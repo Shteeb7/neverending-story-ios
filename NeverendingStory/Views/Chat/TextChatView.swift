@@ -15,10 +15,12 @@ struct TextChatView: View {
     @State private var currentTypewriterIndex = 0
     @State private var isTypewriterActive = false
     @State private var showEndEarlyConfirmation = false
+    @State private var showCancelConfirmation = false
 
     let interviewType: InterviewType
     let context: [String: Any]?
     let onComplete: () -> Void
+    let onCancel: (() -> Void)?
 
     @FocusState private var isInputFocused: Bool
 
@@ -62,8 +64,8 @@ struct TextChatView: View {
                     Spacer()
 
                     Button(action: {
-                        // Cancel and exit (no submission)
-                        onComplete()
+                        // Show cancel confirmation
+                        showCancelConfirmation = true
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
@@ -218,6 +220,17 @@ struct TextChatView: View {
             }
         } message: {
             Text("Your interview isn't complete yet. Ending now may affect the quality of your story recommendations.")
+        }
+        .alert("If you quit now, you'll have to restart the interview, are you sure?", isPresented: $showCancelConfirmation) {
+            Button("Keep Going", role: .cancel) {}
+            Button("Quit Interview", role: .destructive) {
+                // Cancel without calling onComplete - use onCancel if provided
+                if let cancelCallback = onCancel {
+                    cancelCallback()
+                }
+            }
+        } message: {
+            Text("Your progress will not be saved and you'll need to start over.")
         }
     }
 
@@ -471,6 +484,9 @@ struct TextChatView_Previews: PreviewProvider {
             context: [:],
             onComplete: {
                 print("Chat complete!")
+            },
+            onCancel: {
+                print("Chat canceled!")
             }
         )
     }
