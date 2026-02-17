@@ -89,15 +89,15 @@ struct BugReportVoiceView: View {
 
                 Spacer()
 
-                // End conversation button
+                // End and submit button
                 if isSessionActive {
                     Button(action: { voiceSession.endSession() }) {
-                        Text("End Conversation")
+                        Text("End and Submit")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.red.opacity(0.8))
+                            .background(Color.green.opacity(0.8))
                             .cornerRadius(12)
                     }
                     .padding(.horizontal, 24)
@@ -105,11 +105,15 @@ struct BugReportVoiceView: View {
                 }
             }
 
-            // Close button (top-right)
+            // Close button (top-right) - Cancel and exit
             VStack {
                 HStack {
                     Spacer()
-                    Button(action: { dismiss() }) {
+                    Button(action: {
+                        // End the voice session before dismissing (cleanup WebSocket, audio, etc.)
+                        voiceSession.endSession()
+                        dismiss()
+                    }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title)
                             .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.6))
@@ -144,6 +148,10 @@ struct BugReportVoiceView: View {
                 conversationText: voiceSession.conversationText,
                 signOffMessage: collectedData["sign_off_message"] as? String
             )
+            .onDisappear {
+                // When confirmation dismisses, dismiss the entire voice view
+                dismiss()
+            }
         }
         .task {
             await startVoiceSession()
