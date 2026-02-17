@@ -11,6 +11,7 @@ import SwiftUI
 struct BugReportConfirmationView: View {
     let reportType: BugReportView.ReportOption
     let conversationText: String
+    let signOffMessage: String?
 
     @Environment(\.dismiss) private var dismiss
     @State private var scale: CGFloat = 0.5
@@ -32,18 +33,12 @@ struct BugReportConfirmationView: View {
                     .foregroundColor(.green)
                     .scaleEffect(scale)
 
-                // Thank you message
+                // Peggy's sign-off message
                 VStack(spacing: 12) {
-                    Text("Thanks!")
-                        .font(.custom("Georgia", size: 32))
-                        .fontWeight(.bold)
+                    Text(signOffMessage ?? "Thanks!")
+                        .font(.custom("Georgia", size: 24))
+                        .fontWeight(.medium)
                         .foregroundColor(.white)
-
-                    Text(reportType == .bugReport ?
-                         "Your bug report has been sent to the team." :
-                         "Your suggestion has been recorded!")
-                        .font(.body)
-                        .foregroundColor(.white.opacity(0.9))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
                 }
@@ -70,6 +65,9 @@ struct BugReportConfirmationView: View {
             .scaleEffect(scale)
         }
         .onAppear {
+            // Haptic feedback
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+
             // Animate in
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 scale = 1.0
@@ -87,6 +85,7 @@ struct BugReportConfirmationView: View {
 #Preview {
     BugReportConfirmationView(
         reportType: .bugReport,
-        conversationText: "Sample conversation text"
+        conversationText: "Sample conversation text",
+        signOffMessage: "Thanks so much! We'll get this sorted right away."
     )
 }

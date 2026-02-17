@@ -141,7 +141,8 @@ struct BugReportVoiceView: View {
         .fullScreenCover(isPresented: $showConfirmation) {
             BugReportConfirmationView(
                 reportType: reportType,
-                conversationText: voiceSession.conversationText
+                conversationText: voiceSession.conversationText,
+                signOffMessage: collectedData["sign_off_message"] as? String
             )
         }
         .task {
@@ -227,11 +228,11 @@ struct BugReportVoiceView: View {
         do {
             // Extract fields from function tool callback
             let summary = data["summary"] as? String ?? ""
-            let expectedBehavior = data["expectedBehavior"] as? String
-            let actualBehavior = data["actualBehavior"] as? String
-            let stepsArray = data["stepsToReproduce"] as? [String]
-            let stepsToReproduce = stepsArray?.joined(separator: "\n")
-            let severity = data["severity"] as? String
+            let category = data["category"] as? String ?? "other"
+            let severityHint = data["severity_hint"] as? String
+            let userDescription = data["user_description"] as? String
+            let stepsToReproduce = data["steps_to_reproduce"] as? String
+            let expectedBehavior = data["expected_behavior"] as? String
 
             // Build transcript from conversation history
             let transcript = voiceSession.conversationText
@@ -244,9 +245,9 @@ struct BugReportVoiceView: View {
                 interviewMode: "voice",
                 transcript: transcript,
                 peggySummary: summary,
-                category: "other",  // Will be improved with proper category from function tool
-                severityHint: severity,
-                userDescription: actualBehavior,
+                category: category,
+                severityHint: severityHint,
+                userDescription: userDescription,
                 stepsToReproduce: stepsToReproduce,
                 expectedBehavior: expectedBehavior,
                 screenshot: capturedScreenshot,

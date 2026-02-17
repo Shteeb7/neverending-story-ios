@@ -42,7 +42,7 @@ struct BugReportTextChatView: View {
                         .font(.title3)
                         .foregroundColor(Color.red.opacity(0.8))
 
-                    Text(reportType == .bugReport ? "Peggy: Bug Report" : "Peggy: Feature Idea")
+                    Text("Line Open — Peggy, QA Division")
                         .font(.custom("Georgia", size: 18))
                         .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6))
                         .italic()
@@ -120,7 +120,8 @@ struct BugReportTextChatView: View {
         .fullScreenCover(isPresented: $showConfirmation) {
             BugReportConfirmationView(
                 reportType: reportType,
-                conversationText: chatSession.messages.map { "\($0.role): \($0.content)" }.joined(separator: "\n")
+                conversationText: chatSession.messages.map { "\($0.role): \($0.content)" }.joined(separator: "\n"),
+                signOffMessage: collectedData["sign_off_message"] as? String
             )
         }
         .task {
@@ -320,11 +321,11 @@ struct BugReportTextChatView: View {
         do {
             // Extract fields from function tool callback
             let summary = data["summary"] as? String ?? ""
-            let expectedBehavior = data["expectedBehavior"] as? String
-            let actualBehavior = data["actualBehavior"] as? String
-            let stepsArray = data["stepsToReproduce"] as? [String]
-            let stepsToReproduce = stepsArray?.joined(separator: "\n")
-            let severity = data["severity"] as? String
+            let category = data["category"] as? String ?? "other"
+            let severityHint = data["severity_hint"] as? String
+            let userDescription = data["user_description"] as? String
+            let stepsToReproduce = data["steps_to_reproduce"] as? String
+            let expectedBehavior = data["expected_behavior"] as? String
 
             // Build transcript from chat session messages
             let transcript = chatSession.messages.map { "\($0.role == "user" ? "You" : "Peggy"): \($0.content)" }.joined(separator: "\n\n")
@@ -337,9 +338,9 @@ struct BugReportTextChatView: View {
                 interviewMode: "text",
                 transcript: transcript,
                 peggySummary: summary,
-                category: "other",  // Will be improved with proper category from function tool
-                severityHint: severity,
-                userDescription: actualBehavior,
+                category: category,
+                severityHint: severityHint,
+                userDescription: userDescription,
                 stepsToReproduce: stepsToReproduce,
                 expectedBehavior: expectedBehavior,
                 screenshot: capturedScreenshot,

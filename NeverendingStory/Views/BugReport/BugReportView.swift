@@ -17,6 +17,8 @@ struct BugReportView: View {
     @State private var selectedOption: ReportOption?
     @State private var showVoiceInterview = false
     @State private var showTextChat = false
+    @State private var consentStatus: ConsentStatus?
+    @State private var showConsentScreen = false
 
     enum ReportOption {
         case bugReport
@@ -39,6 +41,17 @@ struct BugReportView: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 32) {
+                    // Screenshot thumbnail
+                    if let screenshot = capturedScreenshot {
+                        Image(uiImage: screenshot)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: 100)
+                            .cornerRadius(8)
+                            .shadow(radius: 4)
+                            .padding(.top, 20)
+                    }
+
                     // Header
                     VStack(spacing: 12) {
                         Image(systemName: "ant.circle.fill")
@@ -94,26 +107,51 @@ struct BugReportView: View {
 
                             HStack(spacing: 16) {
                                 // Voice button
-                                Button(action: {
-                                    showVoiceInterview = true
-                                }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "mic.fill")
-                                            .font(.system(size: 18))
-                                        Text("Voice")
-                                            .font(.headline)
+                                VStack(spacing: 8) {
+                                    Button(action: {
+                                        // Check consent before proceeding
+                                        guard let consent = consentStatus else { return }
+                                        if !consent.aiConsent {
+                                            showConsentScreen = true
+                                        } else if consent.voiceConsent {
+                                            showVoiceInterview = true
+                                        }
+                                    }) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "mic.fill")
+                                                .font(.system(size: 18))
+                                            Text("Voice")
+                                                .font(.headline)
+                                        }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                        .background(
+                                            (consentStatus?.voiceConsent == true) ?
+                                            Color.accentColor : Color.gray
+                                        )
+                                        .cornerRadius(12)
                                     }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(Color.accentColor)
-                                    .cornerRadius(12)
+                                    .accessibilityIdentifier("voiceChatButton")
+                                    .disabled(consentStatus?.voiceConsent != true)
+
+                                    if consentStatus?.voiceConsent == false {
+                                        Text("Enable voice in Settings to talk to Peggy")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .multilineTextAlignment(.center)
+                                    }
                                 }
-                                .accessibilityIdentifier("voiceChatButton")
 
                                 // Text button
                                 Button(action: {
-                                    showTextChat = true
+                                    // Check consent before proceeding
+                                    guard let consent = consentStatus else { return }
+                                    if !consent.aiConsent {
+                                        showConsentScreen = true
+                                    } else {
+                                        showTextChat = true
+                                    }
                                 }) {
                                     HStack(spacing: 8) {
                                         Image(systemName: "text.bubble.fill")
@@ -165,6 +203,21 @@ struct BugReportView: View {
                     capturedScreenshot: capturedScreenshot,
                     capturedMetadata: capturedMetadata
                 )
+            }
+        }
+        .fullScreenCover(isPresented: $showConsentScreen) {
+            // TODO: Present appropriate consent screen based on consent status
+            // For now, this prevents the app from crashing if consent is needed
+            EmptyView()
+        }
+        .task {
+            // Load consent status
+            do {
+                consentStatus = try await APIManager.shared.getConsentStatus()
+            } catch {
+                NSLog("⚠️ Failed to load consent status: \(error)")
+                // Default to no consent if fetch fails
+                consentStatus = ConsentStatus(aiConsent: false, voiceConsent: false)
             }
         }
     }

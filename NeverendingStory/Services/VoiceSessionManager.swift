@@ -1255,13 +1255,15 @@ class VoiceSessionManager: ObservableObject {
             "parameters": [
                 "type": "object",
                 "properties": [
-                    "summary": ["type": "string", "description": "Brief summary of the bug"],
-                    "expectedBehavior": ["type": "string", "description": "What the user expected to happen"],
-                    "actualBehavior": ["type": "string", "description": "What actually happened"],
-                    "stepsToReproduce": ["type": "array", "items": ["type": "string"], "description": "Steps to reproduce the bug"],
-                    "severity": ["type": "string", "enum": ["critical", "high", "medium", "low"], "description": "Bug severity"]
+                    "summary": ["type": "string", "description": "One-sentence description of the issue"],
+                    "category": ["type": "string", "enum": ["navigation", "generation", "reading", "interview", "visual", "performance", "feature_request", "other"], "description": "Bug category"],
+                    "severity_hint": ["type": "string", "enum": ["critical", "annoying", "cosmetic", "idea"], "description": "How severe is this issue"],
+                    "user_description": ["type": "string", "description": "Full description of the issue in the user's own words"],
+                    "steps_to_reproduce": ["type": "string", "description": "Steps to reproduce the issue, if described"],
+                    "expected_behavior": ["type": "string", "description": "What the user expected to happen"],
+                    "sign_off_message": ["type": "string", "description": "Peggy's warm closing line to the user"]
                 ],
-                "required": ["summary", "expectedBehavior", "actualBehavior"]
+                "required": ["summary", "category", "user_description", "sign_off_message"]
             ]
         ]]
 
@@ -1301,7 +1303,7 @@ class VoiceSessionManager: ObservableObject {
             "session": [
                 "modalities": ["text", "audio"],
                 "instructions": instructions,
-                "voice": "ballad",
+                "voice": "shimmer",
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": [
@@ -1331,17 +1333,20 @@ class VoiceSessionManager: ObservableObject {
     private func configureSuggestionSession(context: SuggestionContext) async throws {
         let tools: [[String: Any]] = [[
             "type": "function",
-            "name": "submit_feature_suggestion",
+            "name": "submit_bug_report",
             "description": "Submit the feature suggestion after gathering details from the user.",
             "parameters": [
                 "type": "object",
                 "properties": [
-                    "title": ["type": "string", "description": "Short title for the suggestion"],
-                    "description": ["type": "string", "description": "Detailed description of the feature"],
-                    "useCases": ["type": "array", "items": ["type": "string"], "description": "How the user would use this feature"],
-                    "priority": ["type": "string", "enum": ["nice_to_have", "would_love", "critical"], "description": "How important is this to the user"]
+                    "summary": ["type": "string", "description": "One-sentence description of the issue"],
+                    "category": ["type": "string", "enum": ["navigation", "generation", "reading", "interview", "visual", "performance", "feature_request", "other"], "description": "Bug category"],
+                    "severity_hint": ["type": "string", "enum": ["critical", "annoying", "cosmetic", "idea"], "description": "How severe is this issue"],
+                    "user_description": ["type": "string", "description": "Full description of the issue in the user's own words"],
+                    "steps_to_reproduce": ["type": "string", "description": "Steps to reproduce the issue, if described"],
+                    "expected_behavior": ["type": "string", "description": "What the user expected to happen"],
+                    "sign_off_message": ["type": "string", "description": "Peggy's warm closing line to the user"]
                 ],
-                "required": ["title", "description"]
+                "required": ["summary", "category", "user_description", "sign_off_message"]
             ]
         ]]
 
@@ -1377,7 +1382,7 @@ class VoiceSessionManager: ObservableObject {
             "session": [
                 "modalities": ["text", "audio"],
                 "instructions": instructions,
-                "voice": "ballad",
+                "voice": "shimmer",
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": [
@@ -1629,10 +1634,10 @@ class VoiceSessionManager: ObservableObject {
             }
 
         case "submit_bug_report":
-            NSLog("✅ Bug report received!")
+            NSLog("✅ Bug report/suggestion received!")
             NSLog("   \(args)")
 
-            // Trigger callback with bug report data
+            // Trigger callback with bug report/suggestion data
             onPreferencesGathered?(args)
 
             // Send function response back to OpenAI
@@ -1642,30 +1647,7 @@ class VoiceSessionManager: ObservableObject {
                     "item": [
                         "type": "function_call_output",
                         "call_id": callId,
-                        "output": "{\"success\": true, \"message\": \"Bug report captured! The team will investigate.\"}"
-                    ]
-                ]
-                sendEvent(result)
-
-                // Trigger AI to respond with closing message
-                sendEvent(["type": "response.create"])
-            }
-
-        case "submit_feature_suggestion":
-            NSLog("✅ Feature suggestion received!")
-            NSLog("   \(args)")
-
-            // Trigger callback with suggestion data
-            onPreferencesGathered?(args)
-
-            // Send function response back to OpenAI
-            Task {
-                let result: [String: Any] = [
-                    "type": "conversation.item.create",
-                    "item": [
-                        "type": "function_call_output",
-                        "call_id": callId,
-                        "output": "{\"success\": true, \"message\": \"Thanks for the suggestion! We'll consider it.\"}"
+                        "output": "{\"success\": true, \"message\": \"Report captured! The team will review it.\"}"
                     ]
                 ]
                 sendEvent(result)

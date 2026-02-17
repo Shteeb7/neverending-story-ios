@@ -16,6 +16,7 @@ struct BugReportOverlay: View {
     @State private var capturedData: (screenshot: UIImage?, metadata: [String: Any])?
     @AppStorage("bugReporterPosition") private var savedPosition: String = ""
     @AppStorage("showBugReporter") private var showBugReporter: Bool = true
+    @ObservedObject private var apiManager = APIManager.shared
 
     // Screen bounds for drag constraints
     private let screenBounds = UIScreen.main.bounds
@@ -23,11 +24,15 @@ struct BugReportOverlay: View {
 
     var body: some View {
         Group {
+            // TODO: Add visibility rules for voice session (hide during active voice interviews)
+            // TODO: Add visibility rules for focused reading (hide when user is deeply engaged in reading)
             if showBugReporter {
                 ZStack {
                     // Bug icon button
                     Button(action: {
                         guard !isDragging else { return }
+                        // Haptic feedback
+                        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                         // Capture screenshot + metadata immediately on icon tap (spec 3a)
                         Task {
                             capturedData = await BugReportCaptureManager.shared.captureCurrentState()
@@ -36,34 +41,54 @@ struct BugReportOverlay: View {
                             }
                         }
                     }) {
-                        ZStack {
-                            // Outer glow
-                            Circle()
-                                .fill(Color.red.opacity(0.2))
-                                .frame(width: iconSize, height: iconSize)
-                                .blur(radius: 8)
+                        ZStack(alignment: .topTrailing) {
+                            ZStack {
+                                // Outer glow
+                                Circle()
+                                    .fill((apiManager.isQueueFull ? Color.gray : Color.red).opacity(0.2))
+                                    .frame(width: iconSize, height: iconSize)
+                                    .blur(radius: 8)
 
-                            // Main circle background
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color.red.opacity(0.9),
-                                            Color.red.opacity(0.7)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
+                                // Main circle background
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: apiManager.isQueueFull ? [
+                                                Color.gray.opacity(0.6),
+                                                Color.gray.opacity(0.4)
+                                            ] : [
+                                                Color.red.opacity(0.9),
+                                                Color.red.opacity(0.7)
+                                            ]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
                                     )
-                                )
-                                .frame(width: iconSize, height: iconSize)
-                                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                                    .frame(width: iconSize, height: iconSize)
+                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
 
-                            // Bug icon
-                            Image(systemName: "ant.fill")
-                                .font(.system(size: 26))
-                                .foregroundColor(.white)
+                                // Bug icon
+                                Image(systemName: "ant.fill")
+                                    .font(.system(size: 26))
+                                    .foregroundColor(.white)
+                            }
+                            .opacity(apiManager.isQueueFull ? 0.5 : 1.0)
+
+                            // Queue full badge
+                            if apiManager.isQueueFull {
+                                Circle()
+                                    .fill(Color.orange)
+                                    .frame(width: 20, height: 20)
+                                    .overlay(
+                                        Text("!")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.white)
+                                    )
+                                    .offset(x: 5, y: -5)
+                            }
                         }
                     }
+                    .disabled(apiManager.isQueueFull)
                     .position(position)
                     .gesture(
                         DragGesture()
