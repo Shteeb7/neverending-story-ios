@@ -18,6 +18,7 @@ struct BugReportTextChatView: View {
     @State private var currentInput = ""
     @State private var collectedData: [String: Any] = [:]
     @State private var showConfirmation = false
+    @State private var showEndEarlyConfirmation = false
 
     @FocusState private var isInputFocused: Bool
 
@@ -108,18 +109,15 @@ struct BugReportTextChatView: View {
                     }
                 }
 
-                // Input area with End and Submit button
+                // Input area with End and Submit button BELOW
                 if chatSession.isSessionActive && !chatSession.sessionComplete {
                     VStack(spacing: 12) {
-                        // End and Submit button (allows early submission)
+                        inputArea()
+                            .padding(.horizontal, 20)
+
+                        // End and Submit button BELOW input (50% opacity)
                         Button(action: {
-                            // Mark session as complete
-                            chatSession.sessionComplete = true
-                            // Trigger completion callback with whatever data was collected
-                            if let callback = chatSession.onPreferencesGathered {
-                                callback(collectedData)
-                            }
-                            showConfirmation = true
+                            showEndEarlyConfirmation = true
                         }) {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
@@ -132,11 +130,9 @@ struct BugReportTextChatView: View {
                             .frame(maxWidth: .infinity)
                             .background(Color.red.opacity(0.8))
                             .cornerRadius(12)
+                            .opacity(0.5)
                         }
                         .padding(.horizontal, 20)
-
-                        inputArea()
-                            .padding(.horizontal, 20)
                     }
                     .padding(.vertical, 15)
                     .background(
@@ -238,6 +234,20 @@ struct BugReportTextChatView: View {
                 // Show confirmation
                 showConfirmation = true
             }
+        }
+        .alert("Are you sure you want to end the interview early?", isPresented: $showEndEarlyConfirmation) {
+            Button("Keep Going", role: .cancel) {}
+            Button("Submit Report", role: .destructive) {
+                // Mark session as complete
+                chatSession.sessionComplete = true
+                // Trigger completion callback with whatever data was collected
+                if let callback = chatSession.onPreferencesGathered {
+                    callback(collectedData)
+                }
+                showConfirmation = true
+            }
+        } message: {
+            Text("Your report may be incomplete. Ending now may make it harder for us to help you.")
         }
     }
 

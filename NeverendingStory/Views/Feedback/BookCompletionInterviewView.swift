@@ -24,6 +24,7 @@ struct BookCompletionInterviewView: View {
     @State private var showBookComplete = false
     @State private var interviewPreferences: [String: Any] = [:]
     @State private var showTextChat = false
+    @State private var showEndEarlyConfirmation = false
 
     var body: some View {
         ZStack {
@@ -73,6 +74,14 @@ struct BookCompletionInterviewView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage)
+        }
+        .alert("Are you sure you want to end the interview early?", isPresented: $showEndEarlyConfirmation) {
+            Button("Keep Going", role: .cancel) {}
+            Button("Submit Feedback", role: .destructive) {
+                endInterview()
+            }
+        } message: {
+            Text("Your feedback isn't complete yet. Ending now may limit our ability to personalize your next story.")
         }
         .fullScreenCover(isPresented: $showTextChat) {
             // Build book completion context for text chat
@@ -248,9 +257,9 @@ struct BookCompletionInterviewView: View {
 
             Spacer()
 
-            // Submit Feedback button
+            // Submit Feedback button (50% opacity with confirmation)
             if case .listening = voiceSession.state {
-                Button(action: { endInterview() }) {
+                Button(action: { showEndEarlyConfirmation = true }) {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                         Text("Submit Feedback")
@@ -270,9 +279,10 @@ struct BookCompletionInterviewView: View {
                     )
                     .foregroundColor(.white)
                     .cornerRadius(12)
+                    .opacity(0.5)
                 }
             } else if case .processing = voiceSession.state {
-                Button(action: { endInterview() }) {
+                Button(action: { showEndEarlyConfirmation = true }) {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                         Text("Submit Feedback")
@@ -292,6 +302,7 @@ struct BookCompletionInterviewView: View {
                     )
                     .foregroundColor(.white)
                     .cornerRadius(12)
+                    .opacity(0.5)
                 }
             }
 

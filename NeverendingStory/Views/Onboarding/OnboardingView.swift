@@ -24,6 +24,7 @@ struct OnboardingView: View {
     @State private var showTextChat = false
     @State private var showVoiceConsent = false
     @State private var showCancelConfirmation = false
+    @State private var showCompleteEarlyConfirmation = false
     @State private var voiceConsent: Bool? = nil
 
     init(forceNewInterview: Bool = false) {
@@ -243,7 +244,9 @@ struct OnboardingView: View {
                                         .font(.headline)
                                         .foregroundColor(.primary)
 
-                                    Button(action: endVoiceSession) {
+                                    Button(action: {
+                                        showCompleteEarlyConfirmation = true
+                                    }) {
                                         HStack {
                                             Image(systemName: "checkmark.circle.fill")
                                             Text("Complete Interview")
@@ -263,6 +266,7 @@ struct OnboardingView: View {
                                         )
                                         .foregroundColor(.white)
                                         .cornerRadius(12)
+                                        .opacity(0.5)
                                     }
                                 }
                             }
@@ -346,6 +350,14 @@ struct OnboardingView: View {
                 }
             } message: {
                 Text("Prospero won't know what to write for you until your interview is complete. You can return and start the interview again if you cancel now.")
+            }
+            .alert("Are you sure you want to end the interview early?", isPresented: $showCompleteEarlyConfirmation) {
+                Button("Keep Going", role: .cancel) {}
+                Button("Complete Interview", role: .destructive) {
+                    endVoiceSession()
+                }
+            } message: {
+                Text("Your interview isn't complete yet. Ending now may affect the quality of your story recommendations.")
             }
             .fullScreenCover(isPresented: $showTextChat) {
                 TextChatView(

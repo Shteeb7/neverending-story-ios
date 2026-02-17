@@ -14,6 +14,7 @@ struct TextChatView: View {
     @State private var typewriterText = ""
     @State private var currentTypewriterIndex = 0
     @State private var isTypewriterActive = false
+    @State private var showEndEarlyConfirmation = false
 
     let interviewType: InterviewType
     let context: [String: Any]?
@@ -119,18 +120,15 @@ struct TextChatView: View {
                     }
                 }
 
-                // Input area with End and Submit button
+                // Input area with End and Submit button BELOW
                 if chatSession.isSessionActive && !chatSession.sessionComplete {
                     VStack(spacing: 12) {
-                        // End and Submit button (allows early completion)
+                        inputArea()
+                            .padding(.horizontal, 20)
+
+                        // End and Submit button BELOW input (50% opacity)
                         Button(action: {
-                            // Mark session as complete and trigger callback
-                            chatSession.sessionComplete = true
-                            if let callback = chatSession.onPreferencesGathered {
-                                // Call with empty preferences dict (whatever was gathered so far)
-                                callback([:])
-                            }
-                            onComplete()
+                            showEndEarlyConfirmation = true
                         }) {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
@@ -152,11 +150,9 @@ struct TextChatView: View {
                                 )
                             )
                             .cornerRadius(12)
+                            .opacity(0.5)
                         }
                         .padding(.horizontal, 20)
-
-                        inputArea()
-                            .padding(.horizontal, 20)
                     }
                     .padding(.vertical, 15)
                     .background(
@@ -208,6 +204,20 @@ struct TextChatView: View {
                 NSLog("✅ Text chat complete - preferences gathered")
                 onComplete()
             }
+        }
+        .alert("Are you sure you want to end the interview early?", isPresented: $showEndEarlyConfirmation) {
+            Button("Keep Going", role: .cancel) {}
+            Button("End Interview", role: .destructive) {
+                // Mark session as complete and trigger callback
+                chatSession.sessionComplete = true
+                if let callback = chatSession.onPreferencesGathered {
+                    // Call with empty preferences dict (whatever was gathered so far)
+                    callback([:])
+                }
+                onComplete()
+            }
+        } message: {
+            Text("Your interview isn't complete yet. Ending now may affect the quality of your story recommendations.")
         }
     }
 

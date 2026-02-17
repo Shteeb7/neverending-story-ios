@@ -21,6 +21,7 @@ struct BugReportVoiceView: View {
     @State private var isSessionActive = false
     @State private var collectedData: [String: Any] = [:]
     @State private var showConfirmation = false
+    @State private var showEndEarlyConfirmation = false
 
     var body: some View {
         ZStack {
@@ -89,9 +90,9 @@ struct BugReportVoiceView: View {
 
                 Spacer()
 
-                // End and submit button
+                // End and submit button (50% opacity with confirmation)
                 if isSessionActive {
-                    Button(action: { voiceSession.endSession() }) {
+                    Button(action: { showEndEarlyConfirmation = true }) {
                         Text("End and Submit")
                             .font(.headline)
                             .foregroundColor(.white)
@@ -99,6 +100,7 @@ struct BugReportVoiceView: View {
                             .padding(.vertical, 16)
                             .background(Color.green.opacity(0.8))
                             .cornerRadius(12)
+                            .opacity(0.5)
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 40)
@@ -141,6 +143,14 @@ struct BugReportVoiceView: View {
             }
         } message: {
             Text(errorMessage)
+        }
+        .alert("Are you sure you want to end the interview early?", isPresented: $showEndEarlyConfirmation) {
+            Button("Keep Going", role: .cancel) {}
+            Button("Submit Report", role: .destructive) {
+                voiceSession.endSession()
+            }
+        } message: {
+            Text("Your report may be incomplete. Ending now may make it harder for us to help you.")
         }
         .fullScreenCover(isPresented: $showConfirmation) {
             BugReportConfirmationView(
