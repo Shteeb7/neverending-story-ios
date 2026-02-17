@@ -261,9 +261,7 @@ struct BookCompletionInterviewView: View {
             if case .error = voiceSession.state {
                 VStack(spacing: 12) {
                     Button(action: {
-                        Task {
-                            await startInterview()
-                        }
+                        startInterview()
                     }) {
                         HStack {
                             Image(systemName: "arrow.clockwise")
