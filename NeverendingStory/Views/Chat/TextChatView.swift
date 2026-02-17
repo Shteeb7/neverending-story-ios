@@ -52,13 +52,22 @@ struct TextChatView: View {
             }
 
             VStack(spacing: 0) {
-                // Header
+                // Header with X button
                 HStack {
                     Text("Correspondence with Prospero")
                         .font(.custom("Georgia", size: 18))
                         .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6))
                         .italic()
                     Spacer()
+
+                    Button(action: {
+                        // Cancel and exit (no submission)
+                        onComplete()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.6))
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 50)
@@ -110,15 +119,50 @@ struct TextChatView: View {
                     }
                 }
 
-                // Input area
+                // Input area with End and Submit button
                 if chatSession.isSessionActive && !chatSession.sessionComplete {
-                    inputArea()
+                    VStack(spacing: 12) {
+                        // End and Submit button (allows early completion)
+                        Button(action: {
+                            // Mark session as complete and trigger callback
+                            chatSession.sessionComplete = true
+                            if let callback = chatSession.onPreferencesGathered {
+                                // Call with empty preferences dict (whatever was gathered so far)
+                                callback([:])
+                            }
+                            onComplete()
+                        }) {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 16))
+                                Text("End and Submit")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color(red: 0.6, green: 0.4, blue: 0.9),
+                                        Color(red: 0.7, green: 0.3, blue: 0.8)
+                                    ]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                        }
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 15)
-                        .background(
-                            Color.black.opacity(0.5)
-                                .blur(radius: 10)
-                        )
+
+                        inputArea()
+                            .padding(.horizontal, 20)
+                    }
+                    .padding(.vertical, 15)
+                    .background(
+                        Color.black.opacity(0.5)
+                            .blur(radius: 10)
+                    )
                 } else if chatSession.error != nil {
                     // Show error state with retry
                     VStack(spacing: 16) {
@@ -271,7 +315,7 @@ struct TextChatView: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 18))
 
-                    Text(interviewType == .onboarding ? "Enter the Mythweaver" : "Continue")
+                    Text(interviewType == .onboarding ? "Enter the Mythweaver" : "Complete Interview")
                         .font(.custom("Georgia", size: 18))
                         .fontWeight(.semibold)
 

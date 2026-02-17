@@ -49,7 +49,10 @@ struct BugReportTextChatView: View {
 
                     Spacer()
 
-                    Button(action: { dismiss() }) {
+                    Button(action: {
+                        // Cancel and exit (no submission)
+                        dismiss()
+                    }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
                             .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.6))
@@ -105,15 +108,41 @@ struct BugReportTextChatView: View {
                     }
                 }
 
-                // Input area
+                // Input area with End and Submit button
                 if chatSession.isSessionActive && !chatSession.sessionComplete {
-                    inputArea()
+                    VStack(spacing: 12) {
+                        // End and Submit button (allows early submission)
+                        Button(action: {
+                            // Mark session as complete
+                            chatSession.sessionComplete = true
+                            // Trigger completion callback with whatever data was collected
+                            if let callback = chatSession.onPreferencesGathered {
+                                callback(collectedData)
+                            }
+                            showConfirmation = true
+                        }) {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 16))
+                                Text("End and Submit")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.8))
+                            .cornerRadius(12)
+                        }
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 15)
-                        .background(
-                            Color.black.opacity(0.5)
-                                .blur(radius: 10)
-                        )
+
+                        inputArea()
+                            .padding(.horizontal, 20)
+                    }
+                    .padding(.vertical, 15)
+                    .background(
+                        Color.black.opacity(0.5)
+                            .blur(radius: 10)
+                    )
                 } else if chatSession.error != nil {
                     // Show error state with retry
                     VStack(spacing: 16) {
@@ -169,6 +198,10 @@ struct BugReportTextChatView: View {
                 conversationText: chatSession.messages.map { "\($0.role): \($0.content)" }.joined(separator: "\n"),
                 signOffMessage: collectedData["sign_off_message"] as? String
             )
+            .onDisappear {
+                // When confirmation dismisses, dismiss the entire chat view
+                dismiss()
+            }
         }
         .task {
             // Determine interview type
@@ -282,14 +315,14 @@ struct BugReportTextChatView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 18))
 
-                    Text("Done")
+                    Text("Submit Report")
                         .font(.headline)
                         .fontWeight(.semibold)
                 }
                 .foregroundColor(.white)
                 .padding(.vertical, 16)
                 .frame(maxWidth: .infinity)
-                .background(Color.green)
+                .background(Color.red.opacity(0.8))
                 .cornerRadius(12)
             }
             .padding(.top, 20)

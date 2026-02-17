@@ -45,6 +45,26 @@ struct BookCompletionInterviewView: View {
                 }
             }
             .padding(.horizontal, 24)
+
+            // X button (top-right) - Cancel and exit
+            if hasStarted {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            // End the voice session before dismissing (cleanup WebSocket, audio, etc.)
+                            voiceSession.endSession()
+                            dismiss()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title)
+                                .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.6))
+                                .padding(20)
+                        }
+                    }
+                    Spacer()
+                }
+            }
         }
         .onAppear {
             configureVoiceSession()
@@ -228,30 +248,48 @@ struct BookCompletionInterviewView: View {
 
             Spacer()
 
-            // End button
+            // Submit Feedback button
             if case .listening = voiceSession.state {
                 Button(action: { endInterview() }) {
                     HStack {
-                        Image(systemName: "stop.fill")
-                        Text("End Interview")
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Submit Feedback")
                             .font(.headline)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.red)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color(red: 0.6, green: 0.4, blue: 0.9),
+                                Color(red: 0.7, green: 0.3, blue: 0.8)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }
             } else if case .processing = voiceSession.state {
                 Button(action: { endInterview() }) {
                     HStack {
-                        Image(systemName: "stop.fill")
-                        Text("End Interview")
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Submit Feedback")
                             .font(.headline)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.red)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color(red: 0.6, green: 0.4, blue: 0.9),
+                                Color(red: 0.7, green: 0.3, blue: 0.8)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }

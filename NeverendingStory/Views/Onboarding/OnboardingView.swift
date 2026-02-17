@@ -23,6 +23,7 @@ struct OnboardingView: View {
     @State private var showDNATransfer = false
     @State private var showTextChat = false
     @State private var showVoiceConsent = false
+    @State private var showCancelConfirmation = false
     @State private var voiceConsent: Bool? = nil
 
     init(forceNewInterview: Bool = false) {
@@ -244,13 +245,22 @@ struct OnboardingView: View {
 
                                     Button(action: endVoiceSession) {
                                         HStack {
-                                            Image(systemName: "stop.fill")
-                                            Text("End Session")
+                                            Image(systemName: "checkmark.circle.fill")
+                                            Text("Complete Interview")
                                                 .font(.headline)
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 16)
-                                        .background(Color.red)
+                                        .background(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [
+                                                    Color(red: 0.6, green: 0.4, blue: 0.9),
+                                                    Color(red: 0.7, green: 0.3, blue: 0.8)
+                                                ]),
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
                                         .foregroundColor(.white)
                                         .cornerRadius(12)
                                     }
@@ -282,6 +292,40 @@ struct OnboardingView: View {
                         Spacer()
                     }
                 }
+
+                // X button (top-right) - Cancel and exit with confirmation
+                // Only show during active voice session
+                if case .listening = voiceManager.state, !premisesReady {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                showCancelConfirmation = true
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title)
+                                    .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.6))
+                                    .padding(20)
+                            }
+                        }
+                        Spacer()
+                    }
+                } else if case .processing = voiceManager.state {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                showCancelConfirmation = true
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title)
+                                    .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.6))
+                                    .padding(20)
+                            }
+                        }
+                        Spacer()
+                    }
+                }
             }
             .navigationDestination(isPresented: $navigateToPremises) {
                 PremiseSelectionView(voiceConversation: conversationData)
@@ -291,6 +335,17 @@ struct OnboardingView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Please enable microphone access in Settings to use voice onboarding.")
+            }
+            .alert("Are you sure you want to cancel?", isPresented: $showCancelConfirmation) {
+                Button("Keep Going", role: .cancel) {}
+                Button("Cancel Interview", role: .destructive) {
+                    // End the voice session before dismissing (cleanup WebSocket, audio, etc.)
+                    voiceManager.endSession()
+                    // Navigate back without submitting anything
+                    // User will return to OnboardingView next time (hasCompletedOnboarding stays false)
+                }
+            } message: {
+                Text("Prospero won't know what to write for you until your interview is complete. You can return and start the interview again if you cancel now.")
             }
             .fullScreenCover(isPresented: $showTextChat) {
                 TextChatView(
