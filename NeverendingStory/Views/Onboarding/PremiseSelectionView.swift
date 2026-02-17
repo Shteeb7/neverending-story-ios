@@ -12,8 +12,10 @@ struct PremiseSelectionView: View {
 
     @StateObject private var authManager = AuthManager.shared
     @State private var premises: [Premise] = []
+    @State private var previousPremises: [[Premise]] = [] // Array of previous batches
     @State private var expandedPremise: Premise?
     @State private var isLoading = true
+    @State private var isLoadingMore = false
     @State private var isCreatingStory = false
     @State private var error: String?
     @State private var navigateToReader = false
@@ -26,6 +28,7 @@ struct PremiseSelectionView: View {
     @State private var userName = ""
     @State private var isConfirmingName = false
     @State private var selectedPremiseForCreation: Premise?
+    @State private var browsingRound = 0 // Track "show me more" rounds
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -80,7 +83,7 @@ struct PremiseSelectionView: View {
                         .padding(.top, 32)
                         .padding(.horizontal, 24)
 
-                        // Premise cards
+                        // Current premise cards
                         ForEach(premises) { premise in
                             PremiseCard(premise: premise) {
                                 expandedPremise = premise
@@ -88,24 +91,101 @@ struct PremiseSelectionView: View {
                             .padding(.horizontal, 24)
                         }
 
-                        // Talk to Prospero button
-                        TalkToProsperoButton {
-                            handleTalkToProspero()
+                        // Browsing buttons
+                        VStack(spacing: 12) {
+                            // Show me more button (hide after 2 rounds = 9 total premises)
+                            if browsingRound < 2 {
+                                Button(action: loadMorePremises) {
+                                    if isLoadingMore {
+                                        HStack(spacing: 12) {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle())
+                                            Text("Prospero is conjuring more ideas...")
+                                                .font(.headline)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(16)
+                                        .background(Color.accentColor.opacity(0.1))
+                                        .cornerRadius(12)
+                                    } else {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: "wand.and.stars")
+                                                .font(.title3)
+                                            Text("Show me more")
+                                                .font(.headline)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(16)
+                                        .background(Color.accentColor)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                    }
+                                }
+                                .disabled(isLoadingMore)
+                                .buttonStyle(PlainButtonStyle())
+                            }
+
+                            // Talk to Prospero button (secondary action, always visible)
+                            Button(action: handleTalkToProspero) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "sparkles")
+                                        .font(.caption)
+                                    if browsingRound >= 2 {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Still searching? Let's talk about what you're looking for.")
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    } else {
+                                        Text("Talk to Prospero")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(12)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                         .padding(.horizontal, 24)
+
+                        // Previous ideas (collapsed by default)
+                        if !previousPremises.isEmpty {
+                            DisclosureGroup("Previous ideas (\(previousPremises.flatMap { $0 }.count))") {
+                                VStack(spacing: 16) {
+                                    ForEach(previousPremises.indices.reversed(), id: \.self) { batchIndex in
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text("Round \(batchIndex + 1)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .padding(.leading, 8)
+
+                                            ForEach(previousPremises[batchIndex]) { premise in
+                                                PremiseCard(premise: premise) {
+                                                    expandedPremise = premise
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.top, 8)
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                        }
                     }
                     .padding(.bottom, 32)
                 }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Return to the Ether", isPresented: $showDiscardWarning) {
+        .alert("Talk to Prospero", isPresented: $showDiscardWarning) {
             Button("Never mind", role: .cancel) {}
             Button("Summon Prospero", role: .destructive) {
                 discardPremisesAndNavigate()
             }
         } message: {
-            Text("Prospero will conjure fresh story ideas for you, but these unused tales will fade back into the ether. Are you sure?")
+            Text("Prospero will ask what you're looking for and conjure fresh ideas based on your conversation.")
         }
         .navigationDestination(isPresented: $navigateToReader) {
             if let story = createdStory {
@@ -211,6 +291,59 @@ struct PremiseSelectionView: View {
                 print("❌ Failed to load premises: \(error)")
                 self.error = error.localizedDescription
                 isLoading = false
+            }
+        }
+    }
+
+    private func loadMorePremises() {
+        guard let userId = authManager.user?.id else { return }
+
+        isLoadingMore = true
+
+        Task {
+            do {
+                print("🎬 Loading more premises (round \(browsingRound + 1))...")
+
+                // Collect all currently shown premises to exclude
+                var allShownPremises = premises
+                for batch in previousPremises {
+                    allShownPremises.append(contentsOf: batch)
+                }
+
+                // Build excludePremises array
+                let excludePremises: [[String: String]] = allShownPremises.map { premise in
+                    return [
+                        "title": premise.title,
+                        "description": premise.description,
+                        "tier": premise.tier ?? "comfort"
+                    ]
+                }
+
+                print("   Excluding \(excludePremises.count) previously shown premises")
+
+                // Call generate-more-premises endpoint
+                let result = try await APIManager.shared.generateMorePremises(excludePremises: excludePremises)
+
+                await MainActor.run {
+                    // Move current premises to previous
+                    previousPremises.append(premises)
+
+                    // Set new premises as current
+                    premises = result.premises
+                    premisesId = result.premisesId
+                    browsingRound += 1
+
+                    print("✅ Loaded \(premises.count) new premises (round \(browsingRound))")
+                    print("   Total shown: \(allShownPremises.count + premises.count) premises")
+
+                    isLoadingMore = false
+                }
+            } catch {
+                print("❌ Failed to load more premises: \(error)")
+                await MainActor.run {
+                    self.error = error.localizedDescription
+                    isLoadingMore = false
+                }
             }
         }
     }

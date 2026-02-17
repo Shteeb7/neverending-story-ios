@@ -961,6 +961,48 @@ class APIManager: ObservableObject {
         }
     }
 
+    func generateMorePremises(excludePremises: [[String: String]]) async throws -> PremisesResult {
+        NSLog("🔄 generateMorePremises() called - requesting more premises")
+        NSLog("   Excluding \(excludePremises.count) previously shown premises")
+
+        struct GenerateMoreResponse: Decodable {
+            let success: Bool
+            let premises: [Premise]
+            let premisesId: String
+            let message: String?
+        }
+
+        do {
+            NSLog("📡 Calling makeRequest for /onboarding/generate-more-premises")
+
+            struct RequestBody: Encodable {
+                let excludePremises: [[String: String]]
+            }
+
+            let encoder = JSONEncoder()
+            let body = try encoder.encode(RequestBody(excludePremises: excludePremises))
+
+            let response: GenerateMoreResponse = try await makeRequest(
+                endpoint: "/onboarding/generate-more-premises",
+                method: "POST",
+                body: body,
+                requiresAuth: true
+            )
+            NSLog("✅ Generated \(response.premises.count) more premises successfully")
+
+            return PremisesResult(
+                premises: response.premises,
+                needsNewInterview: false,
+                premisesId: response.premisesId
+            )
+        } catch {
+            NSLog("❌ generateMorePremises() FAILED with error: \(error)")
+            NSLog("   Error type: \(type(of: error))")
+            NSLog("   Error description: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     func getPremises(userId: String) async throws -> PremisesResult {
         let response: PremisesResponse = try await makeRequest(
             endpoint: "/onboarding/premises/\(userId)",
