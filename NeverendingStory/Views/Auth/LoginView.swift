@@ -82,7 +82,7 @@ struct LoginView: View {
                 // Email/Password Form
                 VStack(spacing: 16) {
                     // Email field
-                    TextField("", text: $email, prompt: Text("Email or username").foregroundColor(.white.opacity(0.5)))
+                    TextField("", text: $email, prompt: Text("Email").foregroundColor(.white.opacity(0.5)))
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
