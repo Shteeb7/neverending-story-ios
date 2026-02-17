@@ -45,7 +45,7 @@ struct BugReportOverlay: View {
                             ZStack {
                                 // Outer glow
                                 Circle()
-                                    .fill((apiManager.isQueueFull ? Color.gray : Color.red).opacity(0.2))
+                                    .fill((apiManager.isQueueFull ? Color.gray : Color.red).opacity(0.15))
                                     .frame(width: iconSize, height: iconSize)
                                     .blur(radius: 8)
 
@@ -57,8 +57,8 @@ struct BugReportOverlay: View {
                                                 Color.gray.opacity(0.6),
                                                 Color.gray.opacity(0.4)
                                             ] : [
-                                                Color.red.opacity(0.9),
-                                                Color.red.opacity(0.7)
+                                                Color.red.opacity(0.4),
+                                                Color.red.opacity(0.3)
                                             ]),
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
