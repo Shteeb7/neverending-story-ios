@@ -9,13 +9,13 @@ import SwiftUI
 
 struct LibraryView: View {
     @StateObject private var authManager = AuthManager.shared
+    @ObservedObject private var realtimeManager = StoryRealtimeManager.shared
     @State private var stories: [Story] = []
     @State private var isLoading = true
     @State private var error: String?
     @State private var showOnboarding = false
     @State private var selectedStory: Story?
     @State private var showFeedback = false
-    @State private var pollTimer: Timer?
     @State private var showLogoutConfirmation = false
     @State private var showNameConfirmation = false
     @State private var isNameConfirmationFromOnboarding = true
@@ -409,24 +409,29 @@ struct LibraryView: View {
                     }
                 })
             }
+            .onChange(of: realtimeManager.lastChapterInsert?.id) { _ in
+                // A new chapter was inserted — refresh the library
+                Task { await refreshLibrary() }
+            }
+            .onChange(of: realtimeManager.lastStoryUpdate?.id) { _ in
+                // A story's generation progress changed — refresh the library
+                Task { await refreshLibrary() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                // Catch up after returning from background
+                Task { await refreshLibrary() }
+            }
             .onAppear {
                 // Set current screen for bug reporting
                 BugReportCaptureManager.currentScreen = "LibraryView"
 
                 NSLog("📚 LibraryView appeared - loading library")
                 loadLibrary()
-                // NOTE: startPollingIfNeeded() is now called from inside loadLibrary()
-                // after stories are loaded, not here where stories array is still empty
 
                 // Load consent status
                 Task {
                     await loadConsentStatus()
                 }
-
-            }
-            .onDisappear {
-                NSLog("📚 LibraryView disappeared - stopping polling")
-                stopPolling()
             }
         }
     }
@@ -454,9 +459,6 @@ struct LibraryView: View {
                 stories = try await APIManager.shared.getLibrary(userId: userId)
                 isLoading = false
                 NSLog("✅ Got %d stories", stories.count)
-
-                // Start polling AFTER stories are loaded (not in .onAppear where array is empty)
-                startPollingIfNeeded()
 
                 // Check if name confirmation is needed (only if user has stories and hasn't confirmed)
                 checkNameConfirmationStatus()
@@ -626,31 +628,7 @@ struct LibraryView: View {
         }
     }
 
-    // MARK: - Polling for Updates
-
-    private func startPollingIfNeeded() {
-        // Only poll if there are stories currently generating
-        guard hasGeneratingStories else {
-            NSLog("📊 No generating stories - skipping polling")
-            return
-        }
-
-        NSLog("🔄 Starting library polling (checking every 10 seconds)")
-        stopPolling() // Clear any existing timer
-
-        // Poll every 10 seconds
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { _ in
-            NSLog("🔄 Polling library for updates...")
-            Task { @MainActor in
-                await refreshLibrary()
-            }
-        }
-    }
-
-    private func stopPolling() {
-        pollTimer?.invalidate()
-        pollTimer = nil
-    }
+    // MARK: - Library Refresh (triggered by Realtime events or manual pull)
 
     private func refreshLibrary() async {
         guard let userId = authManager.user?.id else { return }
@@ -671,12 +649,6 @@ struct LibraryView: View {
             }
 
             stories = updatedStories
-
-            // Stop polling if no more generating stories
-            if !hasGeneratingStories {
-                NSLog("✅ All stories complete - stopping polling")
-                stopPolling()
-            }
         } catch {
             NSLog("⚠️ Failed to refresh library: \(error.localizedDescription)")
         }

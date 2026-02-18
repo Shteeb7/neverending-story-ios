@@ -24,9 +24,6 @@ class ReadingStateManager: ObservableObject {
 
     private var saveTask: Task<Void, Never>?
 
-    // Chapter polling (for books still generating)
-    private var chapterPollTimer: Timer?
-
     private init() {
         loadPersistedState()
     }
@@ -111,13 +108,9 @@ class ReadingStateManager: ObservableObject {
         NSLog("   currentChapterIndex: %d", currentChapterIndex)
 
         persistState()
-
-        // Start polling for new chapters if book is still generating
-        startChapterPolling()
     }
 
     func clearStory() {
-        stopChapterPolling()
         currentStory = nil
         chapters = []
         currentChapterIndex = 0
@@ -125,49 +118,18 @@ class ReadingStateManager: ObservableObject {
         clearPersistedState()
     }
 
-    // MARK: - Chapter Polling
+    // MARK: - Realtime Chapter Updates
 
-    func startChapterPolling() {
-        guard let story = currentStory else { return }
-        let storyId = story.id  // story.id is String, not Optional
+    /// Called by BookReaderView when a realtime chapter insert event matches the current story
+    func handleNewChapter(storyId: String, chapterNumber: Int) async {
+        guard let currentStory = currentStory, currentStory.id == storyId else { return }
 
-        // Only poll if the story's current_step indicates active generation
-        if let progress = story.generationProgress {
-            let step = progress.currentStep
-            guard step.hasPrefix("generating_") else {
-                NSLog("📚 Story not actively generating (step: %@) - no polling needed", step)
-                return
-            }
-        } else {
-            // No progress info - don't poll
-            return
-        }
-
-        NSLog("🔄 Starting chapter polling (current step: %@)", story.generationProgress?.currentStep ?? "unknown")
-        stopChapterPolling()
-
-        chapterPollTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                await self.checkForNewChapters(storyId: storyId)
-            }
-        }
-    }
-
-    func stopChapterPolling() {
-        chapterPollTimer?.invalidate()
-        chapterPollTimer = nil
-    }
-
-    private func checkForNewChapters(storyId: String) async {
+        // Fetch updated chapter list
         do {
             let fetchedChapters = try await APIManager.shared.getChapters(storyId: storyId)
-            // Deduplicate by chapter_number (defense in depth)
             var seen = Set<Int>()
             let updatedChapters = fetchedChapters.filter { chapter in
-                if seen.contains(chapter.chapterNumber) {
-                    return false
-                }
+                if seen.contains(chapter.chapterNumber) { return false }
                 seen.insert(chapter.chapterNumber)
                 return true
             }
@@ -176,13 +138,8 @@ class ReadingStateManager: ObservableObject {
                 NSLog("📖 New chapters available! %d → %d", chapters.count, updatedChapters.count)
                 self.chapters = updatedChapters
             }
-
-            // Note: We keep polling until the view/manager explicitly stops us.
-            // The LibraryView will stop showing the book as "generating" based on
-            // the story's current_step, which gets updated when the user navigates
-            // back to the library.
         } catch {
-            NSLog("⚠️ Chapter poll failed: %@", error.localizedDescription)
+            NSLog("⚠️ Failed to fetch chapters after realtime event: %@", error.localizedDescription)
         }
     }
 

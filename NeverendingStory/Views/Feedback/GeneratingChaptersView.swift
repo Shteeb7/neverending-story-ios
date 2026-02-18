@@ -15,11 +15,12 @@ struct GeneratingChaptersView: View {
     let onChapterReady: () -> Void
     let onNeedsFeedback: (() -> Void)?  // FIX 3: Called when server is waiting for checkpoint feedback
 
+    @ObservedObject private var realtimeManager = StoryRealtimeManager.shared
     @State private var isPolling = false
     @State private var animationAmount: CGFloat = 1.0
     @State private var pollAttempts = 0  // FIX 3: Track retry count
     @State private var isWaitingForFeedback = false  // FIX 3: Deadlock detection
-    let maxPollAttempts = 60  // FIX 3: 5 minutes at 5-second intervals
+    let maxPollAttempts = 20  // Reduced: 10 minutes at 30-second intervals (fallback only)
 
     var body: some View {
         ZStack {
@@ -104,6 +105,16 @@ struct GeneratingChaptersView: View {
                 Spacer()
             }
         }
+        .onChange(of: realtimeManager.lastChapterInsert?.id) { _ in
+            // Check if the chapter we're waiting for just arrived via Realtime
+            if let event = realtimeManager.lastChapterInsert,
+               event.storyId == storyId,
+               event.chapterNumber == nextChapterNumber {
+                // The chapter we're waiting for just arrived!
+                isPolling = false
+                onChapterReady()
+            }
+        }
         .onAppear {
             startPolling()
         }
@@ -145,19 +156,19 @@ struct GeneratingChaptersView: View {
                         onChapterReady()
                     }
                 } else {
-                    // FIX 3: Every 6th poll (30 seconds), check if server is waiting for feedback
-                    if pollAttempts % 6 == 0 {
+                    // Check if server is waiting for feedback (every 2nd poll = 1 minute)
+                    if pollAttempts % 2 == 0 {
                         await checkIfWaitingForFeedback()
                     }
 
-                    // Check again in 5 seconds
-                    try? await Task.sleep(nanoseconds: 5_000_000_000)
+                    // Fallback poll: Check again in 30 seconds (Realtime should catch it first)
+                    try? await Task.sleep(nanoseconds: 30_000_000_000)
                     checkChapterAvailability()
                 }
             } catch {
-                // On error, retry after 5 seconds
+                // On error, retry after 30 seconds (Realtime should handle normal cases)
                 NSLog("❌ Error checking chapter (attempt \(pollAttempts)/\(maxPollAttempts)): \(error)")
-                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
                 checkChapterAvailability()
             }
         }

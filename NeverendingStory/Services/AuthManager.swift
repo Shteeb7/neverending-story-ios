@@ -64,7 +64,7 @@ class AuthManager: ObservableObject {
     }
     @Published var isLoading = false
 
-    private let supabase: SupabaseClient
+    let supabase: SupabaseClient
 
     private var hasInitialized = false
     private var initTask: Task<Void, Never>?
@@ -186,6 +186,11 @@ class AuthManager: ObservableObject {
         NSLog("   ID: %@", userId)
         NSLog("   Email: %@", supabaseUser.email ?? "nil")
         NSLog("   Access token: %@...", String(refreshedSession.accessToken.prefix(20)))
+
+        // Subscribe to Realtime updates
+        Task {
+            await StoryRealtimeManager.shared.subscribe(userId: userId)
+        }
     }
 
     // MARK: - OAuth Authentication
@@ -318,6 +323,11 @@ class AuthManager: ObservableObject {
                 partNumber += 1
             }
             NSLog("🔑 END TOKEN (combine all parts above)")
+
+            // Subscribe to Realtime updates
+            Task {
+                await StoryRealtimeManager.shared.subscribe(userId: userId)
+            }
         } catch {
             print("❌ Supabase error: \(error)")
             print("❌ Error details: \(error.localizedDescription)")
@@ -428,6 +438,11 @@ class AuthManager: ObservableObject {
 
         self.user = user
 
+        // Subscribe to Realtime updates
+        Task {
+            await StoryRealtimeManager.shared.subscribe(userId: user.id)
+        }
+
         NSLog("✅ Email sign-in complete")
     }
 
@@ -463,6 +478,11 @@ class AuthManager: ObservableObject {
 
         self.user = user
 
+        // Subscribe to Realtime updates
+        Task {
+            await StoryRealtimeManager.shared.subscribe(userId: user.id)
+        }
+
         NSLog("✅ Email sign-up complete")
     }
 
@@ -480,6 +500,10 @@ class AuthManager: ObservableObject {
         defer { isLoading = false }
 
         try await supabase.auth.signOut()
+
+        // Unsubscribe from Realtime updates
+        await StoryRealtimeManager.shared.unsubscribe()
+
         self.user = nil
         // isAuthenticated is now computed from user
     }

@@ -13,6 +13,7 @@ struct BookReaderView: View {
 
     @StateObject private var readingState = ReadingStateManager.shared
     @StateObject private var readerSettings = ReaderSettings.shared
+    @ObservedObject private var realtimeManager = StoryRealtimeManager.shared
 
     @State private var showTopBar = true
     @State private var showSettings = false
@@ -400,7 +401,14 @@ struct BookReaderView: View {
             topBarTimer?.invalidate()
             // End reading session when leaving reader
             readingState.stopTracking()
-            readingState.stopChapterPolling()
+        }
+        .onChange(of: realtimeManager.lastChapterInsert?.id) { _ in
+            // A new chapter was inserted — check if it's for the current story
+            if let event = realtimeManager.lastChapterInsert, event.storyId == story.id {
+                Task {
+                    await readingState.handleNewChapter(storyId: event.storyId, chapterNumber: event.chapterNumber)
+                }
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {

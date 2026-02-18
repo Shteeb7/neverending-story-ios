@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		029076D0A0742A2B78A7A507 /* StoryRealtimeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65526FBD7C8FB0289D107AAF /* StoryRealtimeManager.swift */; };
 		02D24B7BE8CCED516AEC25AB /* Premise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39DF5639056B31DA10387FF4 /* Premise.swift */; };
 		054C6BF7556880C7EBCC15DC /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A9C3777C78FA770863B9B9D /* APIManager.swift */; };
 		0D085741BDF97E0490A70393 /* NeverendingStoryApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DEE559434A716CE477E3260 /* NeverendingStoryApp.swift */; };
@@ -104,6 +105,7 @@
 		4F3AF938CA8AE4F77E0D0845 /* PremiseSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiseSelectionView.swift; sourceTree = "<group>"; };
 		5C992418313E0D149445A242 /* VoiceSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionManager.swift; sourceTree = "<group>"; };
 		6325427DEA71DD9807039F2E /* BookReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookReaderView.swift; sourceTree = "<group>"; };
+		65526FBD7C8FB0289D107AAF /* StoryRealtimeManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StoryRealtimeManager.swift; sourceTree = "<group>"; };
 		693810C2658C52F236C79A30 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		758724A0F1973E37866AD9B3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		7B63092B3F2BF07155861532 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -284,6 +286,7 @@
 				00FEF8F43CC479405800679B /* TextChatSessionManager.swift */,
 				AF9CE2DF18E9E3256862AB2E /* BugReportCaptureManager.swift */,
 				33AA13A0048BFEBA811604A4 /* BugReportNotificationManager.swift */,
+				65526FBD7C8FB0289D107AAF /* StoryRealtimeManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -536,6 +539,7 @@
 				FD4ECBB8529A670C2E3D331D /* BugReportNotificationManager.swift in Sources */,
 				28CADA8BB7E9C449F46E2BCA /* SeriesBadgeView.swift in Sources */,
 				649AB9D1245B224C954CCEC1 /* SeriesStackView.swift in Sources */,
+				029076D0A0742A2B78A7A507 /* StoryRealtimeManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
