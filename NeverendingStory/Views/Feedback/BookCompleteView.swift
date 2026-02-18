@@ -2,7 +2,7 @@
 //  BookCompleteView.swift
 //  NeverendingStory
 //
-//  Congratulations screen after completing a book with sequel generation option
+//  Magical "Conjure the Sequel" moment - the reader just finished a personalized novel
 //
 
 import SwiftUI
@@ -13,116 +13,212 @@ struct BookCompleteView: View {
     let onStartSequel: () -> Void
     let onReturnToLibrary: () -> Void
 
-    @State private var showConfetti = false
+    @State private var showCover = false
+    @State private var showTitle = false
+    @State private var showLabel = false
+    @State private var showButton = false
+    @State private var hueAngle: Double = 0
+    @State private var buttonScale: CGFloat = 1.0
 
     var body: some View {
         ZStack {
-            // Gradient background
+            // Dark magical background
             LinearGradient(
-                colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.4), Color.indigo.opacity(0.3)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                gradient: Gradient(colors: [
+                    Color(red: 0.1, green: 0.05, blue: 0.2),   // Deep purple
+                    Color(red: 0.05, green: 0.05, blue: 0.15), // Dark blue-purple
+                    Color.black
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 40) {
+            // Floating particles
+            GeometryReader { geometry in
+                ForEach(0..<20, id: \.self) { index in
+                    ParticleView(index: index, screenWidth: geometry.size.width, screenHeight: geometry.size.height)
+                }
+            }
+            .ignoresSafeArea()
+
+            VStack(spacing: 32) {
                 Spacer()
 
-                // Celebration icon
-                ZStack {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    Color.yellow.opacity(0.4),
-                                    Color.orange.opacity(0.3),
-                                    Color.clear
-                                ],
-                                center: .center,
-                                startRadius: 40,
-                                endRadius: 120
-                            )
-                        )
-                        .frame(width: 240, height: 240)
-                        .scaleEffect(showConfetti ? 1.1 : 1.0)
-
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 100))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.yellow, .orange],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .rotationEffect(.degrees(showConfetti ? 5 : -5))
-                }
-                .shadow(color: .orange.opacity(0.5), radius: 30)
-
-                // Title
-                VStack(spacing: 16) {
-                    Text("Book \(bookNumber) Complete!")
-                        .font(.system(size: 36, weight: .bold))
-                        .multilineTextAlignment(.center)
-
-                    Text(story.title)
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-
-                // Description
-                Text("You've completed an incredible journey! Prospero has heard what you loved and is ready to conjure Book \(bookNumber + 1) with even more of what you enjoyed.")
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 32)
-
-                Spacer()
-
-                // Action buttons
-                VStack(spacing: 16) {
-                    // Start sequel button
-                    Button(action: { onStartSequel() }) {
-                        HStack {
+                // Story cover image
+                if let coverUrl = story.coverImageUrl, let url = URL(string: coverUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 200, height: 300)
+                                .cornerRadius(12)
+                                .shadow(color: Color.white.opacity(0.3), radius: 20, x: 0, y: 0)
+                        case .failure(_), .empty:
                             Image(systemName: "sparkles")
-                                .font(.title3)
-                            Text("Start Book \(bookNumber + 1)")
-                                .font(.headline)
+                                .font(.system(size: 80))
+                                .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6))
+                        @unknown default:
+                            EmptyView()
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(
-                            LinearGradient(
-                                colors: [.purple, .blue],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .foregroundColor(.white)
-                        .cornerRadius(16)
-                        .shadow(color: .purple.opacity(0.4), radius: 12, y: 6)
                     }
+                    .opacity(showCover ? 1 : 0)
+                    .offset(y: showCover ? 0 : 20)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 80))
+                        .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6))
+                        .opacity(showCover ? 1 : 0)
+                        .offset(y: showCover ? 0 : 20)
+                }
 
-                    // Return to library button
-                    Button(action: { onReturnToLibrary() }) {
+                // Story title
+                Text(story.title)
+                    .font(.custom("Georgia", size: 28))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                    .opacity(showTitle ? 1 : 0)
+                    .offset(y: showTitle ? 0 : 20)
+
+                // Book complete label
+                Text("Book \(bookNumber) Complete")
+                    .font(.system(size: 14, weight: .medium, design: .serif))
+                    .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6))
+                    .opacity(showLabel ? 1 : 0)
+                    .offset(y: showLabel ? 0 : 20)
+
+                Spacer()
+
+                // Conjure Sequel button
+                Button(action: {
+                    // Brief burst animation
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        buttonScale = 1.1
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        onStartSequel()
+                    }
+                }) {
+                    ZStack {
+                        // Rainbow border
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(
+                                AngularGradient(
+                                    gradient: Gradient(colors: [
+                                        .red, .orange, .yellow, .green, .blue, .purple, .red
+                                    ]),
+                                    center: .center
+                                )
+                            )
+                            .hueRotation(Angle(degrees: hueAngle))
+                            .frame(height: 64)
+
+                        // Button content
+                        HStack(spacing: 12) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 20))
+                            Text("Conjure the Sequel")
+                                .font(.system(size: 20, weight: .bold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 17)
+                        .background(Color.black.opacity(0.8))
+                        .cornerRadius(13)
+                    }
+                    .frame(height: 64)
+                }
+                .padding(.horizontal, 40)
+                .scaleEffect(showButton ? buttonScale : 0.8)
+                .opacity(showButton ? 1 : 0)
+
+                // Return to Library button
+                Button(action: onReturnToLibrary) {
+                    VStack(spacing: 4) {
                         Text("Return to Library")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 16)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color.white.opacity(0.7))
+                        Text("You can always conjure a sequel later")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color.white.opacity(0.5))
                     }
                 }
-                .padding(.horizontal, 32)
+                .padding(.top, 16)
                 .padding(.bottom, 40)
+                .opacity(showButton ? 1 : 0)
             }
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                showConfetti = true
+            // Staggered entrance animations
+            withAnimation(.easeOut(duration: 0.5).delay(0.3)) {
+                showCover = true
+            }
+            withAnimation(.easeOut(duration: 0.5).delay(0.6)) {
+                showTitle = true
+            }
+            withAnimation(.easeOut(duration: 0.5).delay(0.9)) {
+                showLabel = true
+            }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7).delay(1.2)) {
+                showButton = true
+            }
+
+            // Rainbow border animation
+            withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                hueAngle = 360
+            }
+
+            // Pulsing button animation
+            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true).delay(1.5)) {
+                buttonScale = 1.03
             }
         }
+    }
+}
+
+// Floating particle effect
+struct ParticleView: View {
+    let index: Int
+    let screenWidth: CGFloat
+    let screenHeight: CGFloat
+    @State private var yOffset: CGFloat = 0
+    @State private var opacity: Double = 0
+
+    private let randomX: CGFloat
+    private let randomSize: CGFloat
+
+    init(index: Int, screenWidth: CGFloat, screenHeight: CGFloat) {
+        self.index = index
+        self.screenWidth = screenWidth
+        self.screenHeight = screenHeight
+        self.randomX = CGFloat.random(in: 0...screenWidth)
+        self.randomSize = CGFloat.random(in: 2...6)
+    }
+
+    var body: some View {
+        Circle()
+            .fill(Color.white)
+            .frame(width: randomSize, height: randomSize)
+            .opacity(opacity)
+            .position(
+                x: randomX,
+                y: screenHeight + yOffset
+            )
+            .onAppear {
+                let duration = Double.random(in: 3...6)
+                let delay = Double.random(in: 0...2)
+
+                withAnimation(.linear(duration: duration).repeatForever(autoreverses: false).delay(delay)) {
+                    yOffset = -screenHeight - 100
+                }
+
+                withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true).delay(delay)) {
+                    opacity = Double.random(in: 0.3...0.8)
+                }
+            }
     }
 }
 
@@ -145,11 +241,7 @@ struct BookCompleteView: View {
             description: "An epic dragon adventure"
         ),
         bookNumber: 1,
-        onStartSequel: {
-            print("Starting Book 2")
-        },
-        onReturnToLibrary: {
-            print("Returning to library")
-        }
+        onStartSequel: {},
+        onReturnToLibrary: {}
     )
 }
