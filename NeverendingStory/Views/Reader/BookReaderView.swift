@@ -30,7 +30,6 @@ struct BookReaderView: View {
     @State private var checkedCheckpoints: Set<String> = []
     @State private var protagonistName: String = ""
     @State private var showCompletionInterview = false
-    @State private var showSequelGeneration = false
     @State private var interviewPreferences: [String: Any] = [:]
     @State private var showGeneratingChapters = false
     @State private var generatingChapterNumber: Int = 0
@@ -351,21 +350,20 @@ struct BookReaderView: View {
                 story: story,
                 bookNumber: story.bookNumber ?? 1
             ) { preferences in
-                NSLog("✅ Book completion interview finished with preferences: \(preferences)")
-                // Start sequel generation
-                interviewPreferences = preferences
-                showSequelGeneration = true
-            }
-        }
-        .fullScreenCover(isPresented: $showSequelGeneration) {
-            SequelGenerationView(
-                book1Story: story,
-                bookNumber: (story.bookNumber ?? 1) + 1,
-                userPreferences: interviewPreferences
-            ) { book2 in
-                NSLog("✅ Book 2 generated: \(book2.title)")
-                // Navigate to Book 2 reader
-                // For now, just dismiss back to library
+                NSLog("✅ Book completion interview finished - firing sequel generation")
+                // Fire sequel generation API (fire-and-forget)
+                Task {
+                    do {
+                        try await APIManager.shared.generateSequel(
+                            storyId: story.id,
+                            userPreferences: preferences
+                        )
+                        NSLog("✅ Sequel generation started successfully")
+                    } catch {
+                        NSLog("❌ Failed to start sequel generation: \(error)")
+                    }
+                }
+                // Immediately dismiss back to library (sequel will appear in "Being Conjured")
                 dismiss()
             }
         }
