@@ -95,6 +95,12 @@ class TextChatSessionManager: ObservableObject {
                 // Text chat doesn't support premise rejection yet - fall back to onboarding
                 interviewTypeString = "onboarding"
                 NSLog("⚠️ premiseRejection not supported in text chat, using onboarding")
+            case .checkpoint(let ctx):
+                interviewTypeString = "checkpoint"
+                requestContext = [
+                    "storyId": ctx.storyId,
+                    "checkpoint": ctx.checkpoint
+                ]
             case .bugReport(let ctx):
                 interviewTypeString = "bug_report"
                 requestContext = [

@@ -27,6 +27,7 @@ enum InterviewType: Equatable {
     case onboarding                                         // First-time user
     case returningUser(context: ReturningUserContext)     // Wants new story
     case premiseRejection(context: PremiseRejectionContext) // Rejected all premises
+    case checkpoint(context: CheckpointContext)           // Mid-story feedback checkpoint
     case bookCompletion(context: BookCompletionContext)   // Finished a book
     case bugReport(context: BugReportContext)             // Report a bug
     case suggestion(context: SuggestionContext)           // Suggest a feature
@@ -55,6 +56,16 @@ struct PremiseRejectionContext: Equatable {
         // Simple equality check ignoring existingPreferences since [String: Any] isn't Equatable
         return lhs.userName == rhs.userName &&
                lhs.hasReadBooks == rhs.hasReadBooks
+    }
+}
+
+struct CheckpointContext: Equatable {
+    let storyId: String
+    let checkpoint: String  // "chapter_2", "chapter_5", or "chapter_8"
+
+    static func == (lhs: CheckpointContext, rhs: CheckpointContext) -> Bool {
+        return lhs.storyId == rhs.storyId &&
+               lhs.checkpoint == rhs.checkpoint
     }
 }
 
@@ -897,6 +908,9 @@ class VoiceSessionManager: ObservableObject {
             try await configureReturningUserSession(context: context)
         case .premiseRejection(let context):
             try await configurePremiseRejectionSession(context: context)
+        case .checkpoint:
+            // Checkpoint interviews are handled via text chat, not voice
+            throw NSError(domain: "VoiceSessionManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Checkpoint interviews use text chat, not voice"])
         case .bookCompletion(let context):
             try await configureCompletionSession(context: context)
         case .bugReport(let context):
@@ -1431,6 +1445,8 @@ class VoiceSessionManager: ObservableObject {
                 greeting = "Ah, \(context.userName)! Back for more, I see. Fresh from \(lastTitle)! What calls to your spirit today — more of what you love, or shall I surprise you?"
             case .premiseRejection(let context):
                 greeting = "\(context.userName)! You're back — and I'm GLAD. Those tales I conjured clearly weren't worthy of you. Help me understand what missed the mark, and I'll summon something far better."
+            case .checkpoint:
+                greeting = "Ah! You've reached a checkpoint. Tell me — how are you feeling about the story so far?"
             case .bookCompletion(let context):
                 greeting = "\(context.userName)! You've journeyed through \"\(context.storyTitle)\"! The final page has turned, but before the ink dries — tell me, what moment seized your heart?"
             case .bugReport(let context):

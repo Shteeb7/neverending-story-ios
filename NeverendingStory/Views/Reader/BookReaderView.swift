@@ -301,11 +301,19 @@ struct BookReaderView: View {
             )
         }
         .fullScreenCover(isPresented: $showProsperoCheckIn) {
-            ProsperoCheckInView(
-                checkpoint: currentCheckpoint,
-                protagonistName: protagonistName,
-                onComplete: { pacing, tone, character in
-                    handleProsperoCheckInComplete(pacing: pacing, tone: tone, character: character)
+            TextChatView(
+                interviewType: .checkpoint(context: CheckpointContext(
+                    storyId: story.id,
+                    checkpoint: currentCheckpoint
+                )),
+                context: [
+                    "storyId": story.id,
+                    "checkpoint": currentCheckpoint
+                ],
+                onComplete: handleCheckpointInterviewComplete,
+                onCancel: {
+                    // User canceled — dismiss and allow them to continue reading
+                    showProsperoCheckIn = false
                 }
             )
         }
@@ -550,33 +558,24 @@ struct BookReaderView: View {
         }
     }
 
-    // Adaptive Reading Engine: Handle dimension-based check-in completion
-    private func handleProsperoCheckInComplete(pacing: String, tone: String, character: String) {
+    // Checkpoint Interview: Handle completion (tool call processed server-side)
+    private func handleCheckpointInterviewComplete() {
+        NSLog("✅ Checkpoint interview complete")
+
+        // Persist that this checkpoint is complete so it never re-triggers
+        markCheckpointComplete(storyId: story.id, checkpoint: currentCheckpoint)
+
+        // Dismiss the interview
+        showProsperoCheckIn = false
+
+        // Smart routing: go to library if no next chapter available
         Task {
-            do {
-                let _ = try await APIManager.shared.submitCheckpointFeedbackWithDimensions(
-                    storyId: story.id,
-                    checkpoint: currentCheckpoint,
-                    pacing: pacing,
-                    tone: tone,
-                    character: character,
-                    protagonistName: protagonistName
-                )
-                NSLog("✅ Submitted dimension feedback: pacing=\(pacing), tone=\(tone), character=\(character)")
-
-                // Persist that this checkpoint is complete so it never re-triggers
-                markCheckpointComplete(storyId: story.id, checkpoint: currentCheckpoint)
-
-                // Smart routing: go to library if no next chapter available
-                await MainActor.run {
-                    if !readingState.canGoToNextChapter {
-                        // No next chapter yet — return to library where they'll see generation status
-                        dismiss()
-                    }
-                    // If next chapter exists, stay in reader (default behavior)
+            await MainActor.run {
+                if !readingState.canGoToNextChapter {
+                    // No next chapter yet — return to library where they'll see generation status
+                    dismiss()
                 }
-            } catch {
-                NSLog("❌ Failed to submit dimension feedback: \(error)")
+                // If next chapter exists, stay in reader (default behavior)
             }
         }
     }
