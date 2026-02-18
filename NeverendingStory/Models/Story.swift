@@ -22,6 +22,7 @@ struct Story: Codable, Identifiable, Hashable {
     let coverImageUrl: String?
     let genre: String?
     let description: String?
+    let seriesName: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -38,6 +39,7 @@ struct Story: Codable, Identifiable, Hashable {
         case coverImageUrl = "cover_image_url"
         case genre
         case description
+        case seriesName = "series_name"
     }
 
     /// A book is only "generating" (not yet readable) if it has ZERO chapters.

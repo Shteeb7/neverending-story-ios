@@ -47,6 +47,22 @@ struct LibraryView: View {
         }
     }
 
+    // Group stories into series and standalones
+    var seriesGroups: [(seriesName: String, books: [Story])] {
+        let seriesStories = activeStories.filter { $0.seriesId != nil && !$0.isGenerating }
+        let grouped = Dictionary(grouping: seriesStories, by: { $0.seriesId! })
+
+        return grouped.values.compactMap { books in
+            let sorted = books.sorted { ($0.bookNumber ?? 0) < ($1.bookNumber ?? 0) }
+            guard let name = sorted.first?.seriesName else { return nil }
+            return (seriesName: name, books: sorted)
+        }.sorted { $0.books.first?.createdAt ?? Date.distantPast > $1.books.first?.createdAt ?? Date.distantPast }
+    }
+
+    var standaloneStories: [Story] {
+        activeStories.filter { $0.seriesId == nil && !$0.isGenerating }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -162,6 +178,28 @@ struct LibraryView: View {
                                         .padding(12)
                                         .background(Color(.secondarySystemBackground))
                                         .cornerRadius(12)
+                                        .padding(.horizontal, 24)
+                                    }
+                                }
+                            }
+
+                            // MARK: - Your Series
+                            if !seriesGroups.isEmpty {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text("Your Series")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal, 24)
+
+                                    ForEach(Array(seriesGroups.enumerated()), id: \.offset) { _, group in
+                                        SeriesStackView(
+                                            seriesName: group.seriesName,
+                                            books: group.books,
+                                            onSelectBook: { story in
+                                                selectedStory = story
+                                            }
+                                        )
                                         .padding(.horizontal, 24)
                                     }
                                 }

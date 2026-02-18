@@ -10,6 +10,7 @@ import SwiftUI
 struct BookCoverCard: View {
     let story: Story
     var isSmall: Bool = false
+    var totalBooksInSeries: Int? = nil
     let action: () -> Void
 
     private var coverWidth: CGFloat { isSmall ? 140 : 180 }
@@ -44,7 +45,8 @@ struct BookCoverCard: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .bottom) {
                 // Cover image or gradient fallback
                 if let urlString = story.coverImageUrl, let url = URL(string: urlString) {
                     AsyncImage(url: url) { phase in
@@ -94,8 +96,15 @@ struct BookCoverCard: View {
                     }
                     .allowsHitTesting(false)
                 }
+            }
+            .frame(width: coverWidth, height: coverHeight)
+
+            // Series badge overlay
+            if let bookNumber = story.bookNumber, let totalBooks = totalBooksInSeries {
+                SeriesBadgeView(bookNumber: bookNumber, totalBooks: totalBooks)
+                    .padding(8)
+            }
         }
-        .frame(width: coverWidth, height: coverHeight)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
         .opacity(isReadable ? 1.0 : 0.6)
