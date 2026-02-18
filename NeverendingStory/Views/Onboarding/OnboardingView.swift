@@ -568,34 +568,19 @@ struct OnboardingView: View {
         // Get existing preferences from first interview
         let existingPreferences = await fetchExistingPreferences(userId: userId)
 
-        // Check if they've read any books (distinguishes first-timer from returning user)
+        // All premise rejections go through premise_rejection template (deep diagnostic)
+        // Fetch previous titles to include in context (helps template understand reader history)
         let previousTitles = await fetchPreviousStoryTitles(userId: userId)
         let hasReadBooks = !previousTitles.isEmpty
 
-        // If they HAVE read books before, use the returning user interview instead
-        // (They're an experienced user who just didn't like today's options)
-        if hasReadBooks {
-            let preferredGenres = await fetchPreferredGenres(userId: userId)
-            let context = ReturningUserContext(
-                userName: userName,
-                previousStoryTitles: previousTitles,
-                preferredGenres: preferredGenres,
-                discardedPremises: discardedPremises
-            )
-            voiceManager.interviewType = .returningUser(context: context)
-            NSLog("✅ Configured RETURNING USER session for \(userName) (has \(previousTitles.count) books)")
-            return
-        }
-
-        // First-time user who rejected premises — use the deep diagnostic interview
         let context = PremiseRejectionContext(
             userName: userName,
             discardedPremises: discardedPremises,
             existingPreferences: existingPreferences,
-            hasReadBooks: false
+            hasReadBooks: hasReadBooks
         )
         voiceManager.interviewType = .premiseRejection(context: context)
-        NSLog("✅ Configured PREMISE REJECTION session for \(userName) (first-time user, \(discardedPremises.count) premises rejected)")
+        NSLog("✅ Configured PREMISE REJECTION session for \(userName) (\(hasReadBooks ? "experienced reader" : "first-time user"), \(discardedPremises.count) premises rejected)")
     }
 
     private func fetchUserName(userId: String) async -> String? {
