@@ -153,7 +153,8 @@ struct SequelGenerationView: View {
                     bookNumber: response.book2.bookNumber,
                     coverImageUrl: nil,
                     genre: nil,
-                    description: nil
+                    description: nil,
+                    seriesName: nil
                 )
 
                 book2Story = book2
@@ -247,7 +248,8 @@ struct SequelGenerationView: View {
             bookNumber: 1,
             coverImageUrl: nil,
             genre: "Fantasy",
-            description: "An epic dragon adventure"
+            description: "An epic dragon adventure",
+            seriesName: nil
         ),
         bookNumber: 2,
         userPreferences: [:],

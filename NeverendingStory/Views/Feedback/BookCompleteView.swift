@@ -238,7 +238,8 @@ struct ParticleView: View {
             bookNumber: 1,
             coverImageUrl: nil,
             genre: "Fantasy",
-            description: "An epic dragon adventure"
+            description: "An epic dragon adventure",
+            seriesName: nil
         ),
         bookNumber: 1,
         onStartSequel: {},

@@ -828,6 +828,7 @@ enum ReaderColorScheme: Int {
         bookNumber: 1,
         coverImageUrl: nil,
         genre: "Sci-Fi",
-        description: "A mysterious space station adventure"
+        description: "A mysterious space station adventure",
+        seriesName: nil
     ))
 }

@@ -194,7 +194,8 @@ struct BookCoverCard: View {
                     bookNumber: nil,
                     coverImageUrl: "https://placehold.co/180x270",
                     genre: "Sci-Fi",
-                    description: "A futuristic tale"
+                    description: "A futuristic tale",
+                    seriesName: nil
                 ),
                 action: {}
             )
@@ -221,7 +222,8 @@ struct BookCoverCard: View {
                     bookNumber: nil,
                     coverImageUrl: nil,
                     genre: "Fantasy",
-                    description: "A test story"
+                    description: "A test story",
+                    seriesName: nil
                 ),
                 action: {}
             )
@@ -248,7 +250,8 @@ struct BookCoverCard: View {
                     bookNumber: nil,
                     coverImageUrl: nil,
                     genre: "Mystery",
-                    description: "A test story"
+                    description: "A test story",
+                    seriesName: nil
                 ),
                 action: {}
             )
@@ -275,7 +278,8 @@ struct BookCoverCard: View {
                     bookNumber: nil,
                     coverImageUrl: "https://placehold.co/140x210",
                     genre: "Adventure",
-                    description: "An epic journey"
+                    description: "An epic journey",
+                    seriesName: nil
                 ),
                 isSmall: true,
                 action: {}
