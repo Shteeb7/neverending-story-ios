@@ -41,6 +41,7 @@ struct BookReaderView: View {
 
     // MARK: - Next Chapter Alert State
     @State private var showNextChapterUnavailableAlert = false
+    @State private var hasRestoredScroll = false
 
     var body: some View {
         ZStack {
@@ -61,27 +62,45 @@ struct BookReaderView: View {
                                 .foregroundColor(readerSettings.textColor)
                                 .id("chapter-top")
 
-                            // Chapter content
-                            Text(chapter.content)
-                                .font(.system(
-                                    size: readerSettings.fontSize,
-                                    weight: .regular,
-                                    design: readerSettings.fontDesign
-                                ))
-                                .lineSpacing(readerSettings.lineSpacing)
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 40)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .foregroundColor(readerSettings.textColor)
-                                .background(
-                                    GeometryReader { geometry in
-                                        Color.clear
-                                            .preference(key: ScrollOffsetPreferenceKey.self,
-                                                       value: geometry.frame(in: .named("scrollView")).minY)
-                                            .preference(key: ContentHeightPreferenceKey.self,
-                                                       value: geometry.size.height)
-                                    }
-                                )
+                            // Chapter content — split into paragraphs for scroll restoration
+                            let paragraphs = chapter.content.components(separatedBy: "\n\n").filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+                            ForEach(Array(paragraphs.enumerated()), id: \.offset) { index, paragraph in
+                                Text(paragraph.trimmingCharacters(in: .whitespacesAndNewlines))
+                                    .font(.system(
+                                        size: readerSettings.fontSize,
+                                        weight: .regular,
+                                        design: readerSettings.fontDesign
+                                    ))
+                                    .lineSpacing(readerSettings.lineSpacing)
+                                    .padding(.horizontal, 24)
+                                    .padding(.bottom, 16)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .foregroundColor(readerSettings.textColor)
+                                    .id("para-\(index)")
+                                    .background(
+                                        GeometryReader { geometry in
+                                            Color.clear
+                                                .preference(key: ParagraphVisibilityKey.self,
+                                                           value: [ParagraphVisibility(
+                                                               index: index,
+                                                               minY: geometry.frame(in: .named("scrollView")).minY,
+                                                               height: geometry.size.height
+                                                           )])
+                                        }
+                                    )
+                            }
+
+                            // Bottom spacer for last paragraph padding
+                            Spacer().frame(height: 24)
+
+                            // Track total content height via the full VStack
+                            GeometryReader { geometry in
+                                Color.clear
+                                    .preference(key: ContentHeightPreferenceKey.self,
+                                               value: geometry.size.height)
+                            }
+                            .frame(height: 0)
 
                             // Next Chapter button
                             Button(action: handleNextChapterTap) {
@@ -102,16 +121,16 @@ struct BookReaderView: View {
                         }
                     }
                     .coordinateSpace(name: "scrollView")
-                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
-                        readingState.updateScrollPosition(Double(value))
-                        // Calculate progress based on actual content height
-                        if contentHeight > 0 {
-                            // value is negative as we scroll down, so negate it
-                            let scrolled = max(-value, 0)
-                            let maxScroll = max(contentHeight - visibleHeight, 1)
-                            let newProgress = min(scrolled / maxScroll, 1.0)
+                    .onPreferenceChange(ParagraphVisibilityKey.self) { paragraphs in
+                        // Find topmost visible paragraph (closest to top of viewport)
+                        guard !paragraphs.isEmpty else { return }
 
-                            // Only update state when percentage actually changes (prevents scroll stuttering)
+                        // Calculate scroll progress from paragraph positions
+                        let sorted = paragraphs.sorted { $0.index < $1.index }
+                        if let first = sorted.first, let last = sorted.last {
+                            let totalHeight = max((last.minY + last.height) - first.minY, 1)
+                            let scrolled = max(-first.minY, 0)
+                            let newProgress = min(scrolled / totalHeight, 1.0)
                             let newPercent = Int(newProgress * 100)
                             let currentPercent = Int(scrollProgress * 100)
 
@@ -120,7 +139,18 @@ struct BookReaderView: View {
                                 readingState.updateScrollPercentage(Double(newPercent))
                             }
                         }
-                        // Check for book completion as user scrolls through chapter 12
+
+                        // Update raw scroll position for debounced save
+                        if let topVisible = sorted.first {
+                            readingState.updateScrollPosition(Double(topVisible.minY))
+                        }
+
+                        // Restore scroll position on first render
+                        if !hasRestoredScroll {
+                            restoreScrollPosition(proxy: proxy, paragraphCount: sorted.count)
+                        }
+
+                        // Check for book completion
                         checkForFeedbackCheckpoint()
                     }
                     .onPreferenceChange(ContentHeightPreferenceKey.self) { value in
@@ -139,6 +169,7 @@ struct BookReaderView: View {
                     }
                     .onChange(of: readingState.currentChapterIndex) {
                         // Scroll to top when chapter changes
+                        hasRestoredScroll = false
                         withAnimation {
                             proxy.scrollTo("chapter-top", anchor: .top)
                         }
@@ -377,6 +408,8 @@ struct BookReaderView: View {
         }
         .task {
             do {
+                // Reset scroll restoration flag for fresh load
+                hasRestoredScroll = false
                 try await readingState.loadStory(story)
                 startTopBarTimer()
                 // Start reading session for initial chapter
@@ -426,6 +459,33 @@ struct BookReaderView: View {
             @unknown default:
                 break
             }
+        }
+    }
+
+    private func restoreScrollPosition(proxy: ScrollViewProxy, paragraphCount: Int) {
+        // Only restore once per view lifecycle
+        guard !hasRestoredScroll else { return }
+        hasRestoredScroll = true
+
+        let savedPercentage = readingState.scrollPercentage  // 0-100 from backend
+
+        // Also check scrollPosition which may have been loaded from backend before percentage was set
+        let effectivePercentage = savedPercentage > 0 ? savedPercentage : readingState.scrollPosition
+
+        // Don't restore if at beginning (< 2%)
+        guard effectivePercentage > 2.0 else {
+            NSLog("📖 Scroll restore: at beginning (%.1f%%), no restore needed", effectivePercentage)
+            return
+        }
+
+        guard paragraphCount > 0 else { return }
+
+        let targetIndex = min(Int(effectivePercentage / 100.0 * Double(paragraphCount)), paragraphCount - 1)
+        NSLog("📖 Scroll restore: %.1f%% → paragraph %d of %d", effectivePercentage, targetIndex, paragraphCount)
+
+        // Small delay to ensure layout is complete before scrolling
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            proxy.scrollTo("para-\(targetIndex)", anchor: .top)
         }
     }
 
@@ -672,11 +732,17 @@ struct BookReaderView: View {
 
 // MARK: - Scroll Position Tracking
 
-struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+struct ParagraphVisibility: Equatable {
+    let index: Int
+    let minY: CGFloat
+    let height: CGFloat
+}
 
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
+struct ParagraphVisibilityKey: PreferenceKey {
+    static var defaultValue: [ParagraphVisibility] = []
+
+    static func reduce(value: inout [ParagraphVisibility], nextValue: () -> [ParagraphVisibility]) {
+        value.append(contentsOf: nextValue())
     }
 }
 

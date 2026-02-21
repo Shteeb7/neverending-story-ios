@@ -17,6 +17,7 @@ class ReadingStateManager: ObservableObject {
     @Published var currentChapterIndex: Int = 0
     @Published var scrollPosition: Double = 0
     @Published var scrollPercentage: Double = 0  // 0-100
+    @Published var savedParagraphIndex: Int? = nil  // For scroll restoration
 
     // Reading session tracking
     @Published var currentSessionId: String? = nil
@@ -45,8 +46,19 @@ class ReadingStateManager: ObservableObject {
                let scrollPosition = currentState.scrollPosition {
                 // Backend has progress - restore it (chapter_number is 1-based, convert to 0-based)
                 self.currentChapterIndex = chapterNumber - 1
-                self.scrollPosition = scrollPosition
-                NSLog("✅ Restored reading position from backend: chapter %d, scroll %.2f", chapterNumber, scrollPosition)
+
+                // Backend stores percentage (0-100). Old values were raw pixel offsets (negative numbers).
+                // If value is negative or > 100, it's a legacy raw offset — treat as 0 (start of chapter).
+                if scrollPosition >= 0 && scrollPosition <= 100 {
+                    self.scrollPercentage = scrollPosition
+                    self.scrollPosition = scrollPosition
+                    NSLog("✅ Restored reading position from backend: chapter %d, scroll %.1f%%", chapterNumber, scrollPosition)
+                } else {
+                    // Legacy raw offset — can't reliably restore, start at chapter top
+                    self.scrollPercentage = 0
+                    self.scrollPosition = 0
+                    NSLog("⚠️ Legacy scroll value (%.1f) detected — starting at chapter top. Will save percentage going forward.", scrollPosition)
+                }
             } else {
                 // No progress saved yet - start from beginning
                 self.currentChapterIndex = 0
@@ -210,11 +222,20 @@ class ReadingStateManager: ObservableObject {
 
     func updateScrollPosition(_ position: Double) {
         self.scrollPosition = position
+        // Clear savedParagraphIndex once user starts scrolling (restore is done)
+        if savedParagraphIndex != nil {
+            savedParagraphIndex = nil
+        }
         debouncedSave()
     }
 
     func updateScrollPercentage(_ percentage: Double) {
         self.scrollPercentage = min(max(percentage, 0), 100)
+    }
+
+    /// Track current visible paragraph index for scroll restoration
+    func updateVisibleParagraph(_ index: Int) {
+        // We don't need to publish this — just save it for persistence
     }
 
     private func debouncedSave() {
@@ -229,10 +250,12 @@ class ReadingStateManager: ObservableObject {
         guard let storyId = currentStory?.id else { return }
 
         do {
+            // Save percentage (0-100) to backend, NOT raw pixel offset
+            // Percentage survives font size changes, device changes, and orientation
             try await APIManager.shared.updateProgress(
                 storyId: storyId,
                 chapterNumber: currentChapterIndex + 1, // Convert back to 1-based
-                scrollPosition: scrollPosition
+                scrollPosition: scrollPercentage
             )
 
             // Also save to UserDefaults as backup
@@ -321,7 +344,7 @@ class ReadingStateManager: ObservableObject {
 
         UserDefaults.standard.set(story.id, forKey: "currentStoryId")
         UserDefaults.standard.set(currentChapterIndex, forKey: "currentChapterIndex")
-        UserDefaults.standard.set(scrollPosition, forKey: "scrollPosition")
+        UserDefaults.standard.set(scrollPercentage, forKey: "scrollPosition") // Save percentage, not raw offset
     }
 
     private func loadPersistedState() {
@@ -329,7 +352,7 @@ class ReadingStateManager: ObservableObject {
         // This just loads the last known position
         if let _ = UserDefaults.standard.string(forKey: "currentStoryId") {
             currentChapterIndex = UserDefaults.standard.integer(forKey: "currentChapterIndex")
-            scrollPosition = UserDefaults.standard.double(forKey: "scrollPosition")
+            scrollPosition = UserDefaults.standard.double(forKey: "scrollPosition") // This is now percentage
         }
     }
 
