@@ -18,6 +18,7 @@ class ReadingStateManager: ObservableObject {
     @Published var scrollPosition: Double = 0
     @Published var scrollPercentage: Double = 0  // 0-100
     @Published var savedParagraphIndex: Int? = nil  // For scroll restoration
+    @Published var synopsis: String? = nil  // Book overview from story bible
 
     // Reading session tracking
     @Published var currentSessionId: String? = nil
@@ -84,10 +85,12 @@ class ReadingStateManager: ObservableObject {
             }
         }
 
-        // Fetch chapters (may be empty if still generating)
+        // Fetch chapters + synopsis (may be empty if still generating)
         NSLog("📡 ReadingStateManager: Fetching chapters from API...")
         do {
-            let fetchedChapters = try await APIManager.shared.getChapters(storyId: story.id)
+            let result = try await APIManager.shared.getChaptersWithSynopsis(storyId: story.id)
+            let fetchedChapters = result.chapters
+            self.synopsis = result.synopsis
             // Deduplicate by chapter_number (defense in depth)
             var seen = Set<Int>()
             let uniqueChapters = fetchedChapters.filter { chapter in

@@ -15,10 +15,10 @@ struct BookReaderView: View {
     @StateObject private var readerSettings = ReaderSettings.shared
     @ObservedObject private var realtimeManager = StoryRealtimeManager.shared
 
-    @State private var showTopBar = true
+    // Top bar is always visible — no toggle needed
     @State private var showSettings = false
     @State private var showChapterList = false
-    @State private var topBarTimer: Timer?
+    // Timer removed — top bar is persistent
     @State private var scrollProgress: Double = 0
     @State private var contentHeight: CGFloat = 0
     @State private var visibleHeight: CGFloat = 0
@@ -55,8 +55,8 @@ struct BookReaderView: View {
                             // Chapter title
                             Text(chapter.title)
                                 .font(.system(size: 28, weight: .bold, design: .default))
-                                .padding(.top, 60)
-                                .padding(.bottom, 32)
+                                .padding(.top, 16)
+                                .padding(.bottom, 20)
                                 .padding(.horizontal, 24)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .foregroundColor(readerSettings.textColor)
@@ -165,7 +165,7 @@ struct BookReaderView: View {
                     )
                     .background(readerSettings.backgroundColor)
                     .onTapGesture {
-                        showTopBarTemporarily()
+                        // Reserved for future tap interactions
                     }
                     .onChange(of: readingState.currentChapterIndex) {
                         // Scroll to top when chapter changes
@@ -183,9 +183,9 @@ struct BookReaderView: View {
                 }
             }
 
-            // Auto-hiding top bar (hidden during ceremony)
+            // Persistent top bar (hidden during ceremony)
             VStack {
-                if showTopBar && !showFirstLineCeremony {
+                if !showFirstLineCeremony {
                     HStack {
                         // Back button
                         Button(action: { dismiss() }) {
@@ -206,23 +206,17 @@ struct BookReaderView: View {
 
                         Spacer()
 
-                        // Settings button
-                        Button(action: { showSettings = true }) {
-                            Image(systemName: "textformat.size")
-                                .font(.title3)
-                                .foregroundColor(.primary)
-                                .padding(12)
-                                .background(Circle().fill(Color(.systemGray6).opacity(0.9)))
-                        }
+                        // Invisible spacer to keep title centered (matches back button width)
+                        Color.clear
+                            .frame(width: 44, height: 44)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 4)
                     .background(
                         readerSettings.backgroundColor
                             .opacity(0.95)
                             .ignoresSafeArea(edges: .top)
                     )
-                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
                 Spacer()
@@ -325,6 +319,7 @@ struct BookReaderView: View {
             ChapterListView(
                 chapters: readingState.chapters,
                 currentChapterIndex: $readingState.currentChapterIndex,
+                synopsis: readingState.synopsis,
                 onSelectChapter: { index in
                     readingState.goToChapter(index: index)
                     showChapterList = false
@@ -411,7 +406,6 @@ struct BookReaderView: View {
                 // Reset scroll restoration flag for fresh load
                 hasRestoredScroll = false
                 try await readingState.loadStory(story)
-                startTopBarTimer()
                 // Start reading session for initial chapter
                 readingState.startReadingSession()
 
@@ -431,7 +425,6 @@ struct BookReaderView: View {
             }
         }
         .onDisappear {
-            topBarTimer?.invalidate()
             // End reading session when leaving reader
             readingState.stopTracking()
         }
@@ -489,21 +482,7 @@ struct BookReaderView: View {
         }
     }
 
-    private func showTopBarTemporarily() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            showTopBar = true
-        }
-        startTopBarTimer()
-    }
-
-    private func startTopBarTimer() {
-        topBarTimer?.invalidate()
-        topBarTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
-            withAnimation(.easeInOut(duration: 0.3)) {
-                showTopBar = false
-            }
-        }
-    }
+    // Top bar is now always visible — no timer needed
 
     private func handleNextChapterTap() {
         // Check if next chapter is available
@@ -760,36 +739,70 @@ struct ContentHeightPreferenceKey: PreferenceKey {
 struct ChapterListView: View {
     let chapters: [Chapter]
     @Binding var currentChapterIndex: Int
+    let synopsis: String?
     let onSelectChapter: (Int) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var showFullSynopsis = false
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(chapters.indices, id: \.self) { index in
-                    Button(action: {
-                        onSelectChapter(index)
-                    }) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Chapter \(chapters[index].chapterNumber)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-
-                                Text(chapters[index].title)
-                                    .font(.headline)
+                // Book overview section (from story bible)
+                if let synopsis = synopsis {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "book.closed")
+                                    .foregroundColor(.accentColor)
+                                Text("About This Story")
+                                    .font(.subheadline.weight(.semibold))
                                     .foregroundColor(.primary)
-                                    .lineLimit(2)
                             }
 
-                            Spacer()
+                            Text(synopsis)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .lineLimit(showFullSynopsis ? nil : 4)
 
-                            if index == currentChapterIndex {
-                                Image(systemName: "book.fill")
-                                    .foregroundColor(.accentColor)
+                            if synopsis.count > 200 {
+                                Button(action: { showFullSynopsis.toggle() }) {
+                                    Text(showFullSynopsis ? "Show Less" : "Read More")
+                                        .font(.caption)
+                                        .foregroundColor(.accentColor)
+                                }
                             }
                         }
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                // Chapter list
+                Section {
+                    ForEach(chapters.indices, id: \.self) { index in
+                        Button(action: {
+                            onSelectChapter(index)
+                        }) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Chapter \(chapters[index].chapterNumber)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    Text(chapters[index].title)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(2)
+                                }
+
+                                Spacer()
+
+                                if index == currentChapterIndex {
+                                    Image(systemName: "book.fill")
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
                     }
                 }
             }

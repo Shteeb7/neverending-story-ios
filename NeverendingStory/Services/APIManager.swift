@@ -1090,13 +1090,18 @@ class APIManager: ObservableObject {
         )
     }
 
-    func getChapters(storyId: String) async throws -> [Chapter] {
-        struct ChaptersResponse: Decodable {
-            let chapters: [Chapter]
-        }
+    struct ChaptersWithSynopsis: Decodable {
+        let chapters: [Chapter]
+        let synopsis: String?
+    }
 
-        let response: ChaptersResponse = try await makeRequest(endpoint: "/story/\(storyId)/chapters")
+    func getChapters(storyId: String) async throws -> [Chapter] {
+        let response: ChaptersWithSynopsis = try await makeRequest(endpoint: "/story/\(storyId)/chapters")
         return response.chapters
+    }
+
+    func getChaptersWithSynopsis(storyId: String) async throws -> ChaptersWithSynopsis {
+        return try await makeRequest(endpoint: "/story/\(storyId)/chapters")
     }
 
     func getCurrentState(storyId: String) async throws -> CurrentStateResponse {
