@@ -19,6 +19,7 @@ struct BugReportView: View {
     @State private var showVoiceInterview = false
     @State private var showTextChat = false
     @State private var consentStatus: ConsentStatus?
+    @State private var isLoadingConsent = true
     @State private var showConsentScreen = false
     @State private var showVoiceConsentSheet = false
 
@@ -107,64 +108,82 @@ struct BugReportView: View {
                         // Voice/Text Choice (only if option selected)
                         if selectedOption != nil {
                             VStack(spacing: 16) {
-                                Text("How would you like to chat?")
-                                    .font(.headline)
-                                    .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.8))
-
-                                HStack(alignment: .top, spacing: 16) {
-                                    // Voice button
-                                    Button(action: {
-                                        guard let consent = consentStatus else { return }
-                                        if !consent.aiConsent {
-                                            showConsentScreen = true
-                                        } else if consent.voiceConsent {
-                                            showVoiceInterview = true
-                                        } else {
-                                            // Voice not enabled — show consent view so they can opt in
-                                            showVoiceConsentSheet = true
-                                        }
-                                    }) {
-                                        HStack(spacing: 8) {
-                                            Image(systemName: "mic.fill")
-                                                .font(.system(size: 18))
-                                            Text("Voice")
-                                                .font(.headline)
-                                        }
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 16)
-                                        .background(
-                                            (consentStatus?.voiceConsent == true) ?
-                                            Color.accentColor : Color.gray
-                                        )
-                                        .cornerRadius(12)
+                                if isLoadingConsent {
+                                    // Show spinner while consent loads
+                                    HStack(spacing: 10) {
+                                        ProgressView()
+                                            .tint(Color(red: 0.9, green: 0.8, blue: 0.6))
+                                        Text("Connecting to Peggy...")
+                                            .font(.subheadline)
+                                            .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.7))
                                     }
-                                    .accessibilityIdentifier("voiceChatButton")
+                                    .padding(.vertical, 8)
+                                } else {
+                                    Text("How would you like to chat?")
+                                        .font(.headline)
+                                        .foregroundColor(Color(red: 0.9, green: 0.8, blue: 0.6).opacity(0.8))
 
-                                    // Text button
-                                    Button(action: {
-                                        guard let consent = consentStatus else { return }
-                                        if !consent.aiConsent {
-                                            showConsentScreen = true
-                                        } else {
-                                            showTextChat = true
+                                    HStack(alignment: .top, spacing: 16) {
+                                        // Voice button
+                                        Button(action: {
+                                            guard let consent = consentStatus else {
+                                                // Retry loading consent if it failed
+                                                Task { await retryConsentLoad() }
+                                                return
+                                            }
+                                            if !consent.aiConsent {
+                                                showConsentScreen = true
+                                            } else if consent.voiceConsent {
+                                                showVoiceInterview = true
+                                            } else {
+                                                showVoiceConsentSheet = true
+                                            }
+                                        }) {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "mic.fill")
+                                                    .font(.system(size: 18))
+                                                Text("Voice")
+                                                    .font(.headline)
+                                            }
+                                            .foregroundColor(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 16)
+                                            .background(
+                                                (consentStatus?.voiceConsent == true) ?
+                                                Color.accentColor : Color.gray
+                                            )
+                                            .cornerRadius(12)
                                         }
-                                    }) {
-                                        HStack(spacing: 8) {
-                                            Image(systemName: "text.bubble.fill")
-                                                .font(.system(size: 18))
-                                            Text("Text")
-                                                .font(.headline)
+                                        .accessibilityIdentifier("voiceChatButton")
+
+                                        // Text button
+                                        Button(action: {
+                                            guard let consent = consentStatus else {
+                                                Task { await retryConsentLoad() }
+                                                return
+                                            }
+                                            if !consent.aiConsent {
+                                                showConsentScreen = true
+                                            } else {
+                                                showTextChat = true
+                                            }
+                                        }) {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: "text.bubble.fill")
+                                                    .font(.system(size: 18))
+                                                Text("Text")
+                                                    .font(.headline)
+                                            }
+                                            .foregroundColor(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 16)
+                                            .background(Color.accentColor.opacity(0.8))
+                                            .cornerRadius(12)
                                         }
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 16)
-                                        .background(Color.accentColor.opacity(0.8))
-                                        .cornerRadius(12)
+                                        .accessibilityIdentifier("textChatButton")
                                     }
-                                    .accessibilityIdentifier("textChatButton")
+                                    .padding(.horizontal, 24)
                                 }
-                                .padding(.horizontal, 24)
                             }
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .animation(.easeInOut, value: selectedOption)
@@ -227,13 +246,14 @@ struct BugReportView: View {
         }
         .task {
             // Load consent status
+            isLoadingConsent = true
             do {
                 consentStatus = try await APIManager.shared.getConsentStatus()
             } catch {
                 NSLog("⚠️ Failed to load consent status: \(error)")
-                // Default to no consent if fetch fails
-                consentStatus = ConsentStatus(aiConsent: false, voiceConsent: false)
+                // Leave consentStatus nil — buttons will retry on tap
             }
+            isLoadingConsent = false
 
             // Load squashed reports
             await loadSquashedReports()
@@ -292,6 +312,16 @@ struct BugReportView: View {
     }
 
     // MARK: - Helper Methods
+
+    private func retryConsentLoad() async {
+        isLoadingConsent = true
+        do {
+            consentStatus = try await APIManager.shared.getConsentStatus()
+        } catch {
+            NSLog("⚠️ Retry consent load failed: \(error)")
+        }
+        isLoadingConsent = false
+    }
 
     private func loadSquashedReports() async {
         isLoadingSquashed = true
