@@ -26,6 +26,8 @@ struct OnboardingView: View {
     @State private var showCancelConfirmation = false
     @State private var showCompleteEarlyConfirmation = false
     @State private var voiceConsent: Bool? = nil
+    @State private var showLogoutConfirmation = false
+    @StateObject private var authManager = AuthManager.shared
 
     init(forceNewInterview: Bool = false) {
         self.forceNewInterview = forceNewInterview
@@ -55,6 +57,33 @@ struct OnboardingView: View {
                     endRadius: 600
                 )
                 .ignoresSafeArea()
+
+                // Sign-out button (top-right) — ensures user is never trapped on this screen
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showLogoutConfirmation = true
+                        }) {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .font(.system(size: 16))
+                                .foregroundColor(.white.opacity(0.4))
+                                .padding(12)
+                        }
+                    }
+                    Spacer()
+                }
+                .zIndex(10)
+                .confirmationDialog("Log Out", isPresented: $showLogoutConfirmation, titleVisibility: .visible) {
+                    Button("Log Out", role: .destructive) {
+                        Task {
+                            await performLogout()
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Are you sure you want to log out?")
+                }
 
                 if isCheckingForPremises {
                     // Show loading while checking for existing premises
@@ -834,6 +863,18 @@ struct OnboardingView: View {
     private func openSettings() {
         if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(settingsURL)
+        }
+    }
+
+    private func performLogout() async {
+        NSLog("🔓 User initiated logout from OnboardingView")
+        do {
+            try await authManager.signOut()
+            NSLog("✅ Logout successful")
+        } catch {
+            NSLog("❌ Logout failed: \(error.localizedDescription)")
+            // Even if logout fails, clear local state
+            authManager.user = nil
         }
     }
 }

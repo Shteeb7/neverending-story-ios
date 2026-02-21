@@ -38,6 +38,7 @@
 		8FD47CE8929B1AB17CBAAC15 /* BugReportOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 962ADE765864AE8243978FCA /* BugReportOverlay.swift */; };
 		957BE970EFBA9CDA8CB3BB3B /* VoiceConsentReenableUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EF4633FC1DA165414FE8AA1 /* VoiceConsentReenableUITests.swift */; };
 		95E4D02B70F0048848C04EB7 /* BugReportCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF9CE2DF18E9E3256862AB2E /* BugReportCaptureManager.swift */; };
+		997AF9E0AE4972BFECC3EFA9 /* ScrollRestorationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEA8BFB1FCDF23968CF8C55 /* ScrollRestorationUITests.swift */; };
 		9BD77D467F39674616E27536 /* AIConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 212AFFD9AA761847E9029E82 /* AIConsentView.swift */; };
 		9C335BE7FE5654CBE96AD5F6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2661108E4232961D5696DF00 /* OnboardingView.swift */; };
 		9CE559EE551954215BF26615 /* Story.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8695003D3086D0A0333FD562 /* Story.swift */; };
@@ -109,6 +110,7 @@
 		6325427DEA71DD9807039F2E /* BookReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookReaderView.swift; sourceTree = "<group>"; };
 		65526FBD7C8FB0289D107AAF /* StoryRealtimeManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StoryRealtimeManager.swift; sourceTree = "<group>"; };
 		693810C2658C52F236C79A30 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		6AEA8BFB1FCDF23968CF8C55 /* ScrollRestorationUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScrollRestorationUITests.swift; sourceTree = "<group>"; };
 		758724A0F1973E37866AD9B3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		7B63092B3F2BF07155861532 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7E9125212FA4DCBF3C5EC382 /* Chapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chapter.swift; sourceTree = "<group>"; };
@@ -230,6 +232,7 @@
 				EB830F8EA971C3F1E2AB44F6 /* BugNotificationUITests.swift */,
 				4EF4633FC1DA165414FE8AA1 /* VoiceConsentReenableUITests.swift */,
 				37D28D14A0731AF525F27381 /* RealtimeLibraryUITests.swift */,
+				6AEA8BFB1FCDF23968CF8C55 /* ScrollRestorationUITests.swift */,
 			);
 			name = NeverendingStoryUITests;
 			path = NeverendingStoryUITests;
@@ -558,6 +561,7 @@
 				847ADD932AB88B4A5157EEE4 /* BugNotificationUITests.swift in Sources */,
 				957BE970EFBA9CDA8CB3BB3B /* VoiceConsentReenableUITests.swift in Sources */,
 				3BA6F2EF7B8D2CCBD29298FE /* RealtimeLibraryUITests.swift in Sources */,
+				997AF9E0AE4972BFECC3EFA9 /* ScrollRestorationUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

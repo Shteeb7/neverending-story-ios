@@ -165,6 +165,60 @@ struct LaunchView: View {
         }
     }
 
+    /// Re-reads user metadata from a fresh Supabase session to fix stale JWT issues.
+    /// If the JWT cached on-device has outdated hasCompletedOnboarding, this corrects it.
+    @MainActor
+    private func refreshUserMetadata() async {
+        do {
+            let refreshedSession = try await authManager.supabase.auth.refreshSession()
+            let supabaseUser = refreshedSession.user
+
+            let hasCompletedOnboardingValue: Bool = {
+                if case let .bool(value) = supabaseUser.userMetadata["has_completed_onboarding"] {
+                    return value
+                }
+                return false
+            }()
+
+            let nameValue: String? = {
+                if case let .string(value) = supabaseUser.userMetadata["name"] {
+                    return value
+                }
+                return nil
+            }()
+
+            let avatarURLValue: String? = {
+                if case let .string(value) = supabaseUser.userMetadata["avatar_url"] {
+                    return value
+                }
+                return nil
+            }()
+
+            // Only update if the refreshed value differs (avoids unnecessary SwiftUI re-renders)
+            if authManager.user?.hasCompletedOnboarding != hasCompletedOnboardingValue {
+                NSLog("🔄 Metadata refresh: hasCompletedOnboarding changed from %@ to %@",
+                      authManager.user?.hasCompletedOnboarding == true ? "true" : "false",
+                      hasCompletedOnboardingValue ? "true" : "false")
+
+                authManager.user = User(
+                    id: supabaseUser.id.uuidString,
+                    email: supabaseUser.email,
+                    name: nameValue,
+                    avatarURL: avatarURLValue,
+                    createdAt: supabaseUser.createdAt,
+                    hasCompletedOnboarding: hasCompletedOnboardingValue
+                )
+                authManager.accessToken = refreshedSession.accessToken
+            } else {
+                NSLog("🔄 Metadata refresh: hasCompletedOnboarding already correct (%@)",
+                      hasCompletedOnboardingValue ? "true" : "false")
+            }
+        } catch {
+            NSLog("⚠️ Metadata refresh failed (non-blocking): \(error.localizedDescription)")
+            // Non-blocking — don't gate the app on this
+        }
+    }
+
     private func checkConsentStatus() {
         guard !isCheckingConsent else { return }
 
@@ -174,11 +228,17 @@ struct LaunchView: View {
         Task {
             do {
                 let status = try await APIManager.shared.getConsentStatus()
+
+                // Refresh auth session to pick up latest user metadata from server
+                // This prevents stale JWT data from routing users to onboarding incorrectly
+                await refreshUserMetadata()
+
                 await MainActor.run {
                     consentChecked = true
                     showAIConsent = !status.aiConsent
                     isCheckingConsent = false
                     NSLog("🔒 Consent status: AI=\(status.aiConsent), Voice=\(status.voiceConsent)")
+                    NSLog("🔒 hasCompletedOnboarding: \(authManager.user?.hasCompletedOnboarding == true)")
                 }
 
                 // After consent check, recompute is_minor flag (Part C: Age Gate)
