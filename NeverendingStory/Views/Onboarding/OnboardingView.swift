@@ -26,6 +26,7 @@ struct OnboardingView: View {
     @State private var showCancelConfirmation = false
     @State private var showCompleteEarlyConfirmation = false
     @State private var voiceConsent: Bool? = nil
+    @State private var isLoadingConsent = true
     @State private var showLogoutConfirmation = false
     @StateObject private var authManager = AuthManager.shared
 
@@ -140,56 +141,68 @@ struct OnboardingView: View {
                         VStack(spacing: 16) {
                             switch voiceManager.state {
                         case .idle:
-                            // Side-by-side Speak / Write buttons
-                            HStack(spacing: 12) {
-                                // Speak with Prospero button
-                                Button(action: startVoiceSession) {
-                                    VStack(spacing: 6) {
-                                        Image(systemName: "mic.fill")
-                                            .font(.system(size: 24))
-                                        Text("Speak with\nProspero")
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .multilineTextAlignment(.center)
-                                            .lineLimit(2)
-                                            .minimumScaleFactor(0.8)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 20)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [Color.purple, Color.blue],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                    .shadow(color: .purple.opacity(0.3), radius: 8, y: 4)
+                            if isLoadingConsent {
+                                // Show spinner while consent status loads
+                                HStack(spacing: 10) {
+                                    ProgressView()
+                                        .tint(.white)
+                                    Text("Preparing your session...")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.7))
                                 }
-
-                                // Write to Prospero button
-                                Button(action: startTextChat) {
-                                    VStack(spacing: 6) {
-                                        Image(systemName: "pencil.line")
-                                            .font(.system(size: 24))
-                                        Text("Write to\nProspero")
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .multilineTextAlignment(.center)
-                                            .lineLimit(2)
-                                            .minimumScaleFactor(0.8)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 20)
-                                    .background(
-                                        LinearGradient(
-                                            colors: [Color.purple, Color.blue],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
+                                .padding(.vertical, 20)
+                            } else {
+                                // Side-by-side Speak / Write buttons
+                                HStack(spacing: 12) {
+                                    // Speak with Prospero button
+                                    Button(action: startVoiceSession) {
+                                        VStack(spacing: 6) {
+                                            Image(systemName: "mic.fill")
+                                                .font(.system(size: 24))
+                                            Text("Speak with\nProspero")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .multilineTextAlignment(.center)
+                                                .lineLimit(2)
+                                                .minimumScaleFactor(0.8)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 20)
+                                        .background(
+                                            LinearGradient(
+                                                colors: [Color.purple, Color.blue],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
                                         )
-                                    )
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                    .shadow(color: .purple.opacity(0.3), radius: 8, y: 4)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                        .shadow(color: .purple.opacity(0.3), radius: 8, y: 4)
+                                    }
+
+                                    // Write to Prospero button
+                                    Button(action: startTextChat) {
+                                        VStack(spacing: 6) {
+                                            Image(systemName: "pencil.line")
+                                                .font(.system(size: 24))
+                                            Text("Write to\nProspero")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .multilineTextAlignment(.center)
+                                                .lineLimit(2)
+                                                .minimumScaleFactor(0.8)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 20)
+                                        .background(
+                                            LinearGradient(
+                                                colors: [Color.purple, Color.blue],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                        .shadow(color: .purple.opacity(0.3), radius: 8, y: 4)
+                                    }
                                 }
                             }
 
@@ -514,6 +527,7 @@ struct OnboardingView: View {
 
     private func loadVoiceConsentStatus() {
         Task {
+            await MainActor.run { isLoadingConsent = true }
             do {
                 let status = try await APIManager.shared.getConsentStatus()
                 await MainActor.run {
@@ -522,6 +536,7 @@ struct OnboardingView: View {
             } catch {
                 NSLog("⚠️ Failed to load voice consent status: \(error)")
             }
+            await MainActor.run { isLoadingConsent = false }
         }
     }
 
