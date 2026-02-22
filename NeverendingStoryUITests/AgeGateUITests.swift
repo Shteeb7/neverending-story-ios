@@ -1,67 +1,7 @@
 import XCTest
 
-final class AgeGateUITests: XCTestCase {
-    var app: XCUIApplication!
-    var testEmail: String!
-    var testPassword: String!
-
-    override func setUpWithError() throws {
-        continueAfterFailure = false
-
-        // Generate unique test account credentials
-        let timestamp = Int(Date().timeIntervalSince1970)
-        testEmail = "test-agegate-\(timestamp)@mythweaver.app"
-        testPassword = "TestPassword123!"
-
-        app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
-        app.launch()
-    }
-
-    override func tearDownWithError() throws {
-        // Clean up test user and all their data synchronously
-        let expectation = XCTestExpectation(description: "Cleanup complete")
-        Task {
-            await cleanupTestUser(email: testEmail)
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 10.0)
-
-        // Terminate app to ensure clean state for next test
-        app.terminate()
-        app = nil
-    }
-
-    // MARK: - Helper Methods
-
-    /// Cleans up test user via direct database access
-    private func cleanupTestUser(email: String) async {
-        guard let url = URL(string: "https://hszuuvkfgdfqgtaycojz.supabase.co/rest/v1/rpc/cleanup_test_user") else {
-            print("⚠️ Invalid cleanup URL")
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzenV1dmtmZ2RmcWd0YXljb2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NzA2NDUsImV4cCI6MjA4NjI0NjY0NX0.YvjON4hgMTt081xM_ZjqVqNRd9q_LXUdMCbBDeprRUU", forHTTPHeaderField: "apikey")
-
-        let body: [String: Any] = ["email_pattern": email]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            if let httpResponse = response as? HTTPURLResponse {
-                if httpResponse.statusCode == 200 {
-                    print("✅ Cleaned up test user: \(email)")
-                } else {
-                    print("⚠️ Cleanup returned status \(httpResponse.statusCode)")
-                }
-            }
-        } catch {
-            print("⚠️ Cleanup failed: \(error.localizedDescription)")
-        }
-    }
+final class AgeGateUITests: MythweaverUITestCase {
+    // Uses default preset (fresh-user)
 
     /// Helper to navigate to age gate screen
     private func navigateToAgeGate() {
